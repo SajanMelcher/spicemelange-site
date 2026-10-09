@@ -63,6 +63,7 @@ export function loadConfig(env = {}) {
   const secret = String(env.DOWNLOAD_HMAC_SECRET ?? '');
   if (secret.length < 32) return { enabled: false, reason: 'hmac_secret_not_set' };
   if (!env.STORE_KV) return { enabled: false, reason: 'kv_not_bound' };
+  if (!env.STORE_DB) return { enabled: false, reason: 'db_not_bound' };
   const int = (v, d, lo, hi) => { const n = v === undefined || v === '' ? d : Number(v); return Number.isInteger(n) && n >= lo && n <= hi ? n : d; };
   return {
     enabled: true,
@@ -71,7 +72,8 @@ export function loadConfig(env = {}) {
     asset: normalizeCoinType(SUI_USDC[net]),
     graphqlUrl: GRAPHQL[net],
     secret,
-    kv: env.STORE_KV,
+    kv: env.STORE_KV, // outbox + approximate IP rate limit only
+    db: env.STORE_DB, // D1: orders, amount holds, redemptions (strongly consistent)
     // Unique tag added to the price. Default: 1..9999 atomic units (< 1 cent, like Plumbline).
     // "Unique cents" mode for wallets/exchanges that cannot send 6 decimals: UNIT=10000, RANGE=99.
     tagUnit: BigInt(int(env.STORE_AMOUNT_TAG_UNIT, 1, 1, 10000)),
@@ -189,62 +191,100 @@ export function checkTx(cfg, order, tx, digest, nowMs) {
   return { ok: true, sender: tx.sender ?? null };
 }
 
-// ---------- KV-backed order flow ----------
-const K = {
-  order: (id) => `ord:${id}`,
-  amount: (net, a) => `amt:${net}:${a}`,
-  digest: (net, d) => `dig:${net}:${d}`,
-  ip: (h, hour) => `ip:${h}:${hour}`,
-  outbox: (ms, id, kind) => `outbox:${String(ms).padStart(14, '0')}:${id}:${kind}`,
-};
-const getJSON = async (kv, k) => { const v = await kv.get(k); return v ? JSON.parse(v) : null; };
+// ---------- Order flow: D1 for money-critical state, KV for outbox + rate limit ----------
+const outboxKey = (ms, id, kind) => `outbox:${String(ms).padStart(14, '0')}:${id}:${kind}`;
+const changes = (r) => Number(r?.meta?.changes ?? 0);
+const isConstraint = (e) => /UNIQUE|constraint|PRIMARY KEY/i.test(String(e?.message ?? e));
+const rowToOrder = (r) => r && ({
+  id: r.id, sku: r.sku, net: r.net, amountAtomic: r.amount_atomic, tokenHash: r.token_hash,
+  createdMs: Number(r.created_ms), expiresMs: Number(r.expires_ms), status: r.status, email: r.email,
+  attempts: Number(r.attempts), digest: r.digest, sender: r.sender, paidMs: r.paid_ms == null ? null : Number(r.paid_ms),
+});
+
+/** Atomically take a hold on (net, amount) unless a live hold exists. Returns true if this order got it. */
+async function holdAmount(cfg, amount, orderId, nowMs, holdUntilMs) {
+  const r = await cfg.db.prepare(
+    `INSERT INTO amount_holds (net, amount_atomic, order_id, hold_until_ms) VALUES (?1, ?2, ?3, ?4)
+     ON CONFLICT (net, amount_atomic) DO UPDATE SET order_id = excluded.order_id, hold_until_ms = excluded.hold_until_ms
+     WHERE amount_holds.hold_until_ms < ?5`,
+  ).bind(cfg.net, amount, orderId, holdUntilMs, nowMs).run();
+  return changes(r) === 1;
+}
 
 export async function createOrder(cfg, { sku, email, ipHash, nowMs = Date.now() }) {
   const p = bySku(sku);
-  if (!p) return { ok: false, status: 400, reason: 'unknown_product' };
+  if (!p || p.comingSoon) return { ok: false, status: 400, reason: 'unknown_product' };
   if (email !== undefined && email !== null && email !== '' && !/^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,24}$/i.test(String(email))) {
     return { ok: false, status: 400, reason: 'bad_email' };
   }
-  if (ipHash) {
-    const k = K.ip(ipHash, Math.floor(nowMs / 3_600_000));
+  if (ipHash) { // approximate (KV) limit; abuse brake, not a money guard
+    const k = `ip:${ipHash}:${Math.floor(nowMs / 3_600_000)}`;
     const n = Number((await cfg.kv.get(k)) ?? 0);
     if (n >= cfg.maxOrdersPerIpPerHour) return { ok: false, status: 429, reason: 'too_many_orders' };
     await cfg.kv.put(k, String(n + 1), { expirationTtl: 3700 });
   }
   const base = decimalToAtomic(p.priceUsdc);
-  const holdSec = cfg.ttlSec + cfg.graceSec + 3600; // amount not reissued until well after the window
-  let amount = null;
-  for (let i = 0; i < 12 && amount === null; i++) {
-    const a = base + BigInt(randomTag(cfg.tagRange)) * cfg.tagUnit;
-    if (!(await cfg.kv.get(K.amount(cfg.net, a.toString())))) amount = a;
-  }
-  if (amount === null) return { ok: false, status: 503, reason: 'busy_try_again' };
   const id = newOrderId();
   const token = newToken();
-  const order = {
-    v: 1, id, sku: p.sku, net: cfg.net, amountAtomic: amount.toString(),
-    tokenHash: await sha256Hex(token), createdMs: nowMs, expiresMs: nowMs + cfg.ttlSec * 1000,
-    status: 'open', email: email || null, attempts: 0,
-  };
-  await cfg.kv.put(K.amount(cfg.net, amount.toString()), id, { expirationTtl: holdSec });
-  await cfg.kv.put(K.order(id), JSON.stringify(order), { expirationTtl: 90 * 86400 });
+  const expiresMs = nowMs + cfg.ttlSec * 1000;
+  const holdUntil = expiresMs + (cfg.graceSec + 3600) * 1000; // amount not reissued until well after the window
+  let amount = null;
+  // 8 random picks, then a bounded linear probe from a random start (like Plumbline's fallback scan).
+  const tagAt = (k) => (base + BigInt(k) * cfg.tagUnit).toString();
+  for (let i = 0; i < 8 && amount === null; i++) {
+    const a = tagAt(randomTag(cfg.tagRange));
+    if (await holdAmount(cfg, a, id, nowMs, holdUntil)) amount = a;
+  }
+  const start = randomTag(cfg.tagRange);
+  for (let j = 0; j < Math.min(cfg.tagRange, 64) && amount === null; j++) {
+    const a = tagAt(((start - 1 + j) % cfg.tagRange) + 1);
+    if (await holdAmount(cfg, a, id, nowMs, holdUntil)) amount = a;
+  }
+  if (amount === null) return { ok: false, status: 503, reason: 'busy_try_again' };
+  await cfg.db.prepare(
+    `INSERT INTO orders (id, sku, net, amount_atomic, token_hash, created_ms, expires_ms, status, email, attempts)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'open', ?8, 0)`,
+  ).bind(id, p.sku, cfg.net, amount, await sha256Hex(token), nowMs, expiresMs, email || null).run();
   return {
     ok: true,
     order: {
       orderId: id, token, sku: p.sku, product: p.name, network: `sui:${cfg.net}`,
-      payTo: cfg.payTo, coinType: cfg.asset, amount: atomicToDecimal(amount), amountAtomic: amount.toString(),
-      expiresAt: new Date(order.expiresMs).toISOString(),
-      howToPay: `Send EXACTLY ${atomicToDecimal(amount)} USDC on Sui ${cfg.net} to ${cfg.payTo} in one transaction before ${new Date(order.expiresMs).toISOString()}. Any other amount will not match. Keep your order token private.`,
+      payTo: cfg.payTo, coinType: cfg.asset, amount: atomicToDecimal(amount), amountAtomic: amount,
+      expiresAt: new Date(expiresMs).toISOString(),
+      howToPay: `Send EXACTLY ${atomicToDecimal(amount)} USDC on Sui ${cfg.net} to ${cfg.payTo} in one transaction before ${new Date(expiresMs).toISOString()}. Any other amount will not match. Keep your order token private.`,
     },
   };
 }
 
+async function loadOrder(cfg, id) {
+  return rowToOrder(await cfg.db.prepare('SELECT * FROM orders WHERE id = ?1').bind(id).first());
+}
 async function authOrder(cfg, orderId, token) {
   if (!ORDER_RE.test(orderId ?? '') || !TOKEN_RE.test(token ?? '')) return { err: 'bad_order_or_token' };
-  const o = await getJSON(cfg.kv, K.order(orderId));
+  const o = await loadOrder(cfg, orderId);
   if (!o || o.net !== cfg.net) return { err: 'unknown_order' };
   if (!safeEqual(o.tokenHash, await sha256Hex(token))) return { err: 'unknown_order' }; // do not reveal existence
   return { o };
+}
+const digestOwner = async (cfg, d) => (await cfg.db.prepare('SELECT order_id FROM redemptions WHERE net = ?1 AND digest = ?2').bind(cfg.net, d).first())?.order_id ?? null;
+
+/**
+ * Atomic redeem: one D1 batch (a transaction) inserts the redemption (PRIMARY KEY (net, digest),
+ * UNIQUE order_id) and flips the order open -> paid. If another request already used the digest or
+ * paid the order, the INSERT violates a constraint and the whole batch rolls back.
+ */
+async function redeem(cfg, o, digest, sender, nowMs) {
+  try {
+    const [, upd] = await cfg.db.batch([
+      cfg.db.prepare('INSERT INTO redemptions (net, digest, order_id, redeemed_ms) VALUES (?1, ?2, ?3, ?4)').bind(cfg.net, digest, o.id, nowMs),
+      cfg.db.prepare(`UPDATE orders SET status = 'paid', digest = ?1, sender = ?2, paid_ms = ?3 WHERE id = ?4 AND status = 'open'`).bind(digest, sender, nowMs, o.id),
+    ]);
+    if (changes(upd) !== 1) throw new Error('constraint: order not open'); // unreachable in practice: UNIQUE order_id fires first
+    return true;
+  } catch (e) {
+    if (isConstraint(e)) return false;
+    throw e;
+  }
 }
 
 export async function verifyOrder(cfg, { orderId, token, digest, nowMs = Date.now(), fetchImpl = fetch }) {
@@ -252,26 +292,28 @@ export async function verifyOrder(cfg, { orderId, token, digest, nowMs = Date.no
   if (err) return { ok: false, status: 404, reason: err };
   if (o.status === 'paid') return { ok: true, alreadyPaid: true, ...(await deliver(cfg, o, nowMs)) };
   if (nowMs > o.expiresMs + cfg.graceSec * 1000) return { ok: false, status: 410, reason: 'order_window_closed' };
-  if (o.attempts >= 60) return { ok: false, status: 429, reason: 'too_many_attempts' };
   if (digest !== undefined && digest !== '' && !DIGEST_RE.test(digest)) return { ok: false, status: 400, reason: 'invalid_digest_format' };
-
-  o.attempts++;
-  await cfg.kv.put(K.order(o.id), JSON.stringify(o), { expirationTtl: 90 * 86400 });
+  // Atomic attempt counter (cap 60).
+  const inc = await cfg.db.prepare('UPDATE orders SET attempts = attempts + 1 WHERE id = ?1 AND attempts < 60').bind(o.id).run();
+  if (changes(inc) !== 1) return { ok: false, status: 429, reason: 'too_many_attempts' };
   try {
     const chain = await fetchChainId(cfg, fetchImpl);
     if (chain !== CHAIN_ID[cfg.net]) return { ok: false, status: 502, reason: 'rpc_wrong_chain', retryable: true };
     const candidates = digest ? [digest] : (await recentDigests(cfg, fetchImpl)).reverse();
     let last = { ok: false, reason: 'payment_not_found_yet', retryable: true };
     for (const d of candidates) {
-      if (await cfg.kv.get(K.digest(cfg.net, d))) { if (digest) last = { ok: false, reason: 'digest_already_used' }; continue; }
+      const owner = await digestOwner(cfg, d);
+      if (owner === o.id) { const now = await loadOrder(cfg, o.id); return { ok: true, alreadyPaid: true, ...(await deliver(cfg, now, nowMs)) }; }
+      if (owner) { if (digest) last = { ok: false, reason: 'digest_already_used' }; continue; }
       const tx = await fetchTx(cfg, d, fetchImpl);
       const r = checkTx(cfg, o, tx, d, nowMs);
       if (!r.ok) { if (digest) last = r; continue; } // auto-detect: other people's txs are just skipped
-      // Re-check after the awaits (KV is eventually consistent; see STORE-PLAN security review).
-      if (await cfg.kv.get(K.digest(cfg.net, d))) return { ok: false, status: 409, reason: 'digest_already_used' };
-      await cfg.kv.put(K.digest(cfg.net, d), o.id); // permanent replay guard
+      if (!(await redeem(cfg, o, d, r.sender, nowMs))) {
+        const now = await loadOrder(cfg, o.id); // lost a race: maybe our own parallel request won
+        if (now?.status === 'paid' && now.digest === d) return { ok: true, alreadyPaid: true, ...(await deliver(cfg, now, nowMs)) };
+        return { ok: false, status: 409, reason: 'digest_already_used' };
+      }
       Object.assign(o, { status: 'paid', digest: d, sender: r.sender, paidMs: nowMs });
-      await cfg.kv.put(K.order(o.id), JSON.stringify(o), { expirationTtl: 400 * 86400 });
       await writeOutbox(cfg, o, nowMs);
       return { ok: true, ...(await deliver(cfg, o, nowMs)) };
     }
@@ -300,19 +342,19 @@ export function receiptDraft(cfg, o) {
     requiresApproval: 'sajan',
     createdAt: new Date(o.paidMs).toISOString(),
     order: { id: o.id, sku: o.sku, product: p?.name, amountUsdc: atomicToDecimal(o.amountAtomic), network: `sui:${o.net}`, digest: o.digest, payer: o.sender },
-    customer: { email: o.email }, // null when the buyer gave none
+    customer: { email: o.email },
     draft: o.email ? {
       to: o.email,
       from: 'hello@thespicemelange.org',
       subject: `Your receipt: ${p?.name} (${o.id})`,
-      text: `PLACEHOLDER (Hwi drafts, Sajan approves). Thanks for your order ${o.id}. Paid ${atomicToDecimal(o.amountAtomic)} USDC on Sui ${o.net}, tx ${o.digest}. Your download link was shown at checkout; reply to this email if you need a fresh one. Educational material only; not financial advice.`,
+      text: `PLACEHOLDER (Hwi drafts, Sajan approves). Thanks for your order ${o.id}. Paid ${atomicToDecimal(o.amountAtomic)} USDC on Sui ${o.net}, tx ${o.digest}. Your download link was shown at checkout; reply to this email if you need a fresh one. All sales final, except where the law requires otherwise. Educational material only; not financial advice.`,
     } : null,
     onboarding: { sequence: o.sku, step: 1, status: 'draft' },
   };
 }
 export async function writeOutbox(cfg, o, nowMs) {
   const doc = receiptDraft(cfg, o);
-  await cfg.kv.put(K.outbox(nowMs, o.id, 'receipt'), JSON.stringify(doc), { expirationTtl: 60 * 86400 });
+  await cfg.kv.put(outboxKey(nowMs, o.id, 'receipt'), JSON.stringify(doc), { expirationTtl: 60 * 86400 });
   if (cfg.webhookUrl && cfg.webhookSecret) {
     const body = JSON.stringify(doc);
     const ts = Math.floor(nowMs / 1000);

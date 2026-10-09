@@ -18,3 +18,12 @@ SUI_NETWORK = "testnet"
 [[env.preview.kv_namespaces]]
 binding = "STORE_KV"
 id = "20d393d0a08440a7b391b7b64e9aea4c" # spicemelange-store-preview (orders, amounts, digests, outbox)
+
+[[env.preview.kv_namespaces]]
+binding = "STORE_FILES"
+id = "12b066b74257488f913cf69f73c3b8d8" # spicemelange-store-files-preview (private product zips)
+
+[[env.preview.d1_databases]]
+binding = "STORE_DB"
+database_name = "spicemelange-store-preview"
+database_id = "c03d4c24-3cba-43a8-857d-5f8d3c5b7415" # orders, amount_holds, redemptions (migrations/0001_store.sql)

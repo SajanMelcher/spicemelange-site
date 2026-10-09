@@ -1,0 +1,47 @@
+---
+import Base from '../../layouts/Base.astro';
+import Disclaimer from '../../components/Disclaimer.astro';
+import Checkout from '../../components/Checkout.astro';
+import Glyph from '../../components/Glyph.astro';
+import { CATALOG, ARCHETYPES } from '../../../store-core/catalog.js';
+import { SITE } from '../../data/site';
+export function getStaticPaths() {
+  return CATALOG.filter((p) => !p.comingSoon).map((p) => ({ params: { sku: p.sku }, props: { p } }));
+}
+const { p } = Astro.props;
+const others = ARCHETYPES.filter((a) => a.sku !== p.sku);
+---
+<Base title={`${p.name}: ${p.role}`} noindex description={`${p.name} (${p.role}): ${p.blurb}`}>
+  <section class="container-x pt-14 pb-6">
+    <a href="/store/" class="text-sm text-ibad-300 no-underline hover:underline">← All archetypes</a>
+    <div class="mt-6 grid gap-10 md:grid-cols-[1.4fr_1fr]">
+      <div class="min-w-0">
+        <div class="flex items-center gap-3 text-spice-300"><Glyph name={p.glyph} class="h-14 w-14" /><p class="eyebrow">{p.role}</p></div>
+        <h1 class="mt-4 text-5xl leading-tight text-sand-50 sm:text-6xl">{p.name}</h1>
+        <p class="mt-3 font-serif text-2xl italic text-sand-300/90">{p.quote}</p>
+        <p class="mt-5 max-w-2xl text-lg leading-relaxed text-sand-200/90">{p.blurb}</p>
+        <h2 class="mt-10 text-2xl text-sand-50">What it does well</h2>
+        <ul class="mt-3 space-y-2 text-sand-200/85">{p.highlights.map((h) => <li class="flex gap-3"><span class="text-spice-400">◆</span>{h}</li>)}</ul>
+        <h2 class="mt-10 text-2xl text-sand-50">In the ZIP</h2>
+        <ul class="mt-3 grid gap-2 text-sm text-sand-200/85 sm:grid-cols-2">{p.includes.map((i) => <li class="card !p-3">{i}</li>)}</ul>
+        {!p.bundle && (
+          <>
+            <h2 class="mt-10 text-2xl text-sand-50">Works with</h2>
+            <p class="mt-2 text-sm text-sand-300/80">Each template stands alone, or slots into the full desk with defined hand-offs.</p>
+            <ul class="mt-3 flex flex-wrap gap-2 text-sm">{others.map((o) => <li><a href={`/store/${o.sku}/`} class="inline-block rounded-full border border-sand-200/20 px-3 py-1 text-sand-200/85 no-underline hover:border-ibad-400 hover:text-ibad-300">{o.name} · {o.role}</a></li>)}</ul>
+          </>
+        )}
+      </div>
+      <aside class="card h-fit md:sticky md:top-24">
+        <p><span class="font-serif text-5xl text-spice-300">${p.priceUsdc}</span> <span class="text-sm text-sand-300/70">USDC on Sui</span></p>
+        {p.placeholder && <p class="mt-2 rounded bg-spice-700/30 px-2 py-1 text-xs text-spice-300">PLACEHOLDER price for Sajan</p>}
+        <p class="mt-3 text-sm text-sand-300/80">{p.format} · instant download after on-chain confirmation</p>
+        <button type="button" class="btn-primary buy-btn mt-5 w-full" data-sku={p.sku} data-name={p.name}>Buy with USDC</button>
+        <p class="mt-3 text-xs text-sand-300/70">Preview runs on Sui testnet. All sales final, except where the law requires otherwise. Help: <a class="text-ibad-300" href={`mailto:${SITE.email}`}>{SITE.email}</a></p>
+        <p class="mt-3 text-xs text-sand-300/70">Works with any agent platform that takes a system prompt and files. Guardrails ship as editable defaults: no leverage, a daily loss cap, and human approval for every send and trade.</p>
+      </aside>
+    </div>
+    <Disclaimer class="mt-12" />
+  </section>
+  <Checkout />
+</Base>
