@@ -6,3 +6,4 @@ dist/
 
 # P30 product files: private, never committed or published
 products-private/
+dist-walrus/

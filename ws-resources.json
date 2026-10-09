@@ -1,0 +1,52 @@
+{
+  "headers": {
+    "/404.html": {
+      "Cache-Control": "public, max-age=300",
+      "Content-Type": "text/html; charset=utf-8"
+    },
+    "/dashboard/index.html": {
+      "Cache-Control": "public, max-age=300",
+      "Content-Type": "text/html; charset=utf-8"
+    },
+    "/data/deepbook-snapshot.json": {
+      "Cache-Control": "no-cache",
+      "Content-Type": "application/json"
+    },
+    "/desk/index.html": {
+      "Cache-Control": "public, max-age=300",
+      "Content-Type": "text/html; charset=utf-8"
+    },
+    "/index.html": {
+      "Cache-Control": "public, max-age=300",
+      "Content-Type": "text/html; charset=utf-8"
+    },
+    "/join/index.html": {
+      "Cache-Control": "public, max-age=300",
+      "Content-Type": "text/html; charset=utf-8"
+    },
+    "/plumbline/index.html": {
+      "Cache-Control": "public, max-age=300",
+      "Content-Type": "text/html; charset=utf-8"
+    }
+  },
+  "routes": {
+    "/dashboard": "/dashboard/index.html",
+    "/dashboard/*": "/dashboard/index.html",
+    "/desk": "/desk/index.html",
+    "/desk/*": "/desk/index.html",
+    "/join": "/join/index.html",
+    "/join/*": "/join/index.html",
+    "/plumbline": "/plumbline/index.html",
+    "/plumbline/*": "/plumbline/index.html"
+  },
+  "metadata": {
+    "link": "https://spicemelange.wal.app",
+    "image_url": null,
+    "description": "Spice Melange: Walrus Sites mirror of thespicemelange.org",
+    "project_url": "https://thespicemelange.org",
+    "creator": "Spice Melange"
+  },
+  "site_name": "Spice Melange",
+  "object_id": "0xcfe0bcaaf3a1900cdcc861a8f31233a2aa27859369b5bb0c4cf321904368e9db",
+  "ignore": []
+}
