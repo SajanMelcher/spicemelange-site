@@ -240,3 +240,13 @@ test('selftest SKU: hidden, needs the secret flag, 0.05 + tag, 3 h expiry, inlin
   const f = await loadFile({}, 'selftest');
   assert.match(f.body, /self-test/); assert.equal(f.type.startsWith('text/plain'), true);
 });
+
+test("catalog: Leto's Secret Journals listed at 50, bundle stays 250", async () => {
+  const { bySku, ARCHETYPES } = await import('../store-core/catalog.js');
+  assert.equal(bySku('leto-journals').priceUsdc, '50'); assert.equal(bySku('leto-journals').file, 'file:leto-journals');
+  assert.ok(ARCHETYPES.some((p) => p.sku === 'leto-journals'));
+  assert.equal(bySku('full-desk').priceUsdc, '250');
+  const cfg = loadConfig(env());
+  const r = await createOrder(cfg, { sku: 'leto-journals', nowMs: T0 });
+  assert.ok(BigInt(r.order.amountAtomic) > 50_000_000n && BigInt(r.order.amountAtomic) < 50_010_000n);
+});
