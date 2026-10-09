@@ -1,0 +1,38 @@
+# TO ENABLE: copy to .github/workflows/deploy.yml via the GitHub web UI (the box token lacks the `workflow` scope),
+# then add repo secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID.
+# Auto-deploy thespicemelange.org on every push to main (Cloudflare Pages, direct upload).
+# Needs repo secrets CLOUDFLARE_API_TOKEN (scope: Account > Cloudflare Pages > Edit) and
+# CLOUDFLARE_ACCOUNT_ID. Until they exist, the deploy step is skipped and the job stays green.
+name: Deploy to Cloudflare Pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pages-production
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      HAS_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:store
+      - run: npm run build
+      - name: Deploy (production)
+        if: env.HAS_TOKEN == 'true'
+        run: npx --yes wrangler@4 pages deploy dist --project-name spicemelange-site --branch main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: No token yet
+        if: env.HAS_TOKEN != 'true'
+        run: echo "::notice::CLOUDFLARE_API_TOKEN not set; skipped deploy. Use npm run deploy from the box."

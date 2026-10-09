@@ -1,0 +1,118 @@
+---
+// Shared Sui USDC checkout dialog (store index + detail pages). Buttons: .buy-btn[data-sku][data-name]
+---
+  <dialog id="checkout" class="m-auto w-[min(36rem,calc(100vw-2rem))] rounded-2xl border border-sand-200/15 bg-night-900 p-0 text-sand-100 backdrop:bg-night-950/80">
+    <form method="dialog" class="flex items-center justify-between border-b border-sand-200/10 px-5 py-3">
+      <h2 id="co-title" class="text-xl text-sand-50">Checkout</h2>
+      <button class="btn-ghost !min-h-9 !px-3 !py-1" aria-label="Close">Close</button>
+    </form>
+    <div class="space-y-4 p-5 text-sm" aria-live="polite">
+      <div id="co-step1">
+        <label class="block text-sand-200/85" for="co-email">Email for your receipt (optional)</label>
+        <input id="co-email" type="email" autocomplete="email" class="mt-1 w-full rounded-lg border border-sand-200/20 bg-night-950 px-3 py-2" placeholder="you@example.com" />
+        <p class="mt-1 text-xs text-sand-300/70">Used only to send your receipt after review. Leave blank to stay anonymous.</p>
+        <button id="co-create" type="button" class="btn-primary mt-4">Get my exact amount</button>
+      </div>
+      <div id="co-step2" hidden>
+        <p>Order <code id="co-id" class="text-spice-300"></code> on <span id="co-net"></span>. Send <strong>exactly</strong>:</p>
+        <p class="flex items-center gap-2"><code id="co-amount" class="font-serif text-3xl text-spice-300"></code> <span>USDC</span> <button type="button" class="btn-ghost !min-h-8 !px-3 !py-1 co-copy" data-target="co-amount">Copy</button></p>
+        <p class="text-xs text-sand-300/80">To this Sui address:</p>
+        <p class="flex items-start gap-2"><code id="co-payto" class="break-all text-xs text-ibad-300"></code> <button type="button" class="btn-ghost !min-h-8 shrink-0 !px-3 !py-1 co-copy" data-target="co-payto">Copy</button></p>
+        <p class="text-xs text-sand-300/80">Pay before <span id="co-exp"></span>. Any other amount will not match. Keep this tab open, or note your order ID and token below.</p>
+        <details class="text-xs text-sand-300/70"><summary class="cursor-pointer">Order token (private)</summary><code id="co-token" class="break-all"></code></details>
+        <label class="mt-3 block text-sand-200/85" for="co-digest">Transaction digest</label>
+        <input id="co-digest" class="mt-1 w-full rounded-lg border border-sand-200/20 bg-night-950 px-3 py-2 font-mono text-xs" placeholder="e.g. 9xQ…" autocomplete="off" spellcheck="false" />
+        <div class="mt-3 flex flex-wrap gap-2">
+          <button id="co-verify" type="button" class="btn-primary">Verify payment</button>
+          <button id="co-auto" type="button" class="btn-ghost">Find my payment</button>
+        </div>
+      </div>
+      <div id="co-done" hidden>
+        <p class="text-lg text-sand-50">Payment confirmed.</p>
+        <p class="mt-1 text-xs text-sand-300/70">All sales final, except where the law requires otherwise.</p>
+        <p class="mt-2"><a id="co-dl" class="btn-primary" href="#" rel="nofollow noopener">Download</a></p>
+        <p class="mt-2 text-xs text-sand-300/80">The link expires in 15 minutes. Come back to this page in the same browser to get a fresh link.</p>
+      </div>
+      <p id="co-msg" class="text-sm text-spice-300"></p>
+    </div>
+  </dialog>
+
+<script>
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+  const dlg = $('checkout') as HTMLDialogElement;
+  const msg = (t: string) => ($('co-msg').textContent = t);
+  let sku = '';
+  let order: any = null;
+  let polling = 0;
+  const KEY = 'sm-store-order';
+  const REASONS: Record<string, string> = {
+    store_not_open: 'Checkout is not open yet. Thanks for looking!',
+    store_misconfigured: 'Checkout is temporarily unavailable.',
+    too_many_orders: 'Too many orders from this connection. Try again in an hour.',
+    payment_not_found_yet: 'No matching payment yet. It can take a few seconds to appear.',
+    transaction_not_found: 'Transaction not found yet (or it is on another network). Try again in a few seconds.',
+    digest_already_used: 'That transaction was already used for an order.',
+    order_window_closed: 'This order expired. If you paid, email us with your order ID and digest.',
+    no_usdc_payment_to_store: 'That transaction did not send USDC to the store address.',
+    invalid_digest_format: 'That does not look like a Sui transaction digest.',
+  };
+  const say = (r: any) => msg(REASONS[r.reason] ?? (r.reason ? `Not yet: ${r.reason}` : 'Something went wrong.'));
+  async function api(path: string, body?: any) {
+    const res = await fetch(path, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {});
+    return res.json().catch(() => ({ ok: false, reason: 'network_error' }));
+  }
+  function showOrder(o: any) {
+    order = o;
+    sessionStorage.setItem(KEY, JSON.stringify({ orderId: o.orderId, token: o.token, sku: o.sku }));
+    $('co-step1').hidden = true; $('co-step2').hidden = false; $('co-done').hidden = true;
+    $('co-id').textContent = o.orderId; $('co-net').textContent = o.network === 'sui:mainnet' ? 'Sui mainnet (real USDC)' : `${o.network} (test network, no real money)`;
+    $('co-amount').textContent = o.amount; $('co-payto').textContent = o.payTo;
+    $('co-exp').textContent = new Date(o.expiresAt).toLocaleTimeString();
+    $('co-token').textContent = o.token;
+  }
+  function done(r: any) {
+    $('co-step1').hidden = true; $('co-step2').hidden = true; $('co-done').hidden = false;
+    ($('co-dl') as HTMLAnchorElement).href = r.downloadUrl; msg('');
+  }
+  document.querySelectorAll<HTMLButtonElement>('.buy-btn').forEach((b) => b.addEventListener('click', () => {
+    sku = b.dataset.sku!; $('co-title').textContent = b.dataset.name!;
+    $('co-step1').hidden = false; $('co-step2').hidden = true; $('co-done').hidden = true; msg('');
+    dlg.showModal();
+  }));
+  $('co-create').addEventListener('click', async () => {
+    msg('Creating order…');
+    const r = await api('/api/store/order', { sku, email: ($('co-email') as HTMLInputElement).value.trim() || undefined });
+    if (!r.ok) return say(r);
+    msg(''); showOrder(r.order);
+  });
+  async function verify(digest?: string) {
+    if (!order) return;
+    const r = await api('/api/store/verify', { orderId: order.orderId, token: order.token, digest });
+    if (r.ok) { done(r); return true; }
+    say(r); return !r.retryable;
+  }
+  $('co-verify').addEventListener('click', () => verify(($('co-digest') as HTMLInputElement).value.trim()));
+  $('co-auto').addEventListener('click', async () => {
+    if (polling) return;
+    msg('Looking for your payment…');
+    for (polling = 1; polling <= 20; polling++) { // at most 20 checks, 15 s apart
+      if (await verify()) break;
+      await new Promise((r) => setTimeout(r, 15000));
+    }
+    polling = 0;
+  });
+  document.querySelectorAll<HTMLButtonElement>('.co-copy').forEach((b) => b.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText($(b.dataset.target!).textContent ?? ''); b.textContent = 'Copied'; } catch { b.textContent = 'Select'; }
+    setTimeout(() => (b.textContent = 'Copy'), 1500);
+  }));
+  // Resume an order from this tab session (fresh link if already paid).
+  const saved = sessionStorage.getItem(KEY);
+  if (saved) {
+    const s = JSON.parse(saved);
+    fetch(`/api/store/order?id=${encodeURIComponent(s.orderId)}&token=${encodeURIComponent(s.token)}`).then((r) => r.json()).then((r) => {
+      if (!r.ok) return sessionStorage.removeItem(KEY);
+      order = { ...s };
+      if (r.status === 'paid') { dlg.showModal(); done(r); }
+    }).catch(() => {});
+  }
+</script>

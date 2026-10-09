@@ -1,0 +1,81 @@
+---
+// P30 store (live on mainnet 10/9; unlisted: no nav link, noindex, not in sitemap). The Spice Melange: Golden Path Desk archetype templates.
+import Base from '../../layouts/Base.astro';
+import SectionHead from '../../components/SectionHead.astro';
+import Disclaimer from '../../components/Disclaimer.astro';
+import Checkout from '../../components/Checkout.astro';
+import Glyph from '../../components/Glyph.astro';
+import { CATALOG, ARCHETYPES } from '../../../store-core/catalog.js';
+import { SITE } from '../../data/site';
+const bundle = CATALOG.find((p) => p.bundle);
+const soon = CATALOG.filter((p) => p.comingSoon);
+---
+<Base title="Store" noindex description="The Golden Path Desk: seven AI-agent templates, each an archetype from God Emperor of Dune, working together. Pay in USDC on Sui.">
+  <section class="container-x pt-16 pb-8" aria-labelledby="store-title">
+    <p class="eyebrow mb-4">The Golden Path Desk · agent templates</p>
+    <h1 id="store-title" class="text-5xl leading-tight text-sand-50 sm:text-6xl">Seven seats, one Golden Path</h1>
+    <p class="mt-5 max-w-2xl text-lg leading-relaxed text-sand-200/90">
+      Bot templates drawn from a working desk of AI agents. Each seat is an archetype from <em>God Emperor of Dune</em>, and they work together like the Ixians building the machinery: one front door, specialists who own their work, an independent truthsayer, and a human who approves every irreversible act.
+    </p>
+    <p class="mt-4 text-sm text-sand-300/80">Downloadable ZIP files · paid in USDC on Sui, wallet to wallet · instant delivery after on-chain confirmation.</p>
+  </section>
+
+  <section class="container-x py-6" aria-label="Archetype templates">
+    <ul class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {ARCHETYPES.map((p) => (
+        <li class="card group flex flex-col transition-colors hover:border-spice-500/40">
+          <div class="flex items-center gap-3 text-spice-300"><Glyph name={p.glyph} class="h-11 w-11" /><p class="eyebrow !tracking-[0.18em]">{p.role}</p></div>
+          <h2 class="mt-3 text-2xl text-sand-50"><a href={`/store/${p.sku}/`} class="no-underline hover:text-ibad-300">{p.name}</a></h2>
+          <p class="mt-1 font-serif text-lg italic text-sand-300/90">{p.quote}</p>
+          <p class="mt-3 text-sm leading-relaxed text-sand-200/85">{p.blurb}</p>
+          <div class="mt-auto flex items-center justify-between gap-3 pt-6">
+            <p><span class="font-serif text-3xl text-spice-300">${p.priceUsdc}</span> <span class="text-xs text-sand-300/70">USDC</span></p>
+            <div class="flex gap-2"><a class="btn-ghost !px-4" href={`/store/${p.sku}/`}>Details</a><button type="button" class="btn-primary buy-btn !px-4" data-sku={p.sku} data-name={p.name}>Buy</button></div>
+          </div>
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  {bundle && (
+    <section class="container-x py-8" aria-labelledby="bundle">
+      <div class="card grid gap-6 border-spice-500/30 md:grid-cols-[auto_1fr_auto] md:items-center">
+        <Glyph name={bundle.glyph} class="h-16 w-16 text-spice-300" />
+        <div>
+          <p class="eyebrow">Bundle</p>
+          <h2 id="bundle" class="mt-1 text-3xl text-sand-50"><a href={`/store/${bundle.sku}/`} class="no-underline hover:text-ibad-300">{bundle.name}</a></h2>
+          <p class="mt-2 max-w-2xl text-sm text-sand-200/85">{bundle.blurb}</p>
+        </div>
+        <div class="text-right">
+          <p><span class="font-serif text-4xl text-spice-300">${bundle.priceUsdc}</span> <span class="text-xs text-sand-300/70">USDC</span></p>
+          {bundle.placeholder && <p class="mt-1 rounded bg-spice-700/30 px-2 py-0.5 text-xs text-spice-300">PLACEHOLDER price for Sajan</p>}
+          <button type="button" class="btn-primary buy-btn mt-3" data-sku={bundle.sku} data-name={bundle.name}>Buy the full desk</button>
+        </div>
+      </div>
+    </section>
+  )}
+
+  {soon.length > 0 && (
+    <section class="container-x py-4" aria-label="Coming soon">
+      <ul class="grid gap-4 sm:grid-cols-2">{soon.map((p) => (
+        <li class="card flex items-center gap-4 !p-4 opacity-80"><Glyph name={p.glyph} class="h-9 w-9 text-ibad-300" /><div><p class="text-sand-50">{p.name} <span class="ml-2 rounded-full border border-ibad-400/40 px-2 py-0.5 text-xs text-ibad-300">Coming soon</span></p><p class="text-sm text-sand-300/80">{p.blurb}</p></div></li>
+      ))}</ul>
+    </section>
+  )}
+
+  <section class="container-x py-10" aria-labelledby="how">
+    <SectionHead id="how" eyebrow="How checkout works" title="Exact amount, on-chain proof" />
+    <ol class="grid gap-4 text-sm text-sand-200/85 md:grid-cols-4">
+      <li class="card !p-4"><strong class="text-sand-50">1. Order.</strong> You get an order ID and an exact USDC amount (a few extra micro-cents make it unique to you).</li>
+      <li class="card !p-4"><strong class="text-sand-50">2. Pay.</strong> Send exactly that amount of USDC on Sui from any wallet, in one transaction, within 30 minutes.</li>
+      <li class="card !p-4"><strong class="text-sand-50">3. Confirm.</strong> Paste the transaction digest, or let the page find your payment.</li>
+      <li class="card !p-4"><strong class="text-sand-50">4. Download.</strong> A private link valid for 15 minutes. Reopen your order in the same browser for a fresh one.</li>
+    </ol>
+    <p class="mt-6 max-w-3xl text-sm text-sand-300/80">
+      Digital downloads. <strong class="text-sand-100">All sales final, except where the law requires otherwise.</strong> Sent the wrong amount, or need help? Email <a class="text-ibad-300" href={`mailto:${SITE.email}`}>{SITE.email}</a> with your order ID.
+      Templates are educational tools: they give no personal advice and promise no returns.
+    </p>
+    <Disclaimer class="mt-6" />
+  </section>
+  <Checkout />
+</Base>

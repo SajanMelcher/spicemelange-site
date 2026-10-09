@@ -1,0 +1,43 @@
+# Cloudflare Pages config. PRODUCTION IS LIVE ON SUI MAINNET (Sajan, 10/9/2026 6:26 AM PT). Preview stays on testnet.
+# Secrets (set per env with `wrangler pages secret put ...` [--env preview], NEVER committed):
+#   DOWNLOAD_HMAC_SECRET (>= 32 chars), STORE_PAYTO (receive-only Sui address),
+#   STORE_SELFTEST_KEY (production; unlocks the hidden `selftest` SKU), optional HWI_WEBHOOK_URL + HWI_WEBHOOK_SECRET.
+# Mainnet needs SUI_NETWORK="mainnet" AND STORE_ALLOW_MAINNET="1" (Sajan's explicit OK only).
+name = "spicemelange-site"
+pages_build_output_dir = "./dist"
+compatibility_date = "2026-10-01"
+
+[vars]
+STORE_ENABLED = "1"
+SUI_NETWORK = "mainnet"
+STORE_ALLOW_MAINNET = "1"
+
+[[kv_namespaces]]
+binding = "STORE_KV"
+id = "8ce50b93050349ca9141a9759fddc50a" # spicemelange-store-prod (outbox, rate limit)
+
+[[kv_namespaces]]
+binding = "STORE_FILES"
+id = "78f18195d1fe4263ab84e9d8ecb7de92" # spicemelange-store-files-prod (private product zips)
+
+[[d1_databases]]
+binding = "STORE_DB"
+database_name = "spicemelange-store-prod"
+database_id = "cfe878af-064f-4e0d-81d3-aa08b19e2ceb" # orders, amount_holds, redemptions (migrations/0001_store.sql)
+
+[env.preview.vars]
+STORE_ENABLED = "1"
+SUI_NETWORK = "testnet"
+
+[[env.preview.kv_namespaces]]
+binding = "STORE_KV"
+id = "20d393d0a08440a7b391b7b64e9aea4c" # spicemelange-store-preview (orders, amounts, digests, outbox)
+
+[[env.preview.kv_namespaces]]
+binding = "STORE_FILES"
+id = "12b066b74257488f913cf69f73c3b8d8" # spicemelange-store-files-preview (private product zips)
+
+[[env.preview.d1_databases]]
+binding = "STORE_DB"
+database_name = "spicemelange-store-preview"
+database_id = "c03d4c24-3cba-43a8-857d-5f8d3c5b7415" # orders, amount_holds, redemptions (migrations/0001_store.sql)
