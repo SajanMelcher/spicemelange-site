@@ -1,0 +1,167 @@
+---
+// P30 store (branch `store`, NOT production). Prices and copy are PLACEHOLDERS for Sajan.
+import Base from '../layouts/Base.astro';
+import SectionHead from '../components/SectionHead.astro';
+import Disclaimer from '../components/Disclaimer.astro';
+import { CATALOG } from '../../store-core/catalog.js';
+import { SITE } from '../data/site';
+---
+<Base title="Store" noindex description="Digital tools and templates, paid in USDC on Sui. Preview: prices and copy are placeholders.">
+  <section class="container-x pt-16 pb-8" aria-labelledby="store-title">
+    <p class="eyebrow mb-4">Preview · Sui testnet only · not open</p>
+    <h1 id="store-title" class="text-5xl leading-tight text-sand-50 sm:text-6xl">Store</h1>
+    <p class="mt-5 max-w-2xl text-lg leading-relaxed text-sand-200/90">
+      Purpose-made templates and tools. Pay in USDC on Sui, wallet to wallet; your download unlocks as soon as the payment is confirmed on-chain.
+    </p>
+    <p class="mt-4 inline-block rounded-lg border border-spice-500/40 bg-spice-700/15 px-3 py-2 text-sm text-spice-300">
+      PLACEHOLDER prices and copy, pending Sajan's review. Test checkout runs on Sui <strong>testnet</strong>; no real money moves.
+    </p>
+  </section>
+
+  <section class="container-x py-6" aria-label="Products">
+    <ul class="grid gap-6 md:grid-cols-2">
+      {CATALOG.map((p) => (
+        <li class="card flex flex-col">
+          <div class="flex items-start justify-between gap-4">
+            <h2 class="text-2xl text-sand-50">{p.name}</h2>
+            <p class="shrink-0 text-right"><span class="font-serif text-3xl text-spice-300">${p.priceUsdc}</span><br /><span class="text-xs text-sand-300/70">USDC{p.placeholder && ' · placeholder'}</span></p>
+          </div>
+          <p class="mt-3 text-sm leading-relaxed text-sand-200/85">{p.blurb}</p>
+          <ul class="mt-4 list-disc space-y-1 pl-5 text-sm text-sand-200/80">{p.includes.map((i) => <li>{i}</li>)}</ul>
+          <p class="mt-3 text-xs text-sand-300/70">Format: {p.format} · Digital download</p>
+          <div class="mt-auto pt-6"><button type="button" class="btn-primary buy-btn" data-sku={p.sku} data-name={p.name}>Buy with USDC</button></div>
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <section class="container-x py-10" aria-labelledby="how">
+    <SectionHead id="how" eyebrow="How checkout works" title="Exact amount, on-chain proof" />
+    <ol class="grid gap-4 text-sm text-sand-200/85 md:grid-cols-4">
+      <li class="card !p-4"><strong class="text-sand-50">1. Order.</strong> You get an order ID and an exact USDC amount (a few extra micro-cents make it unique to you).</li>
+      <li class="card !p-4"><strong class="text-sand-50">2. Pay.</strong> Send exactly that amount of USDC on Sui from any wallet, in one transaction, within 30 minutes.</li>
+      <li class="card !p-4"><strong class="text-sand-50">3. Confirm.</strong> Paste the transaction digest, or let the page find your payment.</li>
+      <li class="card !p-4"><strong class="text-sand-50">4. Download.</strong> A private link valid for 15 minutes. Reopen your order any time for a fresh one.</li>
+    </ol>
+    <p class="mt-6 max-w-3xl text-sm text-sand-300/80">
+      Digital goods. Refunds: PLACEHOLDER policy for Sajan to set. Questions or a wrong amount sent: <a class="text-ibad-300" href={`mailto:${SITE.email}`}>{SITE.email}</a> with your order ID.
+      Products are educational tools; none gives personal advice or promises any return.
+    </p>
+    <Disclaimer class="mt-6" />
+  </section>
+
+  <dialog id="checkout" class="m-auto w-[min(36rem,calc(100vw-2rem))] rounded-2xl border border-sand-200/15 bg-night-900 p-0 text-sand-100 backdrop:bg-night-950/80">
+    <form method="dialog" class="flex items-center justify-between border-b border-sand-200/10 px-5 py-3">
+      <h2 id="co-title" class="text-xl text-sand-50">Checkout</h2>
+      <button class="btn-ghost !min-h-9 !px-3 !py-1" aria-label="Close">Close</button>
+    </form>
+    <div class="space-y-4 p-5 text-sm" aria-live="polite">
+      <div id="co-step1">
+        <label class="block text-sand-200/85" for="co-email">Email for your receipt (optional)</label>
+        <input id="co-email" type="email" autocomplete="email" class="mt-1 w-full rounded-lg border border-sand-200/20 bg-night-950 px-3 py-2" placeholder="you@example.com" />
+        <p class="mt-1 text-xs text-sand-300/70">Used only to send your receipt after review. Leave blank to stay anonymous.</p>
+        <button id="co-create" type="button" class="btn-primary mt-4">Get my exact amount</button>
+      </div>
+      <div id="co-step2" hidden>
+        <p>Order <code id="co-id" class="text-spice-300"></code> on <span id="co-net"></span>. Send <strong>exactly</strong>:</p>
+        <p class="flex items-center gap-2"><code id="co-amount" class="font-serif text-3xl text-spice-300"></code> <span>USDC</span> <button type="button" class="btn-ghost !min-h-8 !px-3 !py-1 co-copy" data-target="co-amount">Copy</button></p>
+        <p class="text-xs text-sand-300/80">To this Sui address:</p>
+        <p class="flex items-start gap-2"><code id="co-payto" class="break-all text-xs text-ibad-300"></code> <button type="button" class="btn-ghost !min-h-8 shrink-0 !px-3 !py-1 co-copy" data-target="co-payto">Copy</button></p>
+        <p class="text-xs text-sand-300/80">Pay before <span id="co-exp"></span>. Any other amount will not match. Keep this tab open, or note your order ID and token below.</p>
+        <details class="text-xs text-sand-300/70"><summary class="cursor-pointer">Order token (private)</summary><code id="co-token" class="break-all"></code></details>
+        <label class="mt-3 block text-sand-200/85" for="co-digest">Transaction digest</label>
+        <input id="co-digest" class="mt-1 w-full rounded-lg border border-sand-200/20 bg-night-950 px-3 py-2 font-mono text-xs" placeholder="e.g. 9xQ…" autocomplete="off" spellcheck="false" />
+        <div class="mt-3 flex flex-wrap gap-2">
+          <button id="co-verify" type="button" class="btn-primary">Verify payment</button>
+          <button id="co-auto" type="button" class="btn-ghost">Find my payment</button>
+        </div>
+      </div>
+      <div id="co-done" hidden>
+        <p class="text-lg text-sand-50">Payment confirmed.</p>
+        <p class="mt-2"><a id="co-dl" class="btn-primary" href="#" rel="nofollow noopener">Download</a></p>
+        <p class="mt-2 text-xs text-sand-300/80">The link expires in 15 minutes. Come back to this page in the same browser to get a fresh link.</p>
+      </div>
+      <p id="co-msg" class="text-sm text-spice-300"></p>
+    </div>
+  </dialog>
+</Base>
+
+<script>
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+  const dlg = $('checkout') as HTMLDialogElement;
+  const msg = (t: string) => ($('co-msg').textContent = t);
+  let sku = '';
+  let order: any = null;
+  let polling = 0;
+  const KEY = 'sm-store-order';
+  const REASONS: Record<string, string> = {
+    store_not_open: 'Checkout is not open yet. Thanks for looking!',
+    store_misconfigured: 'Checkout is temporarily unavailable.',
+    too_many_orders: 'Too many orders from this connection. Try again in an hour.',
+    payment_not_found_yet: 'No matching payment yet. It can take a few seconds to appear.',
+    transaction_not_found: 'Transaction not found yet (or it is on another network). Try again in a few seconds.',
+    digest_already_used: 'That transaction was already used for an order.',
+    order_window_closed: 'This order expired. If you paid, email us with your order ID and digest.',
+    no_usdc_payment_to_store: 'That transaction did not send USDC to the store address.',
+    invalid_digest_format: 'That does not look like a Sui transaction digest.',
+  };
+  const say = (r: any) => msg(REASONS[r.reason] ?? (r.reason ? `Not yet: ${r.reason}` : 'Something went wrong.'));
+  async function api(path: string, body?: any) {
+    const res = await fetch(path, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {});
+    return res.json().catch(() => ({ ok: false, reason: 'network_error' }));
+  }
+  function showOrder(o: any) {
+    order = o;
+    sessionStorage.setItem(KEY, JSON.stringify({ orderId: o.orderId, token: o.token, sku: o.sku }));
+    $('co-step1').hidden = true; $('co-step2').hidden = false; $('co-done').hidden = true;
+    $('co-id').textContent = o.orderId; $('co-net').textContent = o.network;
+    $('co-amount').textContent = o.amount; $('co-payto').textContent = o.payTo;
+    $('co-exp').textContent = new Date(o.expiresAt).toLocaleTimeString();
+    $('co-token').textContent = o.token;
+  }
+  function done(r: any) {
+    $('co-step1').hidden = true; $('co-step2').hidden = true; $('co-done').hidden = false;
+    ($('co-dl') as HTMLAnchorElement).href = r.downloadUrl; msg('');
+  }
+  document.querySelectorAll<HTMLButtonElement>('.buy-btn').forEach((b) => b.addEventListener('click', () => {
+    sku = b.dataset.sku!; $('co-title').textContent = b.dataset.name!;
+    $('co-step1').hidden = false; $('co-step2').hidden = true; $('co-done').hidden = true; msg('');
+    dlg.showModal();
+  }));
+  $('co-create').addEventListener('click', async () => {
+    msg('Creating order…');
+    const r = await api('/api/store/order', { sku, email: ($('co-email') as HTMLInputElement).value.trim() || undefined });
+    if (!r.ok) return say(r);
+    msg(''); showOrder(r.order);
+  });
+  async function verify(digest?: string) {
+    if (!order) return;
+    const r = await api('/api/store/verify', { orderId: order.orderId, token: order.token, digest });
+    if (r.ok) { done(r); return true; }
+    say(r); return !r.retryable;
+  }
+  $('co-verify').addEventListener('click', () => verify(($('co-digest') as HTMLInputElement).value.trim()));
+  $('co-auto').addEventListener('click', async () => {
+    if (polling) return;
+    msg('Looking for your payment…');
+    for (polling = 1; polling <= 20; polling++) { // at most 20 checks, 15 s apart
+      if (await verify()) break;
+      await new Promise((r) => setTimeout(r, 15000));
+    }
+    polling = 0;
+  });
+  document.querySelectorAll<HTMLButtonElement>('.co-copy').forEach((b) => b.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText($(b.dataset.target!).textContent ?? ''); b.textContent = 'Copied'; } catch { b.textContent = 'Select'; }
+    setTimeout(() => (b.textContent = 'Copy'), 1500);
+  }));
+  // Resume an order from this tab session (fresh link if already paid).
+  const saved = sessionStorage.getItem(KEY);
+  if (saved) {
+    const s = JSON.parse(saved);
+    fetch(`/api/store/order?id=${encodeURIComponent(s.orderId)}&token=${encodeURIComponent(s.token)}`).then((r) => r.json()).then((r) => {
+      if (!r.ok) return sessionStorage.removeItem(KEY);
+      order = { ...s };
+      if (r.status === 'paid') { dlg.showModal(); done(r); }
+    }).catch(() => {});
+  }
+</script>

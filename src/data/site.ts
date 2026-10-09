@@ -21,6 +21,7 @@ export const NAV = [
   { href: '/plumbline/', label: 'Plumbline' },
   { href: '/dashboard/', label: 'Live DeepBook' },
   { href: '/desk/', label: 'The Desk' },
+  { href: '/store/', label: 'Store' },
 ];
 
 export const DISCLAIMER =

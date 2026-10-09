@@ -3,8 +3,8 @@ import '../styles/global.css';
 import Sigil from '../components/Sigil.astro';
 import Eye from '../components/Eye.astro';
 import { SITE, NAV, DISCLAIMER, mailto } from '../data/site';
-interface Props { title?: string; description?: string }
-const { title, description = 'The Spice Melange: a patient bitcoin desk on the Golden Path. Education, open tools for DeepBook on Sui, and a small team of agents.' } = Astro.props;
+interface Props { title?: string; description?: string; noindex?: boolean }
+const { title, noindex = false, description = 'The Spice Melange: a patient bitcoin desk on the Golden Path. Education, open tools for DeepBook on Sui, and a small team of agents.' } = Astro.props;
 const fullTitle = title ? `${title} · ${SITE.name}` : `${SITE.name} · The Spice Must Flow`;
 const path = Astro.url.pathname.replace(/\/?$/, '/');
 const canonical = new URL(Astro.url.pathname, SITE.url).href;
@@ -17,6 +17,7 @@ const canonical = new URL(Astro.url.pathname, SITE.url).href;
   <title>{fullTitle}</title>
   <meta name="description" content={description} />
   <link rel="canonical" href={canonical} />
+  {noindex && <meta name="robots" content="noindex, nofollow" />}
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <meta name="theme-color" content="#070914" />
   <meta property="og:type" content="website" />

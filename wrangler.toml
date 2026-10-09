@@ -1,0 +1,20 @@
+# Cloudflare Pages config (branch `store`). Production stays OFF: STORE_ENABLED="0", no KV, no secrets.
+# Secrets (set with `wrangler pages secret put ... --env preview`, NEVER committed):
+#   DOWNLOAD_HMAC_SECRET (>= 32 chars), STORE_PAYTO (receive-only Sui address),
+#   optional HWI_WEBHOOK_URL + HWI_WEBHOOK_SECRET.
+# Mainnet needs SUI_NETWORK="mainnet" AND STORE_ALLOW_MAINNET="1" (Sajan's explicit OK only).
+name = "spicemelange-site"
+pages_build_output_dir = "./dist"
+compatibility_date = "2026-10-01"
+
+[vars]
+STORE_ENABLED = "0"
+SUI_NETWORK = "testnet"
+
+[env.preview.vars]
+STORE_ENABLED = "1"
+SUI_NETWORK = "testnet"
+
+[[env.preview.kv_namespaces]]
+binding = "STORE_KV"
+id = "20d393d0a08440a7b391b7b64e9aea4c" # spicemelange-store-preview (orders, amounts, digests, outbox)
