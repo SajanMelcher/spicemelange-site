@@ -9,7 +9,8 @@ export async function onRequestPost(context) {
   if (!sameOrigin(context.request)) return json(403, { ok: false, reason: 'bad_origin' });
   const b = await readJson(context.request);
   if (!b) return json(400, { ok: false, reason: 'bad_request' });
-  const r = await createOrder(cfg, { sku: String(b.sku ?? ''), email: b.email ? String(b.email).trim() : null, ipHash: await ipHash(context.request, cfg.secret) });
+  const selftestKey = new URL(context.request.url).searchParams.get('selftest') ?? undefined;
+  const r = await createOrder(cfg, { sku: String(b.sku ?? ''), email: b.email ? String(b.email).trim() : null, ipHash: await ipHash(context.request, cfg.secret), selftestKey });
   return json(r.ok ? 201 : r.status, r);
 }
 export async function onRequestGet(context) {

@@ -6,7 +6,7 @@ import Glyph from '../../components/Glyph.astro';
 import { CATALOG, ARCHETYPES } from '../../../store-core/catalog.js';
 import { SITE } from '../../data/site';
 export function getStaticPaths() {
-  return CATALOG.filter((p) => !p.comingSoon).map((p) => ({ params: { sku: p.sku }, props: { p } }));
+  return CATALOG.filter((p) => !p.comingSoon && !p.hidden).map((p) => ({ params: { sku: p.sku }, props: { p } }));
 }
 const { p } = Astro.props;
 const others = ARCHETYPES.filter((a) => a.sku !== p.sku);
@@ -37,7 +37,7 @@ const others = ARCHETYPES.filter((a) => a.sku !== p.sku);
         {p.placeholder && <p class="mt-2 rounded bg-spice-700/30 px-2 py-1 text-xs text-spice-300">PLACEHOLDER price for Sajan</p>}
         <p class="mt-3 text-sm text-sand-300/80">{p.format} · instant download after on-chain confirmation</p>
         <button type="button" class="btn-primary buy-btn mt-5 w-full" data-sku={p.sku} data-name={p.name}>Buy with USDC</button>
-        <p class="mt-3 text-xs text-sand-300/70">Preview runs on Sui testnet. All sales final, except where the law requires otherwise. Help: <a class="text-ibad-300" href={`mailto:${SITE.email}`}>{SITE.email}</a></p>
+        <p class="mt-3 text-xs text-sand-300/70">USDC on Sui only. All sales final, except where the law requires otherwise. Help: <a class="text-ibad-300" href={`mailto:${SITE.email}`}>{SITE.email}</a></p>
         <p class="mt-3 text-xs text-sand-300/70">Works with any agent platform that takes a system prompt and files. Guardrails ship as editable defaults: no leverage, a daily loss cap, and human approval for every send and trade.</p>
       </aside>
     </div>

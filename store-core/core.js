@@ -83,6 +83,7 @@ export function loadConfig(env = {}) {
     skewSec: int(env.STORE_CLOCK_SKEW_SEC, 60, 0, 300),
     linkTtlSec: int(env.STORE_LINK_TTL_SEC, 900, 60, 86400), // download link lifetime
     maxOrdersPerIpPerHour: int(env.STORE_MAX_ORDERS_PER_IP_HOUR, 6, 1, 100),
+    selftestKey: String(env.STORE_SELFTEST_KEY ?? '').length >= 24 ? String(env.STORE_SELFTEST_KEY) : null,
     webhookUrl: String(env.HWI_WEBHOOK_URL ?? '').trim() || null,
     webhookSecret: String(env.HWI_WEBHOOK_SECRET ?? '') || null,
   };
@@ -211,9 +212,13 @@ async function holdAmount(cfg, amount, orderId, nowMs, holdUntilMs) {
   return changes(r) === 1;
 }
 
-export async function createOrder(cfg, { sku, email, ipHash, nowMs = Date.now() }) {
+export async function createOrder(cfg, { sku, email, ipHash, selftestKey, nowMs = Date.now() }) {
   const p = bySku(sku);
   if (!p || p.comingSoon) return { ok: false, status: 400, reason: 'unknown_product' };
+  // Hidden SKUs behave exactly like unknown ones unless the secret flag matches.
+  if (p.hidden && !(cfg.selftestKey && typeof selftestKey === 'string' && safeEqual(selftestKey, cfg.selftestKey))) {
+    return { ok: false, status: 400, reason: 'unknown_product' };
+  }
   if (email !== undefined && email !== null && email !== '' && !/^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,24}$/i.test(String(email))) {
     return { ok: false, status: 400, reason: 'bad_email' };
   }
@@ -226,7 +231,7 @@ export async function createOrder(cfg, { sku, email, ipHash, nowMs = Date.now() 
   const base = decimalToAtomic(p.priceUsdc);
   const id = newOrderId();
   const token = newToken();
-  const expiresMs = nowMs + cfg.ttlSec * 1000;
+  const expiresMs = nowMs + (p.ttlSec ?? cfg.ttlSec) * 1000; // per-SKU override (selftest: 3 h)
   const holdUntil = expiresMs + (cfg.graceSec + 3600) * 1000; // amount not reissued until well after the window
   let amount = null;
   // 8 random picks, then a bounded linear probe from a random start (like Plumbline's fallback scan).

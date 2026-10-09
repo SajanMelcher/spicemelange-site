@@ -4,7 +4,9 @@
 import { bySku } from './catalog.js';
 export async function loadFile(env, sku) {
   const p = bySku(sku);
-  if (!p || p.comingSoon || !p.file) return null;
+  if (!p || p.comingSoon) return null;
+  if (p.inline) return { body: p.inline.text, name: p.inline.name, type: 'text/plain; charset=utf-8' };
+  if (!p.file) return null;
   const kv = env.STORE_FILES;
   if (kv) {
     const { value, metadata } = await kv.getWithMetadata(p.file, { type: 'arrayBuffer' });

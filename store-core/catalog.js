@@ -35,7 +35,7 @@ export const CATALOG = [
     blurb: 'Builds the connectors, dashboards and archives the desk runs on: read-only first, paper mode before live, tests for the boring failures, and secret scans before every push.',
     highlights: ['Branch, test, preview, release', 'Paper mode first', 'Secret hygiene'] }),
   { sku: 'full-desk', name: 'The Full Desk', role: 'All seven archetypes', glyph: 'sigil', bundle: true,
-    priceUsdc: '250', placeholder: true, // PLACEHOLDER: Sajan sets the bundle price (7 × $50 = $350 list)
+    priceUsdc: '250', placeholder: false, // Sajan 10/9 6:26 AM PT (7 × $50 = $350 list)
     quote: 'Seven seats, one Golden Path.',
     blurb: 'Every archetype plus the overview: how the seven work together, the decision layer, a day on the desk, the shared folder layout and a Mermaid flow diagram.',
     includes: ['All 7 archetype packs', 'Bundle overview with Mermaid diagram', 'Shared folder layout', '"A day on the desk" walkthrough'],
@@ -43,7 +43,12 @@ export const CATALOG = [
     format: 'ZIP (Markdown)', file: 'file:full-desk' },
   { sku: 'plumbline-pro', name: 'Plumbline Pro', role: 'Coming soon', glyph: 'plumb', comingSoon: true,
     priceUsdc: '—', placeholder: true, quote: '', blurb: 'A supporter tier for the free, read-only Plumbline MCP server. Coming soon.', includes: [], highlights: [], format: '', file: '' },
+  // Hidden mainnet self-test (Sajan 10/9 6:26 AM PT). Never listed; ordering needs ?selftest=<STORE_SELFTEST_KEY>.
+  { sku: 'selftest', name: 'Store self-test', role: 'internal', glyph: 'sigil', hidden: true,
+    priceUsdc: '0.05', placeholder: false, ttlSec: 10800, quote: '', blurb: '', includes: [], highlights: [], format: 'TXT', file: '',
+    inline: { name: 'spicemelange-selftest.txt', text: 'The Spice Melange store self-test: payment verified and delivery works.\n' } },
 ];
 
 export const bySku = (sku) => CATALOG.find((p) => p.sku === sku) ?? null;
-export const ARCHETYPES = CATALOG.filter((p) => !p.bundle && !p.comingSoon);
+export const ARCHETYPES = CATALOG.filter((p) => !p.bundle && !p.comingSoon && !p.hidden);
+export const LISTED = CATALOG.filter((p) => !p.hidden);

@@ -65,7 +65,7 @@
     order = o;
     sessionStorage.setItem(KEY, JSON.stringify({ orderId: o.orderId, token: o.token, sku: o.sku }));
     $('co-step1').hidden = true; $('co-step2').hidden = false; $('co-done').hidden = true;
-    $('co-id').textContent = o.orderId; $('co-net').textContent = o.network;
+    $('co-id').textContent = o.orderId; $('co-net').textContent = o.network === 'sui:mainnet' ? 'Sui mainnet (real USDC)' : `${o.network} (test network, no real money)`;
     $('co-amount').textContent = o.amount; $('co-payto').textContent = o.payTo;
     $('co-exp').textContent = new Date(o.expiresAt).toLocaleTimeString();
     $('co-token').textContent = o.token;

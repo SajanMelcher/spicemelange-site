@@ -218,3 +218,25 @@ test('files: private KV zip served with metadata; coming-soon and unknown SKUs r
   const cfg = loadConfig(env());
   assert.equal((await createOrder(cfg, { sku: 'plumbline-pro', nowMs: T0 })).reason, 'unknown_product');
 });
+
+test('selftest SKU: hidden, needs the secret flag, 0.05 + tag, 3 h expiry, inline file', async () => {
+  const { CATALOG, ARCHETYPES, LISTED } = await import('../store-core/catalog.js');
+  const { loadFile } = await import('../store-core/files.js');
+  assert.ok(!ARCHETYPES.some((p) => p.sku === 'selftest') && !LISTED.some((p) => p.sku === 'selftest'));
+  assert.equal(CATALOG.find((p) => p.sku === 'full-desk').priceUsdc, '250');
+  const KEY = 'k'.repeat(32);
+  const none = loadConfig(env());
+  assert.equal((await createOrder(none, { sku: 'selftest', selftestKey: KEY, nowMs: T0 })).reason, 'unknown_product'); // no key configured
+  const cfg = loadConfig(env({ STORE_SELFTEST_KEY: KEY }));
+  assert.equal((await createOrder(cfg, { sku: 'selftest', nowMs: T0 })).reason, 'unknown_product');
+  assert.equal((await createOrder(cfg, { sku: 'selftest', selftestKey: 'k'.repeat(31) + 'x', nowMs: T0 })).reason, 'unknown_product');
+  const r = await createOrder(cfg, { sku: 'selftest', selftestKey: KEY, nowMs: T0 });
+  assert.equal(r.ok, true);
+  const a = BigInt(r.order.amountAtomic);
+  assert.ok(a > 50_000n && a < 60_000n, r.order.amount);
+  assert.equal(Date.parse(r.order.expiresAt) - T0, 3 * 3_600_000);
+  const v = await verifyOrder(cfg, { orderId: r.order.orderId, token: r.order.token, digest: D1, nowMs: T0 + 2 * 3_600_000, fetchImpl: mockRpc({ [D1]: pay(r.order, { timestampMs: T0 + 2 * 3_600_000 - 5000 }) }) });
+  assert.equal(v.ok, true, v.reason);
+  const f = await loadFile({}, 'selftest');
+  assert.match(f.body, /self-test/); assert.equal(f.type.startsWith('text/plain'), true);
+});
