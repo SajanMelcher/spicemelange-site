@@ -1,3 +1,5 @@
+# TO ENABLE: copy to .github/workflows/deploy.yml via the GitHub web UI (the box token lacks the `workflow` scope),
+# then add repo secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID.
 # Auto-deploy thespicemelange.org on every push to main (Cloudflare Pages, direct upload).
 # Needs repo secrets CLOUDFLARE_API_TOKEN (scope: Account > Cloudflare Pages > Edit) and
 # CLOUDFLARE_ACCOUNT_ID. Until they exist, the deploy step is skipped and the job stays green.
