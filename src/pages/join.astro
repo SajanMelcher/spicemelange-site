@@ -70,7 +70,7 @@ const body = `Hi Hwi,\n\nI'd like to receive the Golden Path letters.\n\nName:\n
         e.g. a Cloudflare Pages Function at /api/join that:
           1. validates input + a honeypot + Turnstile token,
           2. rate-limits by IP,
-          3. calls resend.emails.send() FROM a site address TO reserve@ only (never auto-replies to the visitor),
+          3. calls resend.emails.send() FROM a site address TO hello@ only (never auto-replies to the visitor),
           4. returns 200 with a generic message.
         Until then data-endpoint is empty and the script below falls back to mailto:. Do NOT wire live without Sajan's yes.
       -->
@@ -115,7 +115,7 @@ const body = `Hi Hwi,\n\nI'd like to receive the Golden Path letters.\n\nName:\n
       const name = String(fd.get('name') || '').trim();
       const topic = String(fd.get('topic') || '').trim();
       const body = `Hi Hwi,\n\nI'd like to receive the Golden Path letters.\n\nName: ${name}\nWhat I'd like to learn: ${topic}\n\nI understand this is education only, not financial advice.`;
-      window.location.href = `mailto:reserve@thespicemelange.org?subject=${encodeURIComponent('Join the Golden Path')}&body=${encodeURIComponent(body)}`;
+      window.location.href = `mailto:hello@thespicemelange.org?subject=${encodeURIComponent('Join the Golden Path')}&body=${encodeURIComponent(body)}`;
       status!.textContent = 'Opening your email app…';
     });
   </script>

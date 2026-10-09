@@ -2,14 +2,14 @@ export const SITE = {
   name: 'The Spice Melange',
   tagline: 'A patient bitcoin desk on the Golden Path',
   url: 'https://thespicemelange.org',
-  email: 'reserve@thespicemelange.org',
+  email: 'hello@thespicemelange.org',
   x: 'https://x.com/Sajan_Melcher',
   xHandle: '@Sajan_Melcher',
   github: 'https://github.com/SajanMelcher',
   joinSubject: 'Join the Golden Path',
   // Compliance switch: the private Reserve pilot is family-only. Set to false to remove
   // its single "contact for details" line from the public site entirely.
-  showReserveMention: true,
+  showReserveMention: false,
 };
 
 export const mailto = (subject: string, body = '') =>
