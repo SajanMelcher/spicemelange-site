@@ -72,7 +72,10 @@ export function loadConfig(env = {}) {
     graphqlUrl: GRAPHQL[net],
     secret,
     kv: env.STORE_KV,
-    tagRange: int(env.STORE_AMOUNT_TAG_RANGE, 9999, 100, 9999), // unique tag < 1 cent (atomic 1..9999)
+    // Unique tag added to the price. Default: 1..9999 atomic units (< 1 cent, like Plumbline).
+    // "Unique cents" mode for wallets/exchanges that cannot send 6 decimals: UNIT=10000, RANGE=99.
+    tagUnit: BigInt(int(env.STORE_AMOUNT_TAG_UNIT, 1, 1, 10000)),
+    tagRange: int(env.STORE_AMOUNT_TAG_RANGE, 9999, 10, 9999),
     ttlSec: int(env.STORE_ORDER_TTL_SEC, 1800, 300, 7200), // pay within 30 min
     graceSec: int(env.STORE_REDEEM_GRACE_SEC, 900, 0, 3600), // extra time to submit the digest
     skewSec: int(env.STORE_CLOCK_SKEW_SEC, 60, 0, 300),
@@ -212,7 +215,7 @@ export async function createOrder(cfg, { sku, email, ipHash, nowMs = Date.now() 
   const holdSec = cfg.ttlSec + cfg.graceSec + 3600; // amount not reissued until well after the window
   let amount = null;
   for (let i = 0; i < 12 && amount === null; i++) {
-    const a = base + BigInt(randomTag(cfg.tagRange));
+    const a = base + BigInt(randomTag(cfg.tagRange)) * cfg.tagUnit;
     if (!(await cfg.kv.get(K.amount(cfg.net, a.toString())))) amount = a;
   }
   if (amount === null) return { ok: false, status: 503, reason: 'busy_try_again' };

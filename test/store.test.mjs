@@ -54,6 +54,12 @@ test('order: exact unique amount = price + sub-cent tag', async () => {
   assert.equal(o.payTo, PAYTO);
 });
 
+test('order: unique-cents mode', async () => {
+  const cfg = loadConfig(env({ STORE_AMOUNT_TAG_UNIT: '10000', STORE_AMOUNT_TAG_RANGE: '99' }));
+  const o = (await createOrder(cfg, { sku: 'prompt-pack', nowMs: T0 })).order;
+  assert.match(o.amount, /^9\.\d{1,2}$/); assert.equal(BigInt(o.amountAtomic) % 10000n, 0n);
+});
+
 test('order: unknown sku, bad email, IP rate limit', async () => {
   const cfg = loadConfig(env({ STORE_MAX_ORDERS_PER_IP_HOUR: '2' }));
   assert.equal((await createOrder(cfg, { sku: 'nope', nowMs: T0 })).reason, 'unknown_product');
