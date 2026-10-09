@@ -1,0 +1,15 @@
+---
+import Base from '../layouts/Base.astro';
+import Worm from '../components/Worm.astro';
+---
+<Base title="Lost in the deep desert">
+  <section class="container-x grid min-h-[60dvh] items-center gap-8 py-16 md:grid-cols-2">
+    <div>
+      <p class="eyebrow">404</p>
+      <h1 class="mt-3 text-5xl text-sand-50">Lost in the deep desert</h1>
+      <p class="mt-4 text-sand-200/85">This page has been swallowed by the sand. Walk without rhythm, and head back to safer ground.</p>
+      <a href="/" class="btn-primary mt-6">Return home</a>
+    </div>
+    <Worm class="mx-auto w-full max-w-sm" animate={false} />
+  </section>
+</Base>

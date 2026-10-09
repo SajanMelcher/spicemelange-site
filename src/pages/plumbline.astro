@@ -1,0 +1,116 @@
+---
+import Base from '../layouts/Base.astro';
+import SectionHead from '../components/SectionHead.astro';
+import CodeCopy from '../components/CodeCopy.astro';
+import Disclaimer from '../components/Disclaimer.astro';
+
+const GH = 'https://github.com/SajanMelcher/plumbline-mcp';
+const SMITHERY = 'https://smithery.ai/servers/nazarenechalice/plumbline';
+const REGISTRY = 'https://registry.modelcontextprotocol.io/v0/servers?search=io.github.SajanMelcher/plumbline-mcp';
+const NPM = 'https://www.npmjs.com/package/plumbline-mcp';
+
+const tools = [
+  ['list_pools', 'All DeepBook pools: base/quote, tick, lot, min size, active flag', 'asset?, include_ids?'],
+  ['get_mid_price', 'Best bid/ask, mid, spread (abs and bps), last price', 'pool'],
+  ['get_order_book', 'Top N levels per side, plus liquidity within ±X% of mid', 'pool, levels, within_pct'],
+  ['get_volume', '24h volume, high/low, % change, VWAP; or top pools by volume', 'pool?, window_hours, top'],
+  ['get_pool_params', 'Live on-chain taker/maker fees, DEEP stake, tick/lot/min size', 'pool'],
+  ['get_recent_trades', 'Latest fills: time, side, price, size, buy/sell stats', 'pool, limit, start_time?, end_time?'],
+  ['get_ohlcv', 'OHLCV candles, oldest first', 'pool, interval, limit'],
+  ['get_indexer_status', 'Data-source health and freshness', '—'],
+];
+const config = `{
+  "mcpServers": {
+    "plumbline": {
+      "command": "npx",
+      "args": ["-y", "plumbline-mcp"]
+    }
+  }
+}`;
+---
+<Base title="Plumbline for DeepBook" description="Plumbline for DeepBook: a free, read-only MCP server that gives AI agents DeepBook v3 market data on Sui. No keys, no wallet, no trading.">
+  <section class="relative overflow-hidden pt-16 pb-12" aria-labelledby="pl-title">
+    <div class="container-x grid gap-10 md:grid-cols-[1.3fr_1fr] md:items-center">
+      <div class="min-w-0">
+        <p class="eyebrow mb-4">Open source · MIT</p>
+        <h1 id="pl-title" class="text-5xl leading-tight text-sand-50 sm:text-6xl">Plumbline for DeepBook</h1>
+        <p class="mt-5 max-w-2xl text-lg leading-relaxed text-sand-200/90">
+          A free, <strong class="text-sand-50">read-only</strong> Model Context Protocol server for Sui DeepBook v3 market data.
+          Give any AI agent pools, mid and spread, order-book depth, volume, live fees, trades and candles. No API keys, no wallet, no signing, no trading.
+        </p>
+        <div class="mt-7 flex flex-wrap gap-3">
+          <a class="btn-primary" href={GH}>View on GitHub</a>
+          <a class="btn-ghost" href={SMITHERY}>Smithery listing</a>
+          <a class="btn-ghost" href="/dashboard/">See it live</a>
+        </div>
+      </div>
+      <!-- plumb line art -->
+      <svg class="mx-auto h-64 w-auto md:h-80" viewBox="0 0 200 320" fill="none" aria-hidden="true">
+        <path d="M100 10v220" stroke="#d7b97f" stroke-width="1.2" stroke-dasharray="2 5" />
+        <path d="M100 230l-18 30 18 40 18-40z" stroke="#ee8f3a" stroke-width="1.6" />
+        <circle cx="100" cy="10" r="5" stroke="#d7b97f" />
+        {[60, 100, 140, 180].map((y, i) => <path d={`M${100 - 30 - i * 10} ${y}h${60 + i * 20}`} stroke="#4fb3ff" stroke-opacity={(0.25 + i * 0.15).toFixed(2)} />)}
+        {[60, 100, 140, 180].map((y, i) => <text x={140 + i * 10} y={y - 4} fill="#8fd3ff" fill-opacity=".6" font-size="9" font-family="ui-monospace,monospace">{`±${[0.5, 1, 2, 5][i]}%`}</text>)}
+      </svg>
+    </div>
+  </section>
+
+  <section class="container-x py-10" aria-labelledby="install">
+    <SectionHead id="install" eyebrow="Install" title="One line, no configuration" lede="Runs over stdio and needs Node.js 18.17 or later." />
+    <div class="grid gap-6 lg:grid-cols-2">
+      <div class="min-w-0">
+        <CodeCopy label="npx" code="npx -y plumbline-mcp" />
+        <CodeCopy label="Claude Code" code="claude mcp add plumbline -- npx -y plumbline-mcp" />
+        <CodeCopy label="Smithery CLI" code="npx -y @smithery/cli@latest mcp add nazarenechalice/plumbline --client cursor" />
+      </div>
+      <div class="min-w-0">
+        <CodeCopy label="Cursor, Claude Desktop, VS Code, Windsurf (mcp.json)" code={config} />
+      </div>
+    </div>
+    <ul class="mt-6 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+      <li class="card !p-4"><p class="text-sand-300/70">npm</p><a class="break-all text-ibad-300" href={NPM}>plumbline-mcp</a></li>
+      <li class="card !p-4"><p class="text-sand-300/70">Smithery</p><a class="break-all text-ibad-300" href={SMITHERY}>nazarenechalice/plumbline</a></li>
+      <li class="card !p-4"><p class="text-sand-300/70">MCP Registry</p><a class="break-all text-ibad-300" href={REGISTRY}>io.github.SajanMelcher/plumbline-mcp</a></li>
+      <li class="card !p-4"><p class="text-sand-300/70">GitHub</p><a class="break-all text-ibad-300" href={GH}>SajanMelcher/plumbline-mcp</a></li>
+    </ul>
+  </section>
+
+  <section class="container-x py-10" aria-labelledby="tools">
+    <SectionHead id="tools" eyebrow="Tools" title="Eight read-only tools" lede="Every tool is annotated readOnlyHint. Outputs are compact JSON, cached briefly, with 8-second timeouts." />
+    <div class="overflow-x-auto rounded-2xl border border-sand-200/10">
+      <table class="w-full min-w-[640px] text-left text-sm">
+        <caption class="sr-only">Plumbline tools, what they return and their key inputs</caption>
+        <thead class="bg-night-800/70 text-sand-200">
+          <tr><th scope="col" class="px-4 py-3 font-semibold">Tool</th><th scope="col" class="px-4 py-3 font-semibold">Returns</th><th scope="col" class="px-4 py-3 font-semibold">Key inputs</th></tr>
+        </thead>
+        <tbody class="divide-y divide-sand-200/10">
+          {tools.map(([t, r, k]) => (
+            <tr class="bg-night-900/40"><th scope="row" class="px-4 py-3 font-mono text-[13px] font-normal text-spice-300">{t}</th><td class="px-4 py-3 text-sand-200/90">{r}</td><td class="px-4 py-3 font-mono text-[12px] text-sand-300/80">{k}</td></tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p class="mt-4 text-sm text-sand-300/80">Try asking your agent: “What’s the spread on DeepBook SUI_USDC right now?” or “How much liquidity is within 1% of mid?”</p>
+  </section>
+
+  <section class="container-x py-10" aria-labelledby="pricing">
+    <SectionHead id="pricing" eyebrow="Pricing" title="Free, with optional pay-per-call later" />
+    <div class="grid gap-5 md:grid-cols-2">
+      <div class="card">
+        <h3 class="text-2xl text-sand-50">Local (stdio)</h3>
+        <p class="mt-1 font-serif text-4xl text-spice-300">Free</p>
+        <p class="mt-2 text-sand-200/85">The npm package is always free. Run it on your own machine with no account and no keys.</p>
+      </div>
+      <div class="card relative">
+        <span class="pill absolute right-5 !border-ibad-400/40 !text-ibad-300" style="top:1.25rem">Coming soon</span>
+        <h3 class="text-2xl text-sand-50">Hosted HTTP</h3>
+        <p class="mt-1 font-serif text-4xl text-spice-300">100 free calls/day</p>
+        <p class="mt-2 text-sand-200/85">Then 0.002 USDC per call, paid in USDC on Sui. Receive-only: the server never holds keys. Not live until a hosted endpoint launches.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="container-x py-6">
+    <Disclaimer extra="Plumbline returns data from public third-party sources (the Mysten Labs DeepBook indexer and Sui GraphQL). It may be delayed, incomplete or wrong, and is provided as is, without warranty. Plumbline is an independent community project, not affiliated with Mysten Labs, the Sui Foundation or DeepBook." />
+  </section>
+</Base>

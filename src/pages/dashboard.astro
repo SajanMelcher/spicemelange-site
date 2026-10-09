@@ -1,0 +1,129 @@
+---
+import Base from '../layouts/Base.astro';
+import Disclaimer from '../components/Disclaimer.astro';
+import { POOLS } from '../lib/deepbook-core.js';
+---
+<Base title="Live DeepBook dashboard" description="Live DeepBook v3 market data on Sui: mid price, spread, depth within ±1% and ±2%, 24h volume and a 48-hour chart.">
+  <section class="container-x pt-16 pb-6" aria-labelledby="db-title">
+    <p class="eyebrow mb-4">Sui · DeepBook v3</p>
+    <h1 id="db-title" class="text-5xl leading-tight text-sand-50 sm:text-6xl">Live DeepBook</h1>
+    <p class="mt-4 max-w-2xl text-lg text-sand-200/90">Reading the sand: mid price, spread, liquidity close to mid, and 24-hour volume for the main DeepBook pools. Fetched straight from the public indexer in your browser and refreshed every 45 seconds.</p>
+    <div class="mt-6 flex flex-wrap items-center gap-3 text-sm">
+      <span data-mode class="pill">Connecting…</span>
+      <span class="text-sand-300/80" role="status" aria-live="polite" data-updated>Loading market data…</span>
+      <button type="button" data-refresh class="btn-ghost !min-h-9 !py-1.5 !text-xs">Refresh now</button>
+    </div>
+  </section>
+
+  <section class="container-x py-6" aria-label="Pools">
+    <ul class="grid gap-5 md:grid-cols-2 xl:grid-cols-3" data-grid>
+      {POOLS.map((p) => (
+        <li class="card" data-pool={p}>
+          <div class="flex items-baseline justify-between gap-3">
+            <h2 class="font-serif text-2xl text-sand-50">{p.replace('_', ' / ')}</h2>
+            <span class="text-sm tabular-nums" data-f="chg">—</span>
+          </div>
+          <p class="mt-1 font-serif text-4xl lining-nums tabular-nums text-spice-300" data-f="mid">—</p>
+          <p class="text-xs text-sand-300/70">mid price, USDC</p>
+          <div class="mt-3 h-20" data-f="chart" role="img" aria-label={`48-hour price chart for ${p}`}>
+            <div class="h-full animate-pulse rounded-lg bg-sand-200/5"></div>
+          </div>
+          <dl class="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+            <div><dt class="text-sand-300/70">Spread</dt><dd class="tabular-nums text-sand-50" data-f="spread">—</dd></div>
+            <div><dt class="text-sand-300/70">24h volume</dt><dd class="tabular-nums text-sand-50" data-f="vol">—</dd></div>
+            <div><dt class="text-sand-300/70">Depth ±1% <span class="text-sand-300/50">bid / ask</span></dt><dd class="tabular-nums text-sand-50" data-f="d1">—</dd></div>
+            <div><dt class="text-sand-300/70">Depth ±2% <span class="text-sand-300/50">bid / ask</span></dt><dd class="tabular-nums text-sand-50" data-f="d2">—</dd></div>
+          </dl>
+        </li>
+      ))}
+    </ul>
+    <p class="mt-6 text-sm text-sand-300/80">
+      <svg class="mr-1 inline h-4 w-4 align-[-2px]" viewBox="0 0 20 20" fill="none" stroke="#ee8f3a" aria-hidden="true"><path d="M10 1v12"/><path d="M10 13l-4 3 4 3 4-3z"/></svg>
+      Powered by <a href="/plumbline/" class="text-ibad-300">Plumbline</a>, using the same math as the Plumbline for DeepBook MCP server. Data: public Mysten Labs DeepBook indexer. Depth is USDC notional on each side.
+    </p>
+  </section>
+
+  <section class="container-x py-6">
+    <Disclaimer extra="Data may be delayed, incomplete or wrong. Not an offer, and not a recommendation to trade any asset." />
+  </section>
+
+  <script>
+    import { fetchAll, INDEXER } from '../lib/deepbook-core.js';
+
+    const REFRESH_MS = 45_000;
+    const CANDLE_EVERY = 6; // refresh candles every 6th tick (~4.5 min)
+    let tick = 0;
+    let candleCache: Record<string, [number, number][] | null> = {};
+    let timer: number | undefined;
+
+    const $ = (s: string) => document.querySelector<HTMLElement>(s);
+    const fmtPrice = (n: number) => n >= 1000 ? n.toLocaleString('en-US', { maximumFractionDigits: 0 })
+      : n >= 1 ? n.toFixed(4) : n.toPrecision(4);
+    const fmtUsd = (n?: number) => n == null || !isFinite(n) ? '—'
+      : n >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : n >= 1e3 ? `$${(n / 1e3).toFixed(1)}k` : `$${n.toFixed(0)}`;
+
+    function chart(el: HTMLElement, series: [number, number][] | null, pool: string) {
+      if (!series || series.length < 2) { el.innerHTML = '<p class="pt-6 text-center text-xs text-sand-300/60">No chart data</p>'; return; }
+      const W = 300, H = 80, P = 4;
+      const ys = series.map((s) => s[1]);
+      const min = Math.min(...ys), max = Math.max(...ys), span = max - min || 1;
+      const pts = series.map(([, y], i) => [P + (i / (series.length - 1)) * (W - 2 * P), H - P - ((y - min) / span) * (H - 2 * P)]);
+      const line = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join('');
+      const up = ys[ys.length - 1] >= ys[0];
+      const id = `g-${pool}`;
+      el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="h-full w-full" aria-hidden="true">
+        <defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${up ? '#ee8f3a' : '#4fb3ff'}" stop-opacity=".35"/><stop offset="1" stop-color="${up ? '#ee8f3a' : '#4fb3ff'}" stop-opacity="0"/></linearGradient></defs>
+        <path d="${line}L${W - P} ${H}L${P} ${H}Z" fill="url(#${id})"/>
+        <path d="${line}" fill="none" stroke="${up ? '#f6b26b' : '#8fd3ff'}" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
+      </svg>`;
+      el.setAttribute('aria-label', `48-hour chart for ${pool}: low ${fmtPrice(min)}, high ${fmtPrice(max)}, now ${fmtPrice(ys[ys.length - 1])} USDC`);
+    }
+
+    function render(data: any, mode: 'live' | 'snapshot') {
+      for (const p of data.pools) {
+        const card = document.querySelector<HTMLElement>(`[data-pool="${p.pool}"]`);
+        if (!card) continue;
+        const f = (k: string) => card.querySelector<HTMLElement>(`[data-f="${k}"]`)!;
+        const b = p.book;
+        f('mid').textContent = b ? fmtPrice(b.mid) : '—';
+        f('spread').textContent = b ? `${b.spread_bps.toFixed(1)} bps` : '—';
+        const d = (k: number) => b ? `${fmtUsd(b.depth[k].bid_usd)} / ${fmtUsd(b.depth[k].ask_usd)}${b.depth[k].truncated ? '+' : ''}` : '—';
+        f('d1').textContent = d(1); f('d2').textContent = d(2);
+        f('vol').textContent = fmtUsd(p.vol24_usd);
+        const chg = f('chg');
+        if (typeof p.chg24_pct === 'number' && p.vol24_usd > 0) {
+          chg.textContent = `${p.chg24_pct >= 0 ? '▲' : '▼'} ${Math.abs(p.chg24_pct).toFixed(2)}% 24h`;
+          chg.className = `text-sm tabular-nums ${p.chg24_pct >= 0 ? 'text-spice-300' : 'text-ibad-300'}`;
+        } else chg.textContent = '';
+        if (p.candles) candleCache[p.pool] = p.candles;
+        chart(f('chart'), candleCache[p.pool] ?? null, p.pool);
+      }
+      const t = new Date(data.generated_at);
+      const modeEl = $('[data-mode]')!;
+      modeEl.textContent = mode === 'live' ? '● Live' : '◌ Snapshot';
+      modeEl.className = `pill ${mode === 'live' ? '!border-spice-400/50 !text-spice-300' : '!border-ibad-400/50 !text-ibad-300'}`;
+      $('[data-updated]')!.textContent = mode === 'live'
+        ? `Updated ${t.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })}`
+        : `Live data unavailable; showing a snapshot from ${t.toLocaleString()}`;
+    }
+
+    async function load() {
+      const wantCandles = tick % CANDLE_EVERY === 0;
+      tick++;
+      try {
+        const data = await fetchAll(INDEXER, { candles: wantCandles });
+        if (!data.pools.some((p: any) => p.book)) throw new Error('no live books');
+        render(data, 'live');
+      } catch {
+        try {
+          const snap = await (await fetch('/data/deepbook-snapshot.json', { cache: 'no-cache' })).json();
+          render(snap, 'snapshot');
+        } catch { $('[data-updated]')!.textContent = 'Market data is unavailable right now.'; }
+      }
+    }
+    function schedule() { clearInterval(timer); timer = window.setInterval(() => { if (!document.hidden) load(); }, REFRESH_MS); }
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+    $('[data-refresh]')?.addEventListener('click', () => { load(); schedule(); });
+    load(); schedule();
+  </script>
+</Base>

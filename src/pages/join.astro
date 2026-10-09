@@ -1,0 +1,122 @@
+---
+import Base from '../layouts/Base.astro';
+import SectionHead from '../components/SectionHead.astro';
+import Disclaimer from '../components/Disclaimer.astro';
+import Eye from '../components/Eye.astro';
+import { SITE, mailto } from '../data/site';
+
+const letters = [
+  { n: '01', title: 'Welcome, and the why', text: 'Why a scarce, unprintable asset matters, and why the Golden Path is about patience rather than prediction.' },
+  { n: '02', title: 'Bitcoin basics and self-custody', text: 'Keys, wallets and backups in plain words. What “not your keys, not your coins” means, and how not to lose them.' },
+  { n: '03', title: 'Income and ballast', text: 'How income-paying instruments and cash-like reserves work, what can go wrong with them, and why nothing is guaranteed.' },
+  { n: '04', title: 'Loans, LTV and liquidation', text: 'Why borrowing against bitcoin is risky, how liquidation works, and why this desk keeps leverage off the trading table.' },
+  { n: '05', title: 'Golden Path habits', text: 'Small, repeatable habits: limit orders, position sizing, loss caps, and never acting on a message you have not verified.' },
+];
+const body = `Hi Hwi,\n\nI'd like to receive the Golden Path letters.\n\nName:\nWhat I'd like to learn about:\n\nI understand this is education only, not financial advice.`;
+---
+<Base title="Join the Golden Path" description="Hwi Noree's onboarding letters: a gentle, education-only introduction to bitcoin, self-custody and risk.">
+  <section class="container-x pt-16 pb-10" aria-labelledby="join-title">
+    <p class="eyebrow mb-4 flex items-center gap-3"><Eye class="h-4 w-7" /> Onboarding</p>
+    <h1 id="join-title" class="max-w-3xl text-5xl leading-tight text-sand-50 sm:text-6xl">Join the Golden Path</h1>
+    <p class="mt-5 max-w-2xl text-lg leading-relaxed text-sand-200/90">
+      In the old stories, Hwi Noree was the gentle one who reached the person inside the God Emperor. Ours is the desk’s letter writer.
+      She guides newcomers through a short series of plain-spoken letters about bitcoin: what it is, how to hold it safely, and what can go wrong.
+    </p>
+    <div class="mt-8 flex flex-wrap gap-3">
+      <a class="btn-primary" href={mailto(SITE.joinSubject, body)}>Email {SITE.email}</a>
+      <a class="btn-ghost" href="#form">Or use the form</a>
+    </div>
+    <p class="mt-3 text-xs text-sand-300/70">Opens your email app with the subject “{SITE.joinSubject}”. A person reads every message.</p>
+  </section>
+
+  <section class="container-x py-10" aria-labelledby="series">
+    <SectionHead id="series" eyebrow="The series" title="Five short letters" lede="Warm, patient and free of hype. One idea at a time, sources cited, and always ending with the same reminder: this is education, not advice." />
+    <ol class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {letters.map((l) => (
+        <li class="card">
+          <p class="font-serif text-4xl text-spice-400/80">{l.n}</p>
+          <h3 class="mt-1 text-2xl text-sand-50">{l.title}</h3>
+          <p class="mt-2 text-sand-200/85">{l.text}</p>
+        </li>
+      ))}
+      <li class="card border-dashed bg-transparent">
+        <h3 class="text-2xl text-sand-50">How it works</h3>
+        <ul class="mt-2 list-disc space-y-1.5 pl-5 text-sand-200/85">
+          <li>You write in; Sajan personally approves every letter and reply before it goes out.</li>
+          <li>We never ask for seed phrases, private keys, passwords or bank details. Never send them by email.</li>
+          <li>You can stop at any time. Just say so.</li>
+        </ul>
+      </li>
+    </ol>
+  </section>
+
+  {SITE.showReserveMention && (
+    <section class="container-x py-6" aria-labelledby="private">
+      <div class="card flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h2 id="private" class="text-2xl text-sand-50">Private arrangements</h2>
+          <p class="mt-1 text-sand-200/85">Any private, family-only arrangements are not offered on this site. Contact for details.</p>
+        </div>
+        <a class="btn-ghost shrink-0" href={mailto('Question for the desk')}>Contact for details</a>
+      </div>
+    </section>
+  )}
+
+  <section id="form" class="container-x py-12" aria-labelledby="form-title">
+    <div class="grid gap-10 md:grid-cols-[1fr_1.1fr]">
+      <SectionHead id="form-title" eyebrow="Write to Hwi" title="Prefer a form?" lede="This form doesn’t send anything to a server yet. It opens your own email app with your note filled in, so nothing is stored here." />
+      <!--
+        TODO(resend-endpoint): when a backend exists, point this form at a Resend-backed endpoint,
+        e.g. a Cloudflare Pages Function at /api/join that:
+          1. validates input + a honeypot + Turnstile token,
+          2. rate-limits by IP,
+          3. calls resend.emails.send() FROM a site address TO reserve@ only (never auto-replies to the visitor),
+          4. returns 200 with a generic message.
+        Until then data-endpoint is empty and the script below falls back to mailto:. Do NOT wire live without Sajan's yes.
+      -->
+      <form class="card space-y-4" data-join-form data-endpoint="" novalidate>
+        <div>
+          <label for="name" class="mb-1 block text-sm text-sand-200">Your first name</label>
+          <input id="name" name="name" autocomplete="given-name" required class="w-full rounded-lg border border-sand-200/20 bg-night-950 px-3 py-2.5 text-sand-50 placeholder:text-sand-300/40 focus:border-ibad-400 focus:outline-none" />
+        </div>
+        <div>
+          <label for="topic" class="mb-1 block text-sm text-sand-200">What would you like to learn?</label>
+          <textarea id="topic" name="topic" rows="4" class="w-full rounded-lg border border-sand-200/20 bg-night-950 px-3 py-2.5 text-sand-50 focus:border-ibad-400 focus:outline-none"></textarea>
+        </div>
+        <div class="hidden" aria-hidden="true"><label>Leave empty <input name="website" tabindex="-1" autocomplete="off" /></label></div>
+        <div class="flex items-start gap-3">
+          <input id="ack" name="ack" type="checkbox" required class="mt-1 h-5 w-5 accent-spice-500" />
+          <label for="ack" class="text-sm text-sand-200/90">I understand this is education only, not financial advice, and that no returns are promised.</label>
+        </div>
+        <p class="text-xs text-sand-300/70">Please don’t include account numbers, keys or seed phrases.</p>
+        <button type="submit" class="btn-primary w-full sm:w-auto">Open my email app</button>
+        <p class="text-sm text-ibad-300" role="status" aria-live="polite" data-form-status></p>
+      </form>
+    </div>
+  </section>
+
+  <section class="container-x pb-6">
+    <Disclaimer extra="The letters describe general concepts. Your situation is your own, so speak to a licensed professional before making financial decisions." />
+  </section>
+
+  <script>
+    const form = document.querySelector<HTMLFormElement>('[data-join-form]');
+    const status = document.querySelector<HTMLElement>('[data-form-status]');
+    form?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      if (fd.get('website')) return; // honeypot
+      if (!fd.get('ack')) { status!.textContent = 'Please tick the acknowledgement first.'; return; }
+      const endpoint = form.dataset.endpoint;
+      if (endpoint) {
+        // TODO(resend-endpoint): POST JSON to the endpoint once it exists and is approved.
+        return;
+      }
+      const name = String(fd.get('name') || '').trim();
+      const topic = String(fd.get('topic') || '').trim();
+      const body = `Hi Hwi,\n\nI'd like to receive the Golden Path letters.\n\nName: ${name}\nWhat I'd like to learn: ${topic}\n\nI understand this is education only, not financial advice.`;
+      window.location.href = `mailto:reserve@thespicemelange.org?subject=${encodeURIComponent('Join the Golden Path')}&body=${encodeURIComponent(body)}`;
+      status!.textContent = 'Opening your email app…';
+    });
+  </script>
+</Base>

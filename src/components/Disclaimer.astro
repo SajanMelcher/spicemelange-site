@@ -1,0 +1,8 @@
+---
+import { DISCLAIMER } from '../data/site';
+interface Props { class?: string; extra?: string }
+const { class: cls = '', extra } = Astro.props;
+---
+<aside class={`rounded-xl border border-spice-500/30 bg-spice-700/10 p-4 text-sm text-sand-200/90 ${cls}`} aria-label="Disclaimer">
+  <p><strong class="text-spice-300">Not financial advice.</strong> {DISCLAIMER} {extra}</p>
+</aside>

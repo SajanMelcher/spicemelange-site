@@ -1,0 +1,13 @@
+---
+interface Props { code: string; label?: string }
+const { code, label } = Astro.props;
+---
+<figure class="my-3 min-w-0">
+  <div class="mb-1.5 flex items-center justify-between gap-3">
+    <figcaption class="text-xs uppercase tracking-widest text-sand-300/80">{label}</figcaption>
+    <button type="button" class="copy-btn min-h-8 rounded-md border border-sand-200/20 px-2.5 py-1 text-xs text-sand-200 hover:border-ibad-400 hover:text-ibad-300" data-code={code} aria-label={`Copy: ${label ?? 'code'}`}>Copy</button>
+  </div>
+  <div class="codeblock" tabindex="0" role="region" aria-label={label ?? 'code'}>
+    <pre class="whitespace-pre"><code>{code}</code></pre>
+  </div>
+</figure>

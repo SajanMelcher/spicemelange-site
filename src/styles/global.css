@@ -1,0 +1,80 @@
+@import "tailwindcss";
+@import "@fontsource-variable/cormorant-garamond/wght.css";
+@import "@fontsource-variable/cormorant-garamond/wght-italic.css";
+@import "@fontsource-variable/inter/wght.css";
+
+@theme {
+  --color-night-950: #070914;
+  --color-night-900: #0b0f24;
+  --color-night-800: #121838;
+  --color-night-700: #1c2452;
+  --color-night-600: #2a3470;
+  --color-spice-300: #f6b26b;
+  --color-spice-400: #ee8f3a;
+  --color-spice-500: #d96d1c;
+  --color-spice-600: #b65412;
+  --color-spice-700: #8a3d0e;
+  --color-sand-50: #fbf6ec;
+  --color-sand-100: #f4e9d4;
+  --color-sand-200: #e8d4ad;
+  --color-sand-300: #d7b97f;
+  --color-sand-400: #c29a58;
+  --color-sand-500: #a47c3f;
+  --color-ibad-300: #8fd3ff;
+  --color-ibad-400: #4fb3ff;
+  --color-ibad-500: #1f7fe0;
+  --color-ibad-700: #123c8c;
+  --font-serif: "Cormorant Garamond Variable", "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --font-sans: "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+@layer base {
+  html { color-scheme: dark; scroll-behavior: smooth; }
+  body {
+    @apply bg-night-950 text-sand-100 font-sans antialiased;
+    background-image:
+      radial-gradient(1200px 600px at 80% -10%, rgb(217 109 28 / 0.16), transparent 60%),
+      radial-gradient(900px 500px at -10% 20%, rgb(31 127 224 / 0.10), transparent 60%);
+    background-attachment: fixed;
+  }
+  h1, h2, h3, .font-display { @apply font-serif tracking-tight; font-weight: 600; }
+  a { @apply underline-offset-4; }
+  :focus-visible { outline: 2px solid var(--color-ibad-400); outline-offset: 3px; border-radius: 4px; }
+  ::selection { background: var(--color-spice-500); color: var(--color-night-950); }
+  code, pre, kbd { font-family: var(--font-mono); }
+}
+
+@layer components {
+  .container-x { @apply mx-auto w-full max-w-6xl px-5 sm:px-8; }
+  .eyebrow { @apply text-xs font-semibold uppercase tracking-[0.25em] text-spice-300; }
+  .card {
+    @apply rounded-2xl border border-sand-200/10 bg-night-900/70 p-6 backdrop-blur-sm;
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.04);
+  }
+  .btn, .btn-primary, .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold no-underline transition-colors duration-200 min-h-11;
+  }
+  .btn-primary { @apply bg-spice-500 text-night-950 hover:bg-spice-400; }
+  .btn-ghost { @apply border border-sand-200/25 text-sand-100 hover:border-ibad-400 hover:text-ibad-300; }
+  .prose-desert p { @apply leading-relaxed text-sand-200/90; }
+  .prose-desert p + p { @apply mt-4; }
+  .pill { @apply inline-flex items-center rounded-full border border-sand-200/15 px-2.5 py-0.5 text-xs text-sand-200/80; }
+  .codeblock { @apply relative rounded-xl border border-sand-200/10 bg-night-950/90 p-4 text-sm text-sand-100 overflow-x-auto; }
+}
+
+/* Dune motion: slow and subtle, and switched off for reduced-motion users */
+@keyframes dune-drift { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes twinkle { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+@keyframes worm-draw { from { stroke-dashoffset: 1600; } to { stroke-dashoffset: 0; } }
+@keyframes eye-pulse { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+.dune-drift { animation: dune-drift 90s linear infinite; }
+.dune-drift-slow { animation: dune-drift 160s linear infinite; }
+.twinkle { animation: twinkle 4s ease-in-out infinite; }
+.worm-draw { stroke-dasharray: 1600; animation: worm-draw 6s ease-out forwards; }
+.eye-pulse { animation: eye-pulse 5s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .dune-drift, .dune-drift-slow, .twinkle, .eye-pulse { animation: none !important; }
+  .worm-draw { animation: none !important; stroke-dashoffset: 0; }
+}

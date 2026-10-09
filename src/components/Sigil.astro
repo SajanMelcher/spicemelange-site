@@ -1,0 +1,12 @@
+---
+// Site mark: a dune crescent cradling a spice grain, inside a thin ring.
+interface Props { class?: string }
+const { class: cls = 'h-8 w-8' } = Astro.props;
+---
+<svg class={cls} viewBox="0 0 40 40" aria-hidden="true">
+  <circle cx="20" cy="20" r="18.5" fill="none" stroke="#d7b97f" stroke-opacity=".6" />
+  <path d="M6 26 C 12 18 18 17 24 21 S 32 25 34 22" fill="none" stroke="#ee8f3a" stroke-width="2" stroke-linecap="round" />
+  <path d="M8 30 C 14 25 22 25 32 28" fill="none" stroke="#d7b97f" stroke-opacity=".7" stroke-width="1.2" stroke-linecap="round" />
+  <circle cx="22" cy="12.5" r="3.2" fill="#4fb3ff" />
+  <circle cx="22" cy="12.5" r="1.3" fill="#123c8c" />
+</svg>

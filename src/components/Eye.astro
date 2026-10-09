@@ -1,0 +1,15 @@
+---
+// "Blue within blue": an iris with a deeper blue sclera. Original art, used as an accent.
+interface Props { class?: string; label?: string }
+const { class: cls = 'h-10 w-10', label } = Astro.props;
+---
+<svg class={cls} viewBox="0 0 64 40" role={label ? 'img' : undefined} aria-label={label} aria-hidden={label ? undefined : 'true'}>
+  <defs>
+    <radialGradient id="ibadSclera" cx=".5" cy=".5" r=".6"><stop offset="0" stop-color="#4fb3ff" /><stop offset="1" stop-color="#123c8c" /></radialGradient>
+    <radialGradient id="ibadIris" cx=".45" cy=".45" r=".6"><stop offset="0" stop-color="#8fd3ff" /><stop offset=".7" stop-color="#1f7fe0" /><stop offset="1" stop-color="#0b0f24" /></radialGradient>
+  </defs>
+  <path d="M2 20 C 14 4 50 4 62 20 C 50 36 14 36 2 20 Z" fill="url(#ibadSclera)" stroke="#8fd3ff" stroke-opacity=".6" />
+  <circle cx="32" cy="20" r="11" fill="url(#ibadIris)" class="eye-pulse" />
+  <circle cx="32" cy="20" r="3.5" fill="#070914" />
+  <circle cx="35" cy="16.5" r="1.6" fill="#fbf6ec" opacity=".85" />
+</svg>

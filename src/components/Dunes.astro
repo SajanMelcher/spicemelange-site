@@ -1,0 +1,21 @@
+---
+// Layered dune silhouettes that drift very slowly. Each layer is drawn twice side by side for a seamless loop.
+interface Props { class?: string }
+const { class: cls = '' } = Astro.props;
+const back = 'M0 120 C 120 80 220 70 340 96 S 560 150 700 110 S 920 40 1060 86 S 1300 150 1440 100 S 1520 84 1600 96 L1600 200 L0 200 Z';
+const mid = 'M0 140 C 160 110 260 150 420 128 S 680 80 820 120 S 1080 170 1240 132 S 1480 104 1600 126 L1600 200 L0 200 Z';
+const front = 'M0 168 C 200 140 320 176 520 160 S 820 132 980 158 S 1300 186 1460 160 S 1560 154 1600 162 L1600 200 L0 200 Z';
+---
+<div class={`pointer-events-none absolute inset-x-0 bottom-0 h-40 overflow-hidden sm:h-56 ${cls}`} aria-hidden="true">
+  {[
+    { d: back, fill: '#3a2414', anim: 'dune-drift-slow', op: 0.9 },
+    { d: mid, fill: '#7a3f12', anim: 'dune-drift', op: 0.85 },
+    { d: front, fill: '#c56a22', anim: '', op: 1 },
+  ].map((l) => (
+    <div class={`absolute inset-y-0 left-0 flex w-[200%] ${l.anim}`}>
+      <svg class="h-full w-1/2" viewBox="0 0 1600 200" preserveAspectRatio="none"><path d={l.d} fill={l.fill} fill-opacity={l.op} /></svg>
+      <svg class="h-full w-1/2" viewBox="0 0 1600 200" preserveAspectRatio="none"><path d={l.d} fill={l.fill} fill-opacity={l.op} /></svg>
+    </div>
+  ))}
+  <div class="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-b from-transparent to-night-950/60"></div>
+</div>

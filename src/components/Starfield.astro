@@ -1,0 +1,24 @@
+---
+// Deterministic starfield (seeded), so builds are stable and nothing loads at runtime.
+interface Props { count?: number; seed?: number; class?: string }
+const { count = 140, seed = 7, class: cls = '' } = Astro.props;
+let s = seed;
+const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+const stars = Array.from({ length: count }, (_, i) => ({
+  x: rnd() * 1600, y: rnd() * 900, r: rnd() < 0.92 ? rnd() * 0.9 + 0.3 : rnd() * 1.4 + 1,
+  tw: rnd() < 0.18, d: (rnd() * 4).toFixed(2), blue: rnd() < 0.12, i,
+}));
+---
+<svg class={`pointer-events-none absolute inset-0 h-full w-full ${cls}`} viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+  {stars.map((st) => (
+    <circle cx={st.x.toFixed(1)} cy={st.y.toFixed(1)} r={st.r.toFixed(2)}
+      fill={st.blue ? '#8fd3ff' : '#f4e9d4'}
+      class={st.tw ? 'twinkle' : ''} style={st.tw ? `animation-delay:${st.d}s` : `opacity:${(0.35 + (st.i % 5) * 0.12).toFixed(2)}`} />
+  ))}
+  <!-- two moons, original line art -->
+  <g fill="none" stroke="#e8d4ad" stroke-opacity=".55">
+    <circle cx="1310" cy="150" r="46" stroke-width="1.2" />
+    <path d="M1288 128a40 40 0 0 0 30 62" stroke-width="1" stroke-opacity=".35" />
+    <circle cx="1220" cy="212" r="17" stroke-width="1" />
+  </g>
+</svg>

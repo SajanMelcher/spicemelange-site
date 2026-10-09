@@ -1,0 +1,42 @@
+---
+// Original sandworm-inspired line art: a ringed body arcing out of the sand toward a round, many-toothed maw.
+interface Props { class?: string; animate?: boolean }
+const { class: cls = '', animate = true } = Astro.props;
+const teeth = Array.from({ length: 28 }, (_, i) => {
+  const a = (i / 28) * Math.PI * 2;
+  const r1 = 34, r2 = 52;
+  return `M${(Math.cos(a) * r1).toFixed(1)} ${(Math.sin(a) * r1).toFixed(1)}L${(Math.cos(a) * r2).toFixed(1)} ${(Math.sin(a) * r2).toFixed(1)}`;
+}).join(' ');
+const rings = [0.12, 0.2, 0.28, 0.36, 0.44, 0.52, 0.6, 0.68, 0.76];
+---
+<svg class={cls} viewBox="0 0 520 420" fill="none" role="img" aria-label="Line drawing of a great sandworm rising from the dunes">
+  <defs>
+    <linearGradient id="wormStroke" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#8a3d0e" />
+      <stop offset=".55" stop-color="#ee8f3a" />
+      <stop offset="1" stop-color="#f4e9d4" />
+    </linearGradient>
+  </defs>
+  <!-- body: two parallel curves -->
+  <path class={animate ? 'worm-draw' : ''} d="M30 400 C 80 300 150 250 220 230 S 340 190 372 120" stroke="url(#wormStroke)" stroke-width="2" stroke-linecap="round" />
+  <path class={animate ? 'worm-draw' : ''} d="M110 404 C 150 330 200 300 262 282 S 400 230 430 140" stroke="url(#wormStroke)" stroke-width="2" stroke-linecap="round" />
+  <!-- segment rings -->
+  <g stroke="#d7b97f" stroke-opacity=".5" stroke-width="1.1">
+    {rings.map((t) => {
+      const x1 = 30 + t * 342, y1 = 400 - t * 280;
+      const x2 = 110 + t * 320, y2 = 404 - t * 264;
+      return <path d={`M${x1.toFixed(0)} ${y1.toFixed(0)} Q ${((x1 + x2) / 2 + 14).toFixed(0)} ${((y1 + y2) / 2 + 12).toFixed(0)} ${x2.toFixed(0)} ${y2.toFixed(0)}`} />;
+    })}
+  </g>
+  <!-- maw -->
+  <g transform="translate(402 118) rotate(-28)">
+    <ellipse rx="64" ry="56" stroke="#f4e9d4" stroke-opacity=".85" stroke-width="1.6" />
+    <ellipse rx="56" ry="48" stroke="#ee8f3a" stroke-opacity=".6" stroke-width="1" />
+    <path d={teeth} stroke="#f4e9d4" stroke-opacity=".7" stroke-width="1" stroke-linecap="round" />
+    <circle r="22" fill="#070914" stroke="#4fb3ff" stroke-opacity=".7" stroke-width="1" class="eye-pulse" />
+  </g>
+  <!-- sand spray -->
+  <g fill="#e8d4ad">
+    {Array.from({ length: 26 }, (_, i) => <circle cx={(60 + ((i * 53) % 400)).toString()} cy={(330 + ((i * 37) % 70)).toString()} r={(0.6 + (i % 3) * 0.5).toString()} opacity={(0.25 + (i % 4) * 0.15).toFixed(2)} />)}
+  </g>
+</svg>

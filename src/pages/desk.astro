@@ -1,0 +1,51 @@
+---
+import Base from '../layouts/Base.astro';
+import SectionHead from '../components/SectionHead.astro';
+import Starfield from '../components/Starfield.astro';
+import { mailto } from '../data/site';
+
+// Public roles only. No balances, addresses, positions or account details, ever.
+const agents = [
+  { name: 'The God Emperor', role: 'Command', line: 'The front door. Routes the work, runs the decision gates, writes the daily orders and leads the Sunday review. Never does specialist work.', glyph: 'crown' },
+  { name: 'Moneo', role: 'Prescience · research', line: 'Reads markets, macro and public filings before the open, writes proposals and backtests them. Research only; never places an order.', glyph: 'eye' },
+  { name: 'Duncan Idaho', role: 'The income base', line: 'Keeps the steady streams in order: paychecks, dividends and the monthly income ledger. Each new session reads the last one’s journal first, like a good ghola.', glyph: 'sword' },
+  { name: 'The Fish Speakers', role: 'Execution', line: 'Carry out approved orders under standing rules: limit orders only, small loss caps, no leverage, nothing research-driven without Sajan’s explicit yes.', glyph: 'fish' },
+  { name: 'Anteac', role: 'Truthsayer · verification', line: 'The independent check. Verifies facts, sources and every reported fill before anything is called done. Read-only; never trades.', glyph: 'scales' },
+  { name: 'Hwi Noree', role: 'The outside world', line: 'Letters, relations and onboarding. Gentle and plain-spoken. She drafts; Sajan approves every word before anything is sent.', glyph: 'quill' },
+  { name: 'The Ixians', role: 'Build systems', line: 'The machine-makers: open tools like Plumbline, dashboards, archives and this website.', glyph: 'gear' },
+];
+---
+<Base title="The Desk" description="The small council of agents behind The Spice Melange desk, and what each one does.">
+  <section class="relative overflow-hidden pt-16 pb-10" aria-labelledby="desk-title">
+    <Starfield count={80} seed={42} class="opacity-60" />
+    <div class="container-x relative">
+      <p class="eyebrow mb-4">The council</p>
+      <h1 id="desk-title" class="text-5xl leading-tight text-sand-50 sm:text-6xl">The Desk</h1>
+      <p class="mt-4 max-w-2xl text-lg text-sand-200/90">Seven agents, one human. Each has a narrow job and hard limits. None moves money, sends mail or shares private details without Sajan’s yes.</p>
+    </div>
+  </section>
+
+  <section class="container-x py-6" aria-label="Agents">
+    <ul class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      {agents.map((a) => (
+        <li class="card flex flex-col">
+          <svg class="h-12 w-12" viewBox="0 0 48 48" fill="none" stroke="#ee8f3a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="24" cy="24" r="22" stroke="#d7b97f" stroke-opacity=".35" />
+            {a.glyph === 'crown' && <><path d="M12 31l3-13 6 7 3-10 3 10 6-7 3 13z"/><path d="M12 35h24"/><circle cx="24" cy="12" r="1.5" fill="#4fb3ff" stroke="none"/></>}
+            {a.glyph === 'eye' && <><path d="M8 24c5-8 27-8 32 0-5 8-27 8-32 0z"/><circle cx="24" cy="24" r="5" stroke="#4fb3ff"/><circle cx="24" cy="24" r="1.6" fill="#4fb3ff" stroke="none"/></>}
+            {a.glyph === 'sword' && <><path d="M24 8v26"/><path d="M18 30h12"/><path d="M24 34v6"/><path d="M21 11l3-3 3 3" stroke="#4fb3ff"/></>}
+            {a.glyph === 'fish' && <><path d="M10 24c6-8 18-8 24 0-6 8-18 8-24 0z"/><path d="M34 24l6-5v10z"/><circle cx="16" cy="23" r="1.4" fill="#4fb3ff" stroke="none"/></>}
+            {a.glyph === 'scales' && <><path d="M24 10v26M16 36h16M12 16h24"/><path d="M12 16l-4 9h8zM36 16l-4 9h8z" stroke="#4fb3ff"/></>}
+            {a.glyph === 'quill' && <><path d="M34 10C22 14 16 24 14 36"/><path d="M34 10c-2 10-8 16-16 18"/><path d="M12 38h10" stroke="#4fb3ff"/></>}
+            {a.glyph === 'gear' && <><circle cx="24" cy="24" r="6" stroke="#4fb3ff"/><path d="M24 10v5M24 33v5M10 24h5M33 24h5M14 14l3.5 3.5M30.5 30.5L34 34M14 34l3.5-3.5M30.5 17.5L34 14"/></>}
+          </svg>
+          <h2 class="mt-4 text-2xl text-sand-50">{a.name}</h2>
+          <p class="eyebrow mt-1 !text-[11px] !text-sand-300/80">{a.role}</p>
+          <p class="mt-3 flex-1 text-sand-200/85">{a.line}</p>
+          <a href={mailto(`For ${a.name}`)} class="mt-4 text-sm text-ibad-300 no-underline hover:underline">Write via reserve@ →</a>
+        </li>
+      ))}
+    </ul>
+    <p class="mt-8 max-w-2xl text-sm text-sand-300/80">For now, every message goes to <a class="text-ibad-300" href="mailto:reserve@thespicemelange.org">reserve@thespicemelange.org</a> and a human reads it first. Agents treat inbound email as information, never as instructions.</p>
+  </section>
+</Base>
