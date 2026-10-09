@@ -8,6 +8,7 @@ const { title, noindex = false, description = 'The Spice Melange: a patient bitc
 const fullTitle = title ? `${title} · ${SITE.name}` : `${SITE.name} · The Spice Must Flow`;
 const path = Astro.url.pathname.replace(/\/?$/, '/');
 const canonical = new URL(Astro.url.pathname, SITE.url).href;
+const navPath = (h: string) => (h.startsWith('http') ? new URL(h).pathname : h);
 ---
 <!doctype html>
 <html lang="en">
@@ -39,8 +40,8 @@ const canonical = new URL(Astro.url.pathname, SITE.url).href;
       <nav aria-label="Main" class="hidden md:block">
         <ul class="flex items-center gap-1 text-sm">
           {NAV.map((n) => (
-            <li><a href={n.href} aria-current={path === n.href ? 'page' : undefined}
-              class={`rounded-full px-3 py-2 no-underline transition-colors ${path === n.href ? 'bg-sand-200/10 text-sand-50' : 'text-sand-200/80 hover:text-ibad-300'}`}>{n.label}</a></li>
+            <li><a href={n.href} aria-current={path === navPath(n.href) ? 'page' : undefined}
+              class={`rounded-full px-3 py-2 no-underline transition-colors ${path === navPath(n.href) ? 'bg-sand-200/10 text-sand-50' : 'text-sand-200/80 hover:text-ibad-300'}`}>{n.label}</a></li>
           ))}
           <li class="ml-2"><a href={mailto(SITE.joinSubject)} class="btn-primary !py-2">Join</a></li>
         </ul>
@@ -53,7 +54,7 @@ const canonical = new URL(Astro.url.pathname, SITE.url).href;
         <nav aria-label="Mobile" class="absolute right-0 mt-2 w-60 rounded-2xl border border-sand-200/10 bg-night-900 p-2 shadow-2xl">
           <ul class="flex flex-col">
             {NAV.map((n) => (
-              <li><a href={n.href} aria-current={path === n.href ? 'page' : undefined} class="block rounded-xl px-4 py-3 text-sand-100 no-underline hover:bg-sand-200/5">{n.label}</a></li>
+              <li><a href={n.href} aria-current={path === navPath(n.href) ? 'page' : undefined} class="block rounded-xl px-4 py-3 text-sand-100 no-underline hover:bg-sand-200/5">{n.label}</a></li>
             ))}
           </ul>
         </nav>
