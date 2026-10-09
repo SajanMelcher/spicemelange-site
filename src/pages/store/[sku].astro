@@ -11,7 +11,7 @@ export function getStaticPaths() {
 const { p } = Astro.props;
 const others = ARCHETYPES.filter((a) => a.sku !== p.sku);
 ---
-<Base title={`${p.name}: ${p.role}`} noindex description={`${p.name} (${p.role}): ${p.blurb}`}>
+<Base title={`${p.name}: ${p.role}`} description={`${p.name} (${p.role}): ${p.blurb}`}>
   <section class="container-x pt-14 pb-6">
     <a href="/store/" class="text-sm text-ibad-300 no-underline hover:underline">← All archetypes</a>
     <div class="mt-6 grid gap-10 md:grid-cols-[1.4fr_1fr]">

@@ -1,5 +1,5 @@
 ---
-// P30 store (live on mainnet 10/9; unlisted: no nav link, noindex, not in sitemap). The Spice Melange: Golden Path Desk archetype templates.
+// P30 store (live on mainnet 10/9; listed: nav link, indexable, in sitemap). The Spice Melange: Golden Path Desk archetype templates.
 import Base from '../../layouts/Base.astro';
 import SectionHead from '../../components/SectionHead.astro';
 import Disclaimer from '../../components/Disclaimer.astro';
@@ -10,7 +10,7 @@ import { SITE } from '../../data/site';
 const bundle = CATALOG.find((p) => p.bundle);
 const soon = CATALOG.filter((p) => p.comingSoon);
 ---
-<Base title="Store" noindex description="The Golden Path Desk: seven AI-agent templates, each an archetype from God Emperor of Dune, working together. Pay in USDC on Sui.">
+<Base title="Store" description="The Golden Path Desk: seven AI-agent templates, each an archetype from God Emperor of Dune, working together. Pay in USDC on Sui.">
   <section class="container-x pt-16 pb-8" aria-labelledby="store-title">
     <p class="eyebrow mb-4">The Golden Path Desk · agent templates</p>
     <h1 id="store-title" class="text-5xl leading-tight text-sand-50 sm:text-6xl">Seven seats, one Golden Path</h1>
