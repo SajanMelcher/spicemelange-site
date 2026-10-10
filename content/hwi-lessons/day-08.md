@@ -17,13 +17,13 @@ A week of training is in the books. In *Dune*, Mentats are human thinkers who ca
 ## Five things to read, in order
 1. **Refusals.** Which guard said no, and how often? A few are normal. Many from the same rule means a setting and a strategy are fighting. Find out why before you change anything.
 2. **Fills.** How many rungs filled, at which depths? If nothing ever fills, your spacing may be wider than this market moves. If everything fills at once, it may be too tight for a falling market.
-3. **Round trips.** How many lots were bought *and* sold? Each completed round trip shows realized profit after fees.
+3. **Round trips.** How many lots were bought *and* sold? Each completed round trip shows its realized result after fees.
 4. **Open lots.** What's still waiting, at what cost, and how far under or over the mid? Remember day 3: waiting is allowed.
 5. **Realized vs. unrealized.** *Realized* is locked-in profit from completed sells. *Unrealized* is what open lots would be worth at today's mid. The first is history. The second is a snapshot that changes every minute.
 
 ## Don't fool yourself
 - **One week is a tiny sample.** A calm week and a wild week can tell opposite stories. Don't extrapolate seven days into a year.
-- **Paper is honest, not perfect.** Fills here require real trades through your price, which is strict. But live trading adds gas, and real orders can change the book a little. Expect live to be slightly worse, never better.
+- **Paper is honest, not perfect.** Fills here require real trades through your price, which is strict. But live trading adds gas, and real orders can change the book a little. Plan for live to be a little worse than paper.
 - **No percentages per year.** Turning a good week into an "annual return" is a guess dressed up as math. This desk doesn't make that guess, and you shouldn't either.
 
 ## What good looks like

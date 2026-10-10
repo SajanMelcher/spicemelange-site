@@ -23,12 +23,12 @@ The gap between the best bid and the best ask is the **spread**. The **mid** is 
 Your bot is a maker only (guard R6). It places **limit orders**, never market orders, and it posts them "post-only": if an order would cross the book and fill at once, it's refused instead. Makers usually pay lower fees than takers, and they never buy at a surprise price.
 
 ## Fills
-A resting bid fills when sellers trade down to its price. In training, your paper order counts as filled only when real trades print *strictly through* its price, and only up to the volume that traded. So a paper fill means a real order very likely would have filled too.
+A resting bid fills when sellers trade down to its price. In training, your paper order counts as filled only when real trades print *strictly through* its price, and only up to the volume that traded. So a paper fill means a real order probably would have filled too. Not always, though: real orders wait in line behind others at the same price.
 
 ## Where your coins sit
 On DeepBook, trading funds live in a **BalanceManager**, an on-chain account you own. When you go live, the bot can trade from it using a **TradeCap**: a permission that can place and cancel orders but **cannot withdraw**. That's a good boundary. The bot can work the book, but it can't move your money out.
 
-## Why patience pays the bills
+## Why waiting is fine
 Because your bot waits at its own price, some orders never fill. That's the cost of never chasing. An unfilled order costs nothing but time, and on a quiet day "nothing filled" is a perfectly good result.
 
 ## Today's practice task for your bot

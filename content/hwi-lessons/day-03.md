@@ -17,7 +17,7 @@ Every buy creates a **lot**: how much you bought and what it cost you, including
 The multiplier can't be set below 1. So the smallest possible sell is "get back what you paid, plus a little". A loss sale simply can't be built. There's no override switch, no "just this once", and no human-yes exception.
 
 ## Why be so strict?
-Fear sells at the bottom. In *Dune*, a famous litany warns that fear wrecks clear thinking, and in trading that is close to literal. Most painful losses don't come from one bad buy. They come from selling in a panic, then watching the price come back without you.
+Fear sells at the bottom. In *Dune*, a famous litany warns that fear wrecks clear thinking, and in trading that is close to literal. Many painful losses come less from the buy than from selling in a panic, sometimes just before the price comes back.
 
 Removing the loss sale removes that whole path. A dip becomes a waiting room, not an exit.
 

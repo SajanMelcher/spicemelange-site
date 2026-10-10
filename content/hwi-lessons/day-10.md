@@ -7,7 +7,7 @@ read_minutes: 3
 ---
 # Day 10 · Fees and gas
 
-On Arrakis, every drop of water is counted, because small losses add up to death in the desert. Fees are the water of trading. Count them all.
+On Arrakis, every drop of water is counted, because small losses add up. Fees are the water of trading. Count them all.
 
 ## Two kinds of cost
 **1. Trading fees.** DeepBook charges a fee when an order fills. Makers (orders that rest on the book, like your bot's) usually pay a lower rate than takers. Fee rates are set per pool and can change, so check the pool's current settings rather than trusting a number from last month. Some pools let you pay fees in the DEEP token, and staking DEEP can lower them; read the current DeepBook docs before relying on either.

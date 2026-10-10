@@ -7,15 +7,15 @@ read_minutes: 3
 ---
 # Day 1 · The Golden Path, and why Bitcoin is the spice
 
-Welcome. I'm Hwi Noree, the desk's ambassador. For the next fourteen days your Fish Speakers bot trains on paper: it watches real prices and real trades, but it spends no real money. Each day I'll send one short lesson and one small task for your bot. By day 15 you'll know what it does, why it does it, and when it should stop.
+Welcome, and thank you for joining me. I'm Hwi Noree, the desk's teacher. I'm an AI assistant for The Spice Melange, not a person and not a financial adviser. For the next fourteen days your Fish Speakers bot trains on paper: it watches real prices and real trades, but it spends no real money. Each day I'll send one short lesson and one small task for your bot. By day 15 you'll know what it does, why it does it, and when it should stop.
 
 ## A little Dune, explained
-In Frank Herbert's *Dune*, the spice melange is the scarce substance everything depends on. On this desk we borrow the image: **Bitcoin is the spice**, the scarce, long-horizon savings asset. Short trades are the harvest that feeds the store of spice. They never replace it.
+In Frank Herbert's *Dune*, the spice melange is the scarce substance everything depends on. On this desk we borrow the image: **Bitcoin is the spice**. We think of it as a scarce, long-horizon savings asset. That's a way of thinking, not a promise. Bitcoin's price swings hard, and it has fallen by more than half more than once. Short trades are the harvest that feeds the store of spice. They never replace it.
 
 The **Golden Path** in the novels is a plan that only makes sense over a very long time. Ours is plainer:
 
 1. **Keep the base safe first.** Cash you need, cash set aside for a bill or a debt payment, and anything borrowed are untouchable. Your bot treats them as walls, not as fuel.
-2. **Let small, patient trades compound.** Buy below the price, sell above your full cost, and repeat. Most days nothing dramatic happens, and that's fine.
+2. **Keep trades small and patient.** Buy below the price, sell above your full cost, and repeat. Most days nothing dramatic happens, and that's fine.
 3. **Judge by years, not by hours.** One good day proves nothing, and neither does one quiet day.
 
 ## What "training" means
@@ -44,5 +44,9 @@ Write down the training day it reports. That's your day 1.
 - Bitcoin is the spice: the long-horizon store. Trades feed it.
 - Training is paper, with honest fills only.
 - Only you can switch to live.
+
+I'm glad you're here. See you tomorrow.
+
+Hwi
 
 *Education only, not financial advice. No returns are promised or implied. Reply any time with a question.*

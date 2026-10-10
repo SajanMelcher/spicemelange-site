@@ -27,10 +27,10 @@ In *Dune*, the Fremen live in sietches: hidden rock shelters that keep water in 
 **3. They fail closed.** If the guard's heartbeat is missing, stale or failed, if prices are stale, or if errors repeat, the bot stops placing orders. A crash writes a `HALT` file, and only you remove it.
 
 ## Why a daily loss cap and no leverage?
-Bad days happen to every trader. A daily cap turns a bad day into a *small* bad day: the bot stops buying, waits for tomorrow, and you get time to look. Leverage does the opposite. Borrowed money can turn a dip into a forced sale at the worst moment. So the desk simply doesn't use it, and neither does your bot.
+Bad days happen to every trader. A daily cap turns a bad day into a *small* bad day: the bot stops buying, waits for tomorrow, and you get time to look. Leverage does the opposite. With borrowed money, a dip can trigger a forced sale (a liquidation) at the worst moment, and you can lose more than you put in. So your bot simply doesn't use it.
 
 ## Choosing your numbers
-Start small. Pick a daily loss cap you would shrug at losing, a size cap smaller than you think you need, and only a couple of rungs at first. You can always raise a number later, deliberately, after training shows you how the bot behaves. Hwi never suggests your numbers; they're your decisions.
+Start small. Pick a daily loss cap you would shrug at losing, a size cap smaller than you think you need, and only a couple of rungs at first. You can always raise a number later, deliberately, after training shows you how the bot behaves. I never suggest your numbers. They're your decisions.
 
 ## A refusal is good news
 When your report shows a `guard_refusal` line, the system worked: an order was stopped before it was placed. Read which rule fired. Don't loosen a guard just to make a refusal go away. Ask why it fired first.

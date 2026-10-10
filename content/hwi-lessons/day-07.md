@@ -12,10 +12,10 @@ Halfway through. Today's lesson is the heart of how your bot buys.
 ## A ladder
 Instead of one big buy, the bot places a **ladder**: a few small buy orders resting at different prices below the mid. Each order is a **rung**. If the price dips a little, the top rung fills. If it dips further, the next one fills, at a better price.
 
-Why? Because nobody knows tomorrow's price. A ladder doesn't need to guess. It buys a little on a small dip and a little more on a bigger one, so your average cost improves when the market is weak, and nothing is lost if it never dips.
+Why? Because nobody knows tomorrow's price. A ladder doesn't need to guess. It buys a little on a small dip and a little more on a bigger one, so you buy at lower prices when the market is weak. The flip side: if the price keeps falling, every rung fills and you hold more of a falling coin. That's why sizes stay small.
 
 ## Spacing
-The gap between rungs is set by `buyStepsPct` in your settings: percentages below the mid. Tight spacing fills more often with smaller discounts. Wide spacing fills less often with deeper discounts. Thin books usually need wider spacing than deep ones. The desk likes **golden-ratio spacing** (each gap a little wider than the last), but the numbers are always yours.
+The gap between rungs is set by `buyStepsPct` in your settings: percentages below the mid. Tight spacing fills more often with smaller discounts. Wide spacing fills less often with deeper discounts. Thin books usually need wider spacing than deep ones. The desk likes **golden-ratio spacing** (each gap wider than the one before), but the numbers are always yours.
 
 ## How many rungs?
 The desk rhythm's guidance is:
@@ -28,7 +28,7 @@ Two hard facts sit above that guidance:
 2. **Every rung must be fully funded (R3).** No rung is placed with money you don't have.
 
 ## Exits
-When a rung fills, it becomes a lot, and the bot rests a **sell** above it: at least cost plus fees (R1), and usually at your `sellTargetMultiplier`. Fill low, sell higher, repeat. Each round trip is small. The value comes from many patient repeats, not from one big win.
+When a rung fills, it becomes a lot, and the bot rests a **sell** above it: at least cost plus fees (R1), and usually at your `sellTargetMultiplier`. Fill low, sell higher, repeat. Each round trip is small. Any gain comes from many patient repeats, not one big win, and some weeks there's none.
 
 ## Re-centering
 Prices drift. Every so often (often during the rhythm's ladder windows) the bot moves unfilled rungs to follow the mid. It leaves rungs alone if they're within your `keepTolerancePct`, so it doesn't churn orders for tiny moves.
