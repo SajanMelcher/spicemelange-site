@@ -1,0 +1,29 @@
+---
+// /learn/1/ ... /learn/7/ (R1): the free lessons on the web, every track's section shown. DRAFT, noindex.
+import Base from '../../layouts/Base.astro';
+import { COURSE, RISK } from '../../../store-core/course-content.js';
+export function getStaticPaths() { return COURSE.map((L) => ({ params: { n: String(L.n) }, props: { L } })); }
+const { L } = Astro.props;
+const code = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/`([^`]+)`/g, '<code>$1</code>');
+const TR = [['pilgrim', 'New to this'], ['fremen', "If you've bought some crypto"], ['naib', 'If you trade actively']];
+---
+<Base title={`Lesson ${L.n}: ${L.title}`} noindex={true} description={`Hwi's free Golden Path course, lesson ${L.n} of 7: ${L.title}. Education only.`}>
+  <article class="container-x max-w-3xl pt-16 pb-16 terms">
+    <p class="eyebrow mb-4"><a class="text-ibad-300" href="/learn/">Free course</a> · lesson {L.n} of 7</p>
+    <h1>{L.title}</h1>
+    {L.intro && <p set:html={code(L.intro)} />}
+    <p set:html={code(L.core)} />
+    {TR.map(([k, label]) => (<><h2>{label}</h2><p set:html={code(L.track[k])} /></>))}
+    <h2>A worked example</h2><p set:html={code(L.deeper)} />
+    <h2>Apply this on the desk</h2>
+    <p><strong>With an agent:</strong> <span set:html={code(L.task.yes)} /></p>
+    <p><strong>Without one:</strong> <span set:html={code(L.task.no)} /></p>
+    <p class="mt-8 text-sm opacity-80"><em>{RISK}</em></p>
+    <p class="mt-6">{L.n < 7 ? <a class="text-ibad-300" href={`/learn/${L.n + 1}/`}>Next: lesson {L.n + 1}</a> : <a class="text-ibad-300" href="/learn/">Back to the course</a>} · <a class="text-ibad-300" href="/learn/#fc-title">Get it by email</a></p>
+  </article>
+</Base>
+<style is:global>
+  .terms h1 { font-size: 2.25rem; line-height: 1.2; margin-bottom: .75rem; }
+  .terms h2 { font-size: 1.4rem; margin-top: 1.75rem; margin-bottom: .4rem; }
+  .terms p { margin-top: .5rem; line-height: 1.7; opacity: .92; }
+</style>

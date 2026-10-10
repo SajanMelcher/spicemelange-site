@@ -17,6 +17,7 @@ crons = ["*/10 * * * *"]
 
 [vars]
 SUI_NETWORK = "mainnet"
+COURSE_PRODUCTION_SENDING = "0" # free Golden Path course: OFF until Siona + Sajan approve (R2)
 LESSONS_PRODUCTION_SENDING = "1" # ON 2026-10-10 (Sajan 7:16 AM PT; R0 verified on production; Hwi confirmed). Lesson runs still hold until /privacy/ + terms Resend line are live.
 LESSONS_FROM = '"Hwi Noree, The Spice Melange" <hwi@thespicemelange.org>'
 LESSONS_REPLY_TO = "reserve@thespicemelange.org"
@@ -35,6 +36,9 @@ workers_dev = true
 crons = ["*/10 * * * *"]
 
 [env.preview.vars]
+COURSE_PRODUCTION_SENDING = "0"
+COURSE_TEST_RECIPIENTS = "delivered@resend.dev,delivered+pilgrim@resend.dev,delivered+fremen@resend.dev,delivered+naib@resend.dev"
+COURSE_RESEND_CONTACTS = "1"
 SUI_NETWORK = "testnet"
 LESSONS_PRODUCTION_SENDING = "0"
 # Test mode: only these addresses ever get mail from the preview sender (Resend's test sink; no real person).

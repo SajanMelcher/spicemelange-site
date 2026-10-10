@@ -19,6 +19,8 @@ SIGNALS_ENABLED = "1"
 # end-to-end check (signup, confirm email, confirm, Day 1, one-click unsubscribe link + POST, footer). Lesson runs hold in
 # the worker until /privacy/ is live and /terms/ has the Resend opt-in line.
 LESSONS_PRODUCTION_SENDING = "1"
+# Free Golden Path course signup on /learn/ (R6): OFF in production until Siona + Sajan approve.
+COURSE_PRODUCTION_SENDING = "0"
 
 [[kv_namespaces]]
 binding = "STORE_KV"

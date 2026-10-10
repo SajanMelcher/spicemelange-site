@@ -107,7 +107,14 @@ export function buildAll() {
     if (!/not financial advice/i.test(body)) throw new Error(`${f}: missing education-only line`);
     const words = body.split(/\s+/).filter(Boolean).length;
     const { html, text } = render(body);
-    out.push({ day: d, title: meta.title, subject: meta.subject, preview: meta.preview, words, html, text });
+    // R10: "Apply this on the desk" endings live in content/hwi-lessons/cta/ (email-only; never copied into template ZIPs).
+    const cta = {};
+    for (const v of ['buyer', 'collection']) {
+      const cf = path.join(dir, 'cta', `day-${pad(d)}.${v}.md`);
+      if (existsSync(cf)) { const c = readFileSync(cf, 'utf8'); if (!/not financial advice/i.test(c)) throw new Error(`${cf}: missing risk line`); cta[v] = render(c); }
+    }
+    if (!cta.buyer) throw new Error(`day ${d}: missing cta/day-${pad(d)}.buyer.md`);
+    out.push({ day: d, title: meta.title, subject: meta.subject, preview: meta.preview, words, html, text, cta });
   }
   return out;
 }
