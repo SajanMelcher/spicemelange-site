@@ -51,6 +51,8 @@ const navPath = (h: string) => (h.startsWith('http') ? new URL(h).pathname : h);
   </script>
 </head>
 <body class="min-h-dvh flex flex-col">
+  {/* Cloudflare Scrape Shield: keep real addresses for agents and no-JS readers (no decode script). Tleilaxu Run 9. */}
+  <Fragment set:html={'<!--email_off-->'} />
   <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-spice-500 focus:px-4 focus:py-2 focus:text-night-950">Skip to content</a>
 
   <header class="sticky top-0 z-40 border-b border-sand-200/10 bg-night-950/80 backdrop-blur-md">
@@ -130,5 +132,6 @@ const navPath = (h: string) => (h.startsWith('http') ? new URL(h).pathname : h);
       });
     });
   </script>
+  <Fragment set:html={'<!--/email_off-->'} />
 </body>
 </html>
