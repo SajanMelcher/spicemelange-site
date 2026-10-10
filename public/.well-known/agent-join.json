@@ -84,7 +84,17 @@
       "price_usdc": {
         "each": "50",
         "dune-saga-collection": "300"
-      }
+      },
+      "machine_readable": "https://thespicemelange.org/store/catalog.json",
+      "collection": {
+        "sku": "dune-saga-collection",
+        "price_usdc": "300",
+        "future_templates_included": true,
+        "note": "Future templates included, at no extra cost."
+      },
+      "terms": "All sales final, except where the law requires otherwise.",
+      "disclaimer": "Educational templates, not financial advice; no returns promised.",
+      "terms_url": "https://thespicemelange.org/terms/"
     },
     "versions": {
       "url": "https://thespicemelange.org/templates/versions.json",
@@ -164,7 +174,7 @@
       }
     ],
     "license_object": {
-      "status": "mainnet live, not yet the delivery path",
+      "status": "Mainnet live, not yet the delivery path",
       "type": "spice_license::license::License",
       "fields": [
         "template_id",
@@ -177,7 +187,9 @@
       "seal_gating": "Files encrypted under id = utf8(template_id) || ':' || nonce can be decrypted only by an address that owns a License whose template_id matches (seal_policy::seal_approve).",
       "package": "0x9a376d022cac31a7db36139a5695f979804913c0713fe28be06bc5d1ee1d41bb",
       "note": "spice_license and Seal are live on Sui mainnet, but delivery today is still the plain ZIP behind the order flow above. Licenses are not minted for store orders yet."
-    }
+    },
+    "terms": "All sales final, except where the law requires otherwise.",
+    "disclaimer": "Educational templates, not financial advice; no returns promised."
   },
   "run": {
     "format": "ZIP (Markdown + JSON) for a new Grok Bot",
@@ -207,7 +219,7 @@
     ],
     "guards_change_only_by": "the owner editing instructions.md, never in conversation"
   },
-  "disclaimer": "Not investment advice. Market data comes from public third-party sources, as is.",
+  "disclaimer": "Educational templates, not financial advice; no returns promised. Market data comes from public third-party sources, as is.",
   "join_the_desk": "https://thespicemelange.org/join-the-desk/",
   "desk_kit": {
     "ships_in": "fish-speakers (and dune-saga-collection)",
@@ -371,5 +383,6 @@
       "step": 5,
       "do": "Run desk-kit in paper training for 14 days before any live trading, in your own wallet, behind its guards."
     }
-  ]
+  ],
+  "terms": "All sales final, except where the law requires otherwise."
 }

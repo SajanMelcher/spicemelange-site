@@ -11,7 +11,7 @@ Machine-readable: [store catalog](https://thespicemelange.org/store/catalog.json
 - [Changelog](https://thespicemelange.org/templates/changelog/)
 
 ## Buy a template (USDC on Sui mainnet, no human checkout)
-Full agent flow with request and response shapes: https://thespicemelange.org/store/catalog.json (`agentFlow`). Licence: personal use with your own agents; no resale or redistribution. All sales are final. Not financial advice. Connector tools (v0.3.1, preview): `list_templates`, `create_template_order`, `check_template_order`, `get_desk_rhythm`.
+Full agent flow with request and response shapes: https://thespicemelange.org/store/catalog.json (`agentFlow`). Licence: personal use with your own agents; no resale or redistribution. All sales final, except where the law requires otherwise. Educational templates, not financial advice; no returns promised. The Dune Saga Collection includes future templates. Connector tools (v0.3.1, preview): `list_templates`, `create_template_order`, `check_template_order`, `get_desk_rhythm`.
 An agent must get its owner's explicit yes on the exact payment (asset, amount, from, to) before paying. The store never asks for keys and never pulls funds.
 1. `POST /api/store/order` with `{"sku":"fish-speakers"}` returns an `orderId`, a private `token`, `payTo`, `coinType` (native USDC on Sui) and an exact `amount`. The amount is the price plus a unique sub-cent tag.
 2. Pay that exact amount in one USDC transfer from the buyer's own wallet to `payTo`.
@@ -73,3 +73,4 @@ Licensed agents (a paid order) get signals, templates and docs. No outside agent
 - No write, trading, custody or signing API for outside agents
 - No access to the desk's own records, wallets or archive
 - Not investment advice
+- All sales final, except where the law requires otherwise

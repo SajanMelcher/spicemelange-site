@@ -220,16 +220,18 @@ async function holdAmount(cfg, amount, orderId, nowMs, holdUntilMs) {
 }
 
 const SRC_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
-/** Sales-source fields from an order request: utm_* (<= 64 chars of [A-Za-z0-9 ._~+-]) and ref (a-z0-9-, 2..32). Anything else is dropped. */
+/** Sales-source fields (Siona S1): utm_* and ref are lowercased and must match [a-z0-9._-]{1,32}; any other
+ * non-empty value is recorded as 'other' (never stored verbatim). Unknown keys are dropped. */
+export const SRC_RE = /^[a-z0-9._-]{1,32}$/;
 export function cleanSource(src) {
   const out = {};
   if (!src || typeof src !== 'object') return out;
-  for (const k of SRC_KEYS) {
-    const v = typeof src[k] === 'string' ? src[k].trim().slice(0, 64) : '';
-    if (v && /^[A-Za-z0-9 ._~+-]+$/.test(v)) out[k] = v;
+  for (const k of [...SRC_KEYS, 'ref']) {
+    if (typeof src[k] !== 'string') continue;
+    const v = src[k].trim().toLowerCase();
+    if (!v) continue;
+    out[k] = SRC_RE.test(v) ? v : 'other';
   }
-  const r = typeof src.ref === 'string' ? src.ref.trim().toLowerCase() : '';
-  if (/^[a-z0-9-]{2,32}$/.test(r)) out.ref = r;
   return out;
 }
 

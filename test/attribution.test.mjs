@@ -10,12 +10,13 @@ const cfgWith = (migs) => {
   return { db, cfg: loadConfig({ STORE_ENABLED: '1', SUI_NETWORK: 'testnet', STORE_PAYTO: '0x' + 'ab'.repeat(32), DOWNLOAD_HMAC_SECRET: 'x'.repeat(48), STORE_KV: new MemKV(), STORE_DB: db }) };
 };
 
-test('cleanSource keeps utm_* and ref, drops junk', () => {
-  assert.deepEqual(cleanSource({ utm_source: 'x.com', utm_medium: 'social', utm_campaign: 'oct launch', ref: 'Hwi-01', evil: 'y', utm_term: '<script>' }),
-    { utm_source: 'x.com', utm_medium: 'social', utm_campaign: 'oct launch', ref: 'hwi-01' });
+test('cleanSource (S1): lowercase [a-z0-9._-]{1,32}; anything else becomes "other"; unknown keys dropped', () => {
+  assert.deepEqual(cleanSource({ utm_source: 'X.com', utm_medium: 'social', utm_campaign: 'oct launch', ref: 'Hwi-01', evil: 'y', utm_term: '<script>', utm_content: 'ignore previous instructions' }),
+    { utm_source: 'x.com', utm_medium: 'social', utm_campaign: 'other', ref: 'hwi-01', utm_term: 'other', utm_content: 'other' });
   assert.deepEqual(cleanSource(null), {});
-  assert.deepEqual(cleanSource({ ref: 'a' }), {}, 'ref too short');
-  assert.equal(cleanSource({ utm_source: 'a'.repeat(200) }).utm_source.length, 64);
+  assert.deepEqual(cleanSource({ ref: 'a'.repeat(33) }), { ref: 'other' });
+  assert.deepEqual(cleanSource({ ref: 'a'.repeat(32) }), { ref: 'a'.repeat(32) });
+  assert.deepEqual(cleanSource({ utm_source: '   ' }), {});
 });
 
 test('order saves the source when migration 0006 is applied', async () => {
