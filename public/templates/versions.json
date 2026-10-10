@@ -77,7 +77,7 @@
       "versionKey": 20261010001,
       "released": "2026-10-10",
       "summary": "Memory discipline fixes: memories only fill <SET ME> settings and never loosen a limit; Leto's Secret Journals rebuilt with a HALT kill switch and no loss sales ever.",
-      "sha256": "542353ffde084f7ee0621312ace29a640963ff77fc119e8eec79bb979496e174"
+      "sha256": "873c265f77b4438ed8c2fdb317699bd36dd3031847bffa4b417c9467ca4bde48"
     },
     "dune-saga-collection": {
       "name": "The Dune Saga Collection",
@@ -97,7 +97,7 @@
       "versionKey": 20261010001,
       "released": "2026-10-10",
       "summary": "Memory discipline fixes: memories only fill <SET ME> settings and never loosen a limit; Leto's Secret Journals rebuilt with a HALT kill switch and no loss sales ever.",
-      "sha256": "542353ffde084f7ee0621312ace29a640963ff77fc119e8eec79bb979496e174"
+      "sha256": "873c265f77b4438ed8c2fdb317699bd36dd3031847bffa4b417c9467ca4bde48"
     },
     "dune-saga-collection": {
       "name": "The Dune Saga Collection",
