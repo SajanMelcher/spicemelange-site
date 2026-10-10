@@ -22,3 +22,9 @@ export const sameOrigin = (request) => {
   const o = request.headers.get('origin');
   return !o || o === new URL(request.url).origin;
 };
+
+/** Order token from `Authorization: Bearer smt_...`, then a JSON body field, then the legacy `token` query param. */
+export function tokenFrom(request, body, url) {
+  const m = /^Bearer\s+(\S+)$/i.exec(request.headers.get('authorization') ?? '');
+  return m?.[1] ?? (body && typeof body.token === 'string' ? body.token : null) ?? url?.searchParams.get('token') ?? null;
+}

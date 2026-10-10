@@ -2,7 +2,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { makeD1 } from './d1-shim.mjs';
-import { loadConfig, createOrder, verifyOrder, checkLink, signLink, orderStatus, SUI_USDC, CHAIN_ID, atomicToDecimal } from '../store-core/core.js';
+import { loadConfig, createOrder, verifyOrder, checkLink, signLink, orderStatus, authorizeDownload, resetChallenge, resetToken, SUI_USDC, CHAIN_ID, atomicToDecimal } from '../store-core/core.js';
+import { tokenFrom } from '../store-core/http.js';
+import { verifyPersonalMessage, personalMessageDigest, suiAddress } from '../store-core/suisig.js';
+import { ed25519 } from '@noble/curves/ed25519';
+import { secp256k1 } from '@noble/curves/secp256k1';
+import { sha256 as nsha256 } from '@noble/hashes/sha256';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 
 const PAYTO = '0x' + 'ab'.repeat(32);
 const OTHER = '0x' + 'cd'.repeat(32);
@@ -12,11 +19,11 @@ class MemKV {
   async put(k, v) { this.m.set(k, String(v)); }
   keys(prefix) { return [...this.m.keys()].filter((k) => k.startsWith(prefix)); }
 }
-const env = (over = {}) => ({ STORE_ENABLED: '1', SUI_NETWORK: 'testnet', STORE_PAYTO: PAYTO, DOWNLOAD_HMAC_SECRET: 'x'.repeat(48), STORE_KV: new MemKV(), STORE_DB: makeD1(['../migrations/0001_store.sql', '../migrations/0002_order_payee.sql'].map((m) => new URL(m, import.meta.url))), ...over });
+const env = (over = {}) => ({ STORE_ENABLED: '1', SUI_NETWORK: 'testnet', STORE_PAYTO: PAYTO, DOWNLOAD_HMAC_SECRET: 'x'.repeat(48), STORE_KV: new MemKV(), STORE_DB: makeD1(['../migrations/0001_store.sql', '../migrations/0002_order_payee.sql', '../migrations/0003_status_reset.sql'].map((m) => new URL(m, import.meta.url))), ...over });
 const D1 = '7'.repeat(43), D2 = '8'.repeat(43), D3 = '9'.repeat(43);
 
 /** Mock Sui GraphQL: txs = { digest: {status, timestampMs, changes:[[owner, coinType, amount]]} } */
-function mockRpc(txs, { chain = CHAIN_ID.testnet, recent = [] } = {}) {
+function mockRpc(txs, { chain = CHAIN_ID.testnet, recent = [], sender = OTHER } = {}) {
   return async (_url, init) => {
     const { query, variables } = JSON.parse(init.body);
     let data;
@@ -24,7 +31,7 @@ function mockRpc(txs, { chain = CHAIN_ID.testnet, recent = [] } = {}) {
     else if (query.includes('transactions(')) data = { transactions: { nodes: recent.map((digest) => ({ digest })) } };
     else {
       const t = txs[variables.d];
-      data = { transaction: t ? { digest: variables.d, sender: { address: OTHER }, effects: { status: t.status ?? 'SUCCESS', timestamp: new Date(t.timestampMs).toISOString(), balanceChanges: { nodes: t.changes.map(([o, c, a]) => ({ owner: { address: o }, coinType: { repr: c }, amount: String(a) })) } } } : null };
+      data = { transaction: t ? { digest: variables.d, sender: { address: sender }, effects: { status: t.status ?? 'SUCCESS', timestamp: new Date(t.timestampMs).toISOString(), balanceChanges: { nodes: t.changes.map(([o, c, a]) => ({ owner: { address: o }, coinType: { repr: c }, amount: String(a) })) } } } : null };
     }
     return new Response(JSON.stringify({ data }), { status: 200, headers: { 'content-type': 'application/json' } });
   };
@@ -253,7 +260,7 @@ test("catalog: Leto's Secret Journals listed at 50, bundle stays 250", async () 
 
 test('payee change: each order verifies against the payee recorded on it; new orders use the new payee', async () => {
   const NEW = '0x' + 'ef'.repeat(32);
-  const db = makeD1(['../migrations/0001_store.sql', '../migrations/0002_order_payee.sql'].map((m) => new URL(m, import.meta.url)));
+  const db = makeD1(['../migrations/0001_store.sql', '../migrations/0002_order_payee.sql', '../migrations/0003_status_reset.sql'].map((m) => new URL(m, import.meta.url)));
   const kv = new MemKV();
   const oldCfg = loadConfig(env({ STORE_DB: db, STORE_KV: kv }));
   const a = (await createOrder(oldCfg, { sku: 'moneo', nowMs: T0 })).order;
@@ -344,4 +351,119 @@ test('versions.json: every update-checked entry carries a 64-hex sha256 of the s
   for (const [k, t] of Object.entries(v.templates)) assert.match(t.sha256 ?? '', /^[0-9a-f]{64}$/, k);
   assert.equal(v.templates['hwi-noree'].sha256, '79a9a0c3d958c8cbbe503f59c550509506960689a1b243bf97ba2c2bd39efef0');
   assert.equal(v.templates['dune-saga-collection'].sha256, '5fb75c118841f8aa2ae403f43c55ac6943be6b99f4fc87b904f5945213074417');
+});
+
+// ---------- auto-update support (10/9/2026) ----------
+const b64 = (u) => Buffer.from(u).toString('base64');
+function edWallet() {
+  const sk = ed25519.utils.randomPrivateKey(), pk = ed25519.getPublicKey(sk);
+  return { address: suiAddress(0, pk), sign: (m) => b64([0, ...ed25519.sign(personalMessageDigest(new TextEncoder().encode(m)), sk), ...pk]) };
+}
+function k1Wallet() {
+  const sk = secp256k1.utils.randomPrivateKey(), pk = secp256k1.getPublicKey(sk, true);
+  return { address: suiAddress(1, pk), sign: (m) => b64([1, ...secp256k1.sign(nsha256(personalMessageDigest(new TextEncoder().encode(m))), sk).toCompactRawBytes(), ...pk]) };
+}
+async function paidOrder(over, sender = OTHER) {
+  const { cfg, o } = await setup(over);
+  const r = await verifyOrder(cfg, { orderId: o.orderId, token: o.token, digest: D1, nowMs: T0 + 120_000, fetchImpl: mockRpc({ [D1]: pay(o) }, { sender }) });
+  assert.equal(r.ok, true, r.reason);
+  return { cfg, o };
+}
+
+test('token transport: Authorization Bearer, then JSON body, then legacy ?token=', () => {
+  const u = new URL('https://thespicemelange.org/api/store/order?id=SM-X&token=smt_query');
+  const req = (h) => new Request(u, { headers: h });
+  assert.equal(tokenFrom(req({ authorization: 'Bearer smt_header' }), { token: 'smt_body' }, u), 'smt_header');
+  assert.equal(tokenFrom(req({}), { token: 'smt_body' }, u), 'smt_body');
+  assert.equal(tokenFrom(req({}), null, u), 'smt_query');
+  assert.equal(tokenFrom(req({}), null, null), null);
+});
+
+test('status on a paid order: never uses verify attempts; own hourly limit; resets next hour', async () => {
+  const { cfg, o } = await paidOrder({ STORE_STATUS_PER_HOUR: '5' });
+  const att = () => cfg.db.raw.prepare('SELECT attempts AS n FROM orders WHERE id = ?').get(o.orderId).n;
+  const before = att();
+  for (let i = 0; i < 5; i++) assert.equal((await orderStatus(cfg, { orderId: o.orderId, token: o.token, nowMs: T0 + 300_000 })).status, 'paid');
+  const lim = await orderStatus(cfg, { orderId: o.orderId, token: o.token, nowMs: T0 + 300_000 });
+  assert.equal(lim.reason, 'status_rate_limited'); assert.ok(lim.retryAfterSec > 0);
+  assert.equal(att(), before, 'status must not touch payment-verify attempts');
+  // verifying again on the paid order is also free and still works while status is limited
+  assert.equal((await verifyOrder(cfg, { orderId: o.orderId, token: o.token, digest: D1, nowMs: T0 + 300_000, fetchImpl: mockRpc({}) })).ok, true);
+  assert.equal(att(), before);
+  assert.equal((await orderStatus(cfg, { orderId: o.orderId, token: o.token, nowMs: T0 + 3_700_000 })).status, 'paid');
+  // a wrong token never consumes the order's quota
+  assert.equal((await orderStatus(cfg, { orderId: o.orderId, token: 'smt_' + 'A'.repeat(43), nowMs: T0 + 3_700_000 })).ok, false);
+});
+
+test('direct download with the order token: paid only, wrong token refused; links last >= 15 min, relative path', async () => {
+  const { cfg, o } = await setup();
+  assert.equal((await authorizeDownload(cfg, { orderId: o.orderId, token: o.token, nowMs: T0 })).reason, 'not_paid');
+  await verifyOrder(cfg, { orderId: o.orderId, token: o.token, digest: D1, nowMs: T0 + 120_000, fetchImpl: mockRpc({ [D1]: pay(o) }) });
+  const a = await authorizeDownload(cfg, { orderId: o.orderId, token: o.token, nowMs: T0 + 200_000 });
+  assert.equal(a.ok, true); assert.equal(a.sku, 'moneo');
+  assert.equal((await authorizeDownload(cfg, { orderId: o.orderId, token: 'smt_' + 'B'.repeat(43) })).ok, false);
+  assert.ok(cfg.linkTtlSec >= 900);
+  assert.ok(loadConfig(env({ STORE_LINK_TTL_SEC: '60' })).linkTtlSec >= 900, 'a TTL under 15 minutes is ignored');
+  const s = await orderStatus(cfg, { orderId: o.orderId, token: o.token, nowMs: T0 + 200_000 });
+  assert.match(s.downloadUrl, /^\/api\/store\/download\?o=/);
+  const q = Object.fromEntries(new URL(s.downloadUrl, 'https://x').searchParams);
+  assert.equal((await checkLink(cfg, { ...q, nowMs: T0 + 200_000 + 899_000 })).ok, true, 'still valid at 14m59s');
+});
+
+test('sui signatures: ed25519 + secp256k1 personal messages verify; tamper and other schemes refused', () => {
+  for (const w of [edWallet(), k1Wallet()]) {
+    const r = verifyPersonalMessage('hello', w.sign('hello'));
+    assert.equal(r.ok, true); assert.equal(r.address, w.address);
+    assert.equal(verifyPersonalMessage('hellO', w.sign('hello')).ok, false);
+  }
+  assert.equal(verifyPersonalMessage('x', b64([5, ...new Uint8Array(96)])).reason, 'unsupported_signature_scheme');
+  assert.equal(verifyPersonalMessage('x', 'not base64!').reason, 'bad_signature_format');
+});
+
+test('token reset: paying wallet rotates the token, old token revoked; wrong wallet, replay, expiry refused', async () => {
+  const w = edWallet(), thief = edWallet();
+  const { cfg, o } = await paidOrder({}, w.address);
+  const t1 = T0 + 400_000;
+  const ch = await resetChallenge(cfg, { orderId: o.orderId, nowMs: t1 });
+  assert.equal(ch.ok, true); assert.match(ch.message, new RegExp(o.orderId));
+  // wrong wallet
+  assert.equal((await resetToken(cfg, { orderId: o.orderId, message: ch.message, signature: thief.sign(ch.message), nowMs: t1 })).detail, 'not_the_paying_address');
+  // edited message
+  assert.equal((await resetToken(cfg, { orderId: o.orderId, message: ch.message + ' ', signature: w.sign(ch.message + ' '), nowMs: t1 })).ok, false);
+  const r = await resetToken(cfg, { orderId: o.orderId, message: ch.message, signature: w.sign(ch.message), nowMs: t1 + 1000 });
+  assert.equal(r.ok, true, r.reason); assert.match(r.token, /^smt_/); assert.ok(r.downloadUrl);
+  assert.equal((await orderStatus(cfg, { orderId: o.orderId, token: o.token, nowMs: t1 + 2000 })).ok, false, 'old token revoked');
+  assert.equal((await orderStatus(cfg, { orderId: o.orderId, token: r.token, nowMs: t1 + 2000 })).status, 'paid');
+  // replay of the same signed challenge
+  assert.equal((await resetToken(cfg, { orderId: o.orderId, message: ch.message, signature: w.sign(ch.message), nowMs: t1 + 3000 })).ok, false);
+  // expired challenge
+  const ch2 = await resetChallenge(cfg, { orderId: o.orderId, nowMs: t1 });
+  assert.equal((await resetToken(cfg, { orderId: o.orderId, message: ch2.message, signature: w.sign(ch2.message), nowMs: t1 + 11 * 60_000 })).ok, false);
+  // unknown / unpaid orders get an identical-looking challenge that can never succeed (no existence oracle)
+  const fake = await resetChallenge(cfg, { orderId: 'SM-ZZZZZZZZZZ', nowMs: t1 });
+  assert.equal(fake.ok, true);
+  assert.equal((await resetToken(cfg, { orderId: 'SM-ZZZZZZZZZZ', message: fake.message, signature: w.sign(fake.message), nowMs: t1 })).ok, false);
+});
+
+test('token reset: per-order hourly limit', async () => {
+  const w = edWallet();
+  const { cfg, o } = await paidOrder({ STORE_RESET_PER_HOUR: '2' }, w.address);
+  await resetChallenge(cfg, { orderId: o.orderId, nowMs: T0 + 400_000 });
+  await resetChallenge(cfg, { orderId: o.orderId, nowMs: T0 + 400_000 });
+  assert.equal((await resetChallenge(cfg, { orderId: o.orderId, nowMs: T0 + 400_000 })).reason, 'reset_rate_limited');
+});
+
+test('signed versions.json: static file matches templates.json, signature verifies with the published key, tamper fails', async () => {
+  const { render, checkFiles, publicKey } = await import('../scripts/versions-sign.mjs');
+  const file = readFileSync(new URL('../public/templates/versions.json', import.meta.url));
+  assert.equal(file.toString(), render(), 'run: node scripts/versions-sign.mjs sign');
+  assert.equal(checkFiles(), true);
+  const tampered = Buffer.from(file.toString().replace(/"sha256": "[0-9a-f]/, '"sha256": "_'));
+  assert.equal(checkFiles({ json: tampered }), false);
+  const pk = publicKey();
+  assert.equal(pk.raw.length, 32);
+  assert.equal(JSON.parse(file).signature.fingerprintSha256, createHash('sha256').update(pk.raw).digest('hex'));
+  // the private key must never be in the repo
+  const { execSync } = await import('node:child_process');
+  assert.equal(execSync('git grep -l "PRIVATE KEY" -- . ":!test/store.test.mjs" || true', { cwd: new URL('..', import.meta.url) }).toString().trim(), '');
 });

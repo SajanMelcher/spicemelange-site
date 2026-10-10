@@ -11,6 +11,7 @@
  * digest never used before, order not already paid, chain identifier matches the network.
  */
 import { bySku } from './catalog.js';
+import { verifyPersonalMessage } from './suisig.js';
 
 export const SUI_USDC = {
   // Circle native USDC. Source: https://developers.circle.com/stablecoins/usdc-contract-addresses
@@ -81,7 +82,9 @@ export function loadConfig(env = {}) {
     ttlSec: int(env.STORE_ORDER_TTL_SEC, 1800, 300, 7200), // pay within 30 min
     graceSec: int(env.STORE_REDEEM_GRACE_SEC, 900, 0, 3600), // extra time to submit the digest
     skewSec: int(env.STORE_CLOCK_SKEW_SEC, 60, 0, 300),
-    linkTtlSec: int(env.STORE_LINK_TTL_SEC, 900, 60, 86400), // download link lifetime
+    linkTtlSec: int(env.STORE_LINK_TTL_SEC, 1800, 900, 86400), // download link lifetime (never under 15 min)
+    statusPerHour: int(env.STORE_STATUS_PER_HOUR, 60, 5, 1000), // per order: status + token downloads (separate from verify attempts)
+    resetPerHour: int(env.STORE_RESET_PER_HOUR, 6, 1, 50), // per order: token-reset challenges and attempts
     maxOrdersPerIpPerHour: int(env.STORE_MAX_ORDERS_PER_IP_HOUR, 6, 1, 100),
     selftestKey: String(env.STORE_SELFTEST_KEY ?? '').length >= 24 ? String(env.STORE_SELFTEST_KEY) : null,
     webhookUrl: String(env.HWI_WEBHOOK_URL ?? '').trim() || null,
@@ -375,9 +378,77 @@ export async function writeOutbox(cfg, o, nowMs) {
   return doc;
 }
 
+// Per-order hourly counter in D1 (strongly consistent; separate from payment-verify attempts).
+async function hit(cfg, orderId, kind, limit, nowMs) {
+  const bucket = `${kind}:${Math.floor(nowMs / 3_600_000)}`;
+  const r = await cfg.db.prepare(
+    `INSERT INTO status_hits (order_id, bucket, n) VALUES (?1, ?2, 1)
+     ON CONFLICT (order_id, bucket) DO UPDATE SET n = n + 1 WHERE status_hits.n < ?3`,
+  ).bind(orderId, bucket, limit).run();
+  return changes(r) === 1;
+}
+
+/** Status for an order (token from header, POST body or legacy query). Never touches verify attempts. */
 export async function orderStatus(cfg, { orderId, token, nowMs = Date.now() }) {
   const { o, err } = await authOrder(cfg, orderId, token);
   if (err) return { ok: false, status: 404, reason: err };
+  if (!(await hit(cfg, o.id, 'st', cfg.statusPerHour, nowMs))) return { ok: false, status: 429, reason: 'status_rate_limited', retryAfterSec: 3600 - Math.floor((nowMs % 3_600_000) / 1000) };
   const base = { ok: true, orderId: o.id, status: o.status, amount: atomicToDecimal(o.amountAtomic), expiresAt: new Date(o.expiresMs).toISOString() };
   return o.status === 'paid' ? { ...base, ...(await deliver(cfg, o, nowMs)) } : base;
+}
+
+/** Direct download with the order token (header or POST body): returns the SKU to serve for a paid order. */
+export async function authorizeDownload(cfg, { orderId, token, nowMs = Date.now() }) {
+  const { o, err } = await authOrder(cfg, orderId, token);
+  if (err) return { ok: false, status: 404, reason: err };
+  if (o.status !== 'paid') return { ok: false, status: 402, reason: 'not_paid' };
+  if (!(await hit(cfg, o.id, 'st', cfg.statusPerHour, nowMs))) return { ok: false, status: 429, reason: 'status_rate_limited' };
+  return { ok: true, sku: o.sku, orderId: o.id };
+}
+
+// ---------- buyer token reset (prove ownership with the paying Sui wallet) ----------
+const RESET_TTL_MS = 10 * 60 * 1000;
+const hexBytes = (n) => [...randomBytes(n)].map((b) => b.toString(16).padStart(2, '0')).join('');
+export function resetMessage(orderId, nonce, createdMs, expiresMs) {
+  return [
+    'thespicemelange.org order token reset',
+    `Order: ${orderId}`,
+    `Nonce: ${nonce}`,
+    `Issued: ${new Date(createdMs).toISOString()}`,
+    `Expires: ${new Date(expiresMs).toISOString()}`,
+    'Signing this replaces the download token for this order. It does not move any funds.',
+  ].join('\n');
+}
+/** Step 1: a single-use message to sign. Same response shape whether or not the order exists (no oracle). */
+export async function resetChallenge(cfg, { orderId, nowMs = Date.now() }) {
+  if (!ORDER_RE.test(orderId ?? '')) return { ok: false, status: 400, reason: 'bad_order' };
+  const nonce = hexBytes(16), exp = nowMs + RESET_TTL_MS;
+  const message = resetMessage(orderId, nonce, nowMs, exp);
+  const o = await loadOrder(cfg, orderId);
+  if (o && o.net === cfg.net && o.status === 'paid' && o.sender) {
+    if (!(await hit(cfg, o.id, 'rs', cfg.resetPerHour, nowMs))) return { ok: false, status: 429, reason: 'reset_rate_limited' };
+    await cfg.db.prepare('INSERT INTO reset_challenges (nonce, order_id, message, created_ms, expires_ms, used) VALUES (?1, ?2, ?3, ?4, ?5, 0)')
+      .bind(nonce, o.id, message, nowMs, exp).run();
+  }
+  return { ok: true, message, expiresAt: new Date(exp).toISOString(), signWith: 'the Sui wallet that paid for this order (personal message signature)' };
+}
+/** Step 2: verify the paying wallet's signature, consume the challenge, rotate the token (the old token stops working). */
+export async function resetToken(cfg, { orderId, message, signature, nowMs = Date.now() }) {
+  const fail = { ok: false, status: 403, reason: 'reset_refused' };
+  if (!ORDER_RE.test(orderId ?? '') || typeof message !== 'string' || message.length > 600) return { ok: false, status: 400, reason: 'bad_request' };
+  const nonce = /\nNonce: ([0-9a-f]{32})\n/.exec(message)?.[1];
+  if (!nonce) return fail;
+  const ch = await cfg.db.prepare('SELECT * FROM reset_challenges WHERE nonce = ?1').bind(nonce).first();
+  if (!ch || ch.order_id !== orderId || ch.message !== message || Number(ch.used) !== 0 || Number(ch.expires_ms) < nowMs) return fail;
+  const o = await loadOrder(cfg, orderId);
+  if (!o || o.status !== 'paid' || !o.sender) return fail;
+  if (!(await hit(cfg, o.id, 'rs', cfg.resetPerHour, nowMs))) return { ok: false, status: 429, reason: 'reset_rate_limited' };
+  const v = verifyPersonalMessage(message, String(signature ?? ''));
+  if (!v.ok) return { ...fail, detail: v.reason };
+  if (normalizeAddress(v.address) !== normalizeAddress(o.sender)) return { ...fail, detail: 'not_the_paying_address' };
+  const used = await cfg.db.prepare('UPDATE reset_challenges SET used = 1 WHERE nonce = ?1 AND used = 0').bind(nonce).run();
+  if (changes(used) !== 1) return fail; // a parallel request consumed it
+  const token = newToken();
+  await cfg.db.prepare('UPDATE orders SET token_hash = ?1 WHERE id = ?2').bind(await sha256Hex(token), o.id).run();
+  return { ok: true, orderId: o.id, token, note: 'The old token no longer works. Keep this one private.', ...(await deliver(cfg, o, nowMs)) };
 }

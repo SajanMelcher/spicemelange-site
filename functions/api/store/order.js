@@ -1,7 +1,8 @@
 // POST /api/store/order {sku, email?}  -> order id, private token, exact USDC amount.
-// GET  /api/store/order?id=..&token=..  -> status (and a fresh signed link once paid).
+// GET  /api/store/order?id=..  with `Authorization: Bearer <token>` (preferred) or legacy `&token=..`
+//      -> status (and a fresh signed link once paid). Status calls never count as payment-verify attempts.
 import { createOrder, orderStatus } from '../../../store-core/core.js';
-import { guard, json, ipHash, readJson, sameOrigin } from '../../../store-core/http.js';
+import { guard, json, ipHash, readJson, sameOrigin, tokenFrom } from '../../../store-core/http.js';
 
 export async function onRequestPost(context) {
   const { cfg, res } = guard(context);
@@ -17,6 +18,6 @@ export async function onRequestGet(context) {
   const { cfg, res } = guard(context);
   if (res) return res;
   const u = new URL(context.request.url);
-  const r = await orderStatus(cfg, { orderId: u.searchParams.get('id'), token: u.searchParams.get('token') });
+  const r = await orderStatus(cfg, { orderId: u.searchParams.get('id'), token: tokenFrom(context.request, null, u) });
   return json(r.ok ? 200 : r.status, r);
 }
