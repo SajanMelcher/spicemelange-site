@@ -479,3 +479,28 @@ test('signed versions.json: static file matches templates.json, signature verifi
   const { execSync } = await import('node:child_process');
   assert.equal(execSync('git grep -l "PRIVATE KEY" -- . ":!test/store.test.mjs" || true', { cwd: new URL('..', import.meta.url) }).toString().trim(), '');
 });
+
+test('endpoints: POST /api/store/status (Bearer + {orderId}) and legacy GET /api/store/order?id=&token= both return paid + a link', async () => {
+  const { onRequestPost: statusPost } = await import('../functions/api/store/status.js');
+  const { onRequestGet: orderGet } = await import('../functions/api/store/order.js');
+  const E = env();
+  const cfg = loadConfig(E);
+  const o = (await createOrder(cfg, { sku: 'dune-saga-collection', nowMs: Date.now() })).order;
+  E.STORE_DB.raw.prepare("UPDATE orders SET status='paid', digest='T-'||id, sender=?, paid_ms=? WHERE id=?").run(OTHER, Date.now(), o.orderId);
+  const B = 'https://thespicemelange.org';
+  const call = async (p) => { const r = await p; return { code: r.status, body: await r.json() }; };
+  // 2026.10.10 client: POST status, Bearer header, {orderId} body (with and without a content-type)
+  for (const headers of [{ authorization: `Bearer ${o.token}`, 'content-type': 'application/json' }, { authorization: `Bearer ${o.token}` }]) {
+    const r = await call(statusPost({ env: E, request: new Request(`${B}/api/store/status`, { method: 'POST', headers, body: JSON.stringify({ orderId: o.orderId }) }) }));
+    assert.equal(r.code, 200); assert.equal(r.body.status, 'paid'); assert.match(r.body.downloadUrl, /^\/api\/store\/download\?o=/);
+  }
+  // wrong / missing token, bad body
+  assert.equal((await call(statusPost({ env: E, request: new Request(`${B}/api/store/status`, { method: 'POST', headers: { authorization: 'Bearer smt_' + 'Z'.repeat(43) }, body: JSON.stringify({ orderId: o.orderId }) }) }))).code, 404);
+  assert.equal((await call(statusPost({ env: E, request: new Request(`${B}/api/store/status`, { method: 'POST', body: JSON.stringify({ orderId: o.orderId }) }) }))).code, 404);
+  assert.equal((await call(statusPost({ env: E, request: new Request(`${B}/api/store/status`, { method: 'POST', headers: { authorization: `Bearer ${o.token}` }, body: 'nope' }) }))).code, 400);
+  // 2026.10.09.2 client: legacy token in the URL
+  const g = await call(orderGet({ env: E, request: new Request(`${B}/api/store/order?id=${o.orderId}&token=${o.token}`) }));
+  assert.equal(g.code, 200); assert.equal(g.body.status, 'paid'); assert.ok(g.body.downloadUrl);
+  // Bearer on the GET as well
+  assert.equal((await call(orderGet({ env: E, request: new Request(`${B}/api/store/order?id=${o.orderId}`, { headers: { authorization: `Bearer ${o.token}` } }) }))).body.status, 'paid');
+});
