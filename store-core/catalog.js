@@ -1,7 +1,7 @@
 // P30 store catalog: "The Spice Melange" Golden Path Desk archetype templates (Sajan, 10/9 6:12 AM PT).
 // Grok Bot templates (Sajan, 10/9 8:38 PM PT): $50 USDC each, weekly updates included.
 // STAGED 10/9 10:04 PM PT (branch dune-saga-collection): the $250 Full Desk is retired for new orders and replaced by
-// The Dune Saga Collection at $300 (7 packs + Leto's Journals + all future templates, upgrades free forever, all sales final).
+// The Dune Saga Collection at $300 (7 packs + Leto's Journals + all future templates, upgrades never cost extra, all sales final).
 // Retired SKUs stay in CATALOG so past paid orders keep re-downloading their original file (checkLink needs bySku).
 // Re-downloading with the order ID and token always serves the latest version in STORE_FILES.
 // Product files live in private storage (STORE_FILES KV), keyed by `file`. Never under public/.
@@ -52,9 +52,9 @@ export const CATALOG = [
   { sku: 'dune-saga-collection', name: 'The Dune Saga Collection', role: 'Every template, now and in the future', glyph: 'sigil', bundle: true, kind: 'Grok Bot template collection', version: latestFor('dune-saga-collection')?.version ?? null,
     priceUsdc: '300', placeholder: false, // Sajan 10/9 ~10:00 PM PT (staged): replaces the $250 Full Desk; singles stay $50
     quote: 'Seven seats, one Golden Path, and every seat still to come.',
-    blurb: "All seven Golden Path Desk Grok Bot templates plus Leto's Secret Journals, and every future template at no extra cost. Upgrades are free forever. All sales final.",
-    includes: ['All 7 Grok Bot desk templates', "Leto's Secret Journals", 'Every future template, at no extra cost', 'Upgrades free forever: re-download the latest any time', 'Collection overview and README'],
-    highlights: ['$300 for every template, now and in the future', 'Upgrades free forever', 'Start with three seats, grow to seven and beyond'],
+    blurb: "All seven Golden Path Desk Grok Bot templates plus Leto's Secret Journals, and every future template at no extra cost. Upgrades never cost extra. All sales final.",
+    includes: ['All 7 Grok Bot desk templates', "Leto's Secret Journals", 'Every future template, at no extra cost', 'Upgrades never cost extra: re-download the latest any time', 'Collection overview and README'],
+    highlights: ['$300 for every template, now and in the future', 'Upgrades never cost extra', 'Start with three seats, grow to seven and beyond'],
     format: 'Grok Bot templates (ZIP, Markdown + JSON)', file: 'file:dune-saga-collection' },
   { sku: 'plumbline-pro', name: 'The Spice Melange Trading Desk Pro', role: 'Coming soon', glyph: 'plumb', comingSoon: true,
     priceUsdc: '—', placeholder: true, quote: '', blurb: 'A supporter tier for The Spice Melange Trading Desk, the read-only DeepBook market data connector. Coming soon.', includes: [], highlights: [], format: '', file: '' },

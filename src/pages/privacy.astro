@@ -1,0 +1,54 @@
+---
+// /privacy/ (Ixians R4, Siona S3 follow-up / O2). DRAFT for Sajan's approval: plain-language summary of what the site
+// stores, why, for how long, and how to delete it. The binding text is terms section 9 (/terms/, owned by Tleilaxu).
+import Base from '../layouts/Base.astro';
+const updated = 'October 10, 2026';
+---
+<Base title="Privacy" description="What The Spice Melange stores, why, for how long, and how to have it deleted. No third-party trackers, no ad pixels, and we never sell your data.">
+  <section class="container-x max-w-3xl pt-16 pb-16 terms">
+    <p class="eyebrow mb-4">The Spice Melange · privacy</p>
+    <h1>Privacy</h1>
+    <p class="text-sm opacity-80">Last updated {updated}. This page sums up section 9 of our <a class="text-ibad-300" href="/terms/">terms</a>. If they ever differ, the terms win.</p>
+
+    <h2>The short version</h2>
+    <ul>
+      <li>We keep as little as we can, only to fill orders, prevent abuse and send emails you asked for.</li>
+      <li>We never sell your data and never ask for keys, recovery phrases, passwords or account numbers.</li>
+      <li>We use no ad pixels, no cookies for tracking, and no third-party trackers.</li>
+      <li>Your templates run on your own agents. Your settings, memories, ledgers and keys never come to us.</li>
+    </ul>
+
+    <h2>What we store, why, and for how long</h2>
+    <ul>
+      <li><strong>Orders:</strong> order ID, amount, the paying Sui address and the payment record (public on-chain). Unpaid orders are deleted 30 days after the payment window closes. Paid orders are kept as sales records.</li>
+      <li><strong>Optional receipt email:</strong> used only for your receipt and help with your order. A receipt draft that includes it is held for up to 60 days.</li>
+      <li><strong>IP addresses:</strong> never stored raw. A salted hash is kept for about an hour for rate limits. If you report a signal post, the hash is kept with that report for 90 days.</li>
+      <li><strong>Referral source:</strong> if you arrive through a campaign or referral link, a short utm or ref tag is held in your browser tab (no cookies) and saved with your order or course signup so we can credit the referrer. It's deleted with an unpaid order or on request.</li>
+      <li><strong>Lesson and course emails (opt-in only):</strong> if you tick the box and then confirm by email, we keep your email address, when and where you opted in, and which lessons were sent. For the free course we also keep your optional quiz answers: experience level, goal, time and whether you use an AI agent. We never ask about income, savings, debts, balances or age.</li>
+      <li><strong>Signal posts:</strong> shown under a pseudonym. The link to your order is kept privately for rate limits and moderation.</li>
+    </ul>
+
+    <h2>Who helps us</h2>
+    <ul>
+      <li><strong>Cloudflare</strong> hosts the site and its database, and processes requests to serve it.</li>
+      <li><strong>Resend</strong> (Resend, Inc.) sends lesson, course and receipt emails, and processes your address only to deliver them.</li>
+      <li><strong>Sui</strong> is a public blockchain. Payments made on it are public and can't be deleted by anyone.</li>
+    </ul>
+
+    <h2>Unsubscribing and deletion</h2>
+    <ul>
+      <li>Every lesson or course email has a one-click unsubscribe. After you unsubscribe we keep only a record that you did, so we never email you again.</li>
+      <li>To delete your email, quiz answers, referral source or signal posts, write to <a class="text-ibad-300" href="mailto:reserve@thespicemelange.org">reserve@thespicemelange.org</a>. We do it by hand. There is no self-serve tool yet.</li>
+    </ul>
+
+    <h2>Contact</h2>
+    <p>Sajan Melcher, The Spice Melange · <a class="text-ibad-300" href="mailto:reserve@thespicemelange.org">reserve@thespicemelange.org</a></p>
+  </section>
+</Base>
+<style is:global>
+  .terms h1 { font-size: 2.25rem; line-height: 1.2; margin-bottom: .75rem; }
+  .terms h2 { font-size: 1.5rem; margin-top: 2rem; margin-bottom: .5rem; }
+  .terms p, .terms li { line-height: 1.7; opacity: .9; }
+  .terms p { margin-top: .5rem; }
+  .terms ul { list-style: disc; padding-left: 1.5rem; margin-top: .5rem; }
+</style>

@@ -8,13 +8,15 @@ const run = (context) => {
   const u = new URL(context.request.url);
   return unsubscribe(context.env.STORE_DB, { subId: u.searchParams.get('s'), token: u.searchParams.get('t') });
 };
+// R11: log the method (no ids, no email) so link-scanner GET unsubscribes can be spotted next to RFC 8058 POSTs.
+const logUnsub = (method, r) => console.log(JSON.stringify({ kind: 'lesson_unsubscribe', method, ok: r.ok }));
 export async function onRequestGet(context) {
-  const r = await run(context);
+  const r = await run(context); logUnsub('GET', r);
   return r.ok
     ? page(200, "You're unsubscribed", ["You won't get any more of Hwi's practice lessons."])
     : page(400, 'That link is not valid', ['It may be incomplete. Copy the whole link from the email, or email reserve@thespicemelange.org and we will remove you by hand.']);
 }
 export async function onRequestPost(context) {
-  const r = await run(context);
+  const r = await run(context); logUnsub('POST', r);
   return new Response(r.ok ? 'unsubscribed' : 'bad link', { status: r.ok ? 200 : 400, headers: { 'content-type': 'text/plain', 'cache-control': 'no-store' } });
 }

@@ -19,6 +19,7 @@ test('hashes every executable inline script and style, skips src= and JSON data 
   const c = csp(h);
   assert.doesNotMatch(c.split(';').find((x) => x.includes('script-src')), /unsafe-inline|unsafe-eval|\*/);
   for (const d of ["default-src 'self'", "frame-ancestors 'none'", "base-uri 'self'", "form-action 'self'", "img-src 'self' data:", "object-src 'none'"]) assert.ok(c.includes(d), d);
+  assert.doesNotMatch(c, /cloudflareinsights/, 'no third-party analytics allowance (terms s9: no third-party trackers)');
   const b = siteBlock(h);
   assert.match(b, /^\/\*\n/);
   assert.match(b, /Strict-Transport-Security: max-age=31536000; includeSubDomains\n/);

@@ -290,7 +290,7 @@ test('templates: Grok Bot catalog copy, prices, and a public versions.json with 
   for (const s of seven) { const p = bySku(s); assert.equal(p.kind, 'Grok Bot template'); assert.equal(p.priceUsdc, '50'); assert.match(p.version, /^\d{4}\.\d{2}\.\d{2}(\.\d+)?$/); }
   const saga = bySku('dune-saga-collection');
   assert.equal(saga.priceUsdc, '300'); assert.equal(saga.bundle, true); assert.equal(saga.file, 'file:dune-saga-collection');
-  assert.ok(saga.includes.some((i) => /Leto/.test(i)) && saga.includes.some((i) => /future/i.test(i)) && saga.includes.some((i) => /free forever/i.test(i)));
+  assert.ok(saga.includes.some((i) => /Leto/.test(i)) && saga.includes.some((i) => /future/i.test(i)) && saga.includes.some((i) => /never cost extra/i.test(i)));
   assert.equal(bySku('hwi-noree').role, 'Ambassador of the Trading Desk');
   assert.ok(ARCHETYPES.length === 8);
   const v = versionsDoc();
