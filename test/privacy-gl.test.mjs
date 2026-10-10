@@ -78,7 +78,7 @@ test('GL7: preview signups only for allowlisted test addresses', async () => {
 test('GL8-GL13 + license: course text uses the corrected wording', () => {
   const all = JSON.stringify(COURSE) + CONNECTOR_PRICE;
   assert.match(all, /rules your bot is told to follow/); assert.match(all, /Nothing outside the bot enforces them, so check them yourself/); // GL8
-  assert.doesNotMatch(all, /one lesson a day|with me sending/); assert.match(all, /launching soon/); // GL9
+  assert.doesNotMatch(all, /one lesson a day|with me sending|launching soon/); // GL9 (Siona MF1: no 'launching soon' at all)
   assert.match(all, /current releases are also backed up on Walrus/); assert.doesNotMatch(all, /archived on Walrus/); // GL10
   assert.match(all, /We plan to add Seal/); assert.match(all, /would release/); assert.doesNotMatch(all, /moving templates to Seal|is released only/); // GL11
   assert.match(CONNECTOR_PRICE, /per client/); assert.match(CONNECTOR_PRICE, /0\.01 USDC minimum/); assert.match(CONNECTOR_PRICE, /can't place trades or touch your funds/); // GL12

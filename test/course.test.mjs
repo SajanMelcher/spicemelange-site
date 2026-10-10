@@ -1,7 +1,7 @@
 // Free Golden Path course (R2, R6-R10): quiz validation, double opt-in, tailored assembly, cadence, replies, handoff, contacts.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { createHmac } from 'node:crypto';
 import { makeD1 } from './d1-shim.mjs';
 import { sha256Hex } from '../store-core/core.js';
@@ -240,4 +240,21 @@ test('free course is information only (Sajan 9:36 AM PT): no setup task in any e
   for (const L of COURSE) { assert.equal(L.task, undefined, `lesson ${L.n} task`); if (L.invite) { assert.equal(L.invite.door, 'collection'); assert.match(L.invite.text, /Dune Saga Collection/); } }
   const page = readFileSync(new URL('../src/pages/learn/[n].astro', import.meta.url), 'utf8');
   assert.doesNotMatch(page, /Apply this on the desk|L\.task/);
+});
+
+test('Siona MF1: no free-course page or email mentions connector / Trade beside / desk-kit / one template / launching soon / pay per call', async () => {
+  const BAD = /connector|Trade beside|desk-kit|one template|launching soon|pay per call/i;
+  const c = courseConfig({ LESSONS_FOOTER: FOOT });
+  for (const track of ['pilgrim', 'fremen', 'naib']) for (const goal of ['longview', 'botsafety', 'builder', 'evaluate']) for (const agent of ['yes', 'no']) for (const time of ['brief', 'standard', 'weekly'])
+    for (let e = 1; e <= (time === 'weekly' ? 4 : 7); e++) {
+      const m = courseEmail(c, { id: 'cs_aaaaaaaaaaaaaaaa', unsub_token: 'cu_x', email: 'a@b.co', track, goal, time, agent }, e);
+      for (const s of [m.subject, m.text, m.html]) assert.doesNotMatch(s, BAD, `${track}/${goal}/${agent}/${time} email ${e}`);
+    }
+  const { COURSE } = await import('../store-core/course-content.js');
+  assert.doesNotMatch(JSON.stringify(COURSE), BAD);
+  const dist = new URL('../dist/learn/', import.meta.url);
+  if (existsSync(dist)) for (const d of ['', '1/', '2/', '3/', '4/', '5/', '6/', '7/']) {
+    const html = readFileSync(new URL(`${d}index.html`, dist), 'utf8').replace(/<header[\s\S]*?<\/header>|<footer[\s\S]*?<\/footer>/g, '');
+    assert.doesNotMatch(html.replace(/<[^>]+>/g, ' '), BAD, `/learn/${d}`);
+  }
 });

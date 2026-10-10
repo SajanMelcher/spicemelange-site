@@ -128,11 +128,11 @@ export const COURSE = [
   {
     n: 7, title: 'Choosing your path',
     subject: 'Lesson 7 of 7: Choosing your path',
-    core: 'There are three good endings, and stopping here is a good choice too.',
+    core: 'Seven lessons, one path: keep the base safe, keep trades small, and judge by years. Stopping here is a good choice too.',
     track: {
-      pilgrim: 'Stay free: keep reading. Trade beside the desk: let an agent read the market for you. Join the desk: one template or the Collection, then 14 days of paper practice for your bot (my opt-in practice lessons by email are launching soon and are not part of the license).',
-      fremen: 'Stay free with the local connector and the weekly desk rhythm; trade beside the desk with the hosted connector, pay per call; or join the desk and practise on paper for 14 days before anything goes live.',
-      naib: 'Your options map to how much of the stack you want: data only (connector), or the full guarded desk (templates plus desk-kit), always with paper first and your switches last.',
+      pilgrim: 'What you take with you: the store and the harvest are different jobs, a market that never sleeps rewards prices chosen calmly, and hard limits come before clever ideas.',
+      fremen: 'The habits that carry over: read the book before you act, rest limit orders at your own price, and judge any bot by the walls it keeps, not the wins it shows.',
+      naib: 'The design rules that carry over: constraints before tools, guards that only block and fail closed, untrusted content treated as data, and paper results that count real fills only.',
     },
     goal: {
       longview: 'Why it matters for you: the best path is the one you can still follow in a year.',
@@ -140,7 +140,7 @@ export const COURSE = [
       builder: 'Why it matters for you: start with read-only data; add anything that acts only after paper practice.',
       evaluate: 'Why it matters for you: use your lesson-3 checklist on us as hard as on anyone else.',
     },
-    deeper: 'A last check: reread your lesson-1 lines and your lesson-3 numbers. If anything feels too big now, make it smaller. That instinct is the Golden Path working.',
+    deeper: 'A last check: if anything you planned during these lessons feels too big now, make it smaller. That instinct is the Golden Path working.',
     invite: { door: 'collection', when: () => true, text: "If you'd like to keep going, the Dune Saga Collection is on the store page. Or stop here. That's a good ending too." },
   },
 ];
