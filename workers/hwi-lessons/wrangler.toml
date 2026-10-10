@@ -38,7 +38,7 @@ crons = ["*/10 * * * *"]
 [env.preview.vars]
 COURSE_PRODUCTION_SENDING = "0"
 COURSE_TEST_RECIPIENTS = "delivered@resend.dev,delivered+pilgrim@resend.dev,delivered+fremen@resend.dev,delivered+naib@resend.dev"
-COURSE_RESEND_CONTACTS = "1"
+COURSE_RESEND_CONTACTS = "0" # GL4: OFF (our Resend key is send-only; quiz answers stay in our D1)
 SUI_NETWORK = "testnet"
 LESSONS_PRODUCTION_SENDING = "0"
 # Test mode: only these addresses ever get mail from the preview sender (Resend's test sink; no real person).

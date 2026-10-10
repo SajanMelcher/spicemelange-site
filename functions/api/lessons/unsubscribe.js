@@ -3,6 +3,7 @@
 // POST /api/lessons/unsubscribe?s=..&t=..  body "List-Unsubscribe=One-Click" (RFC 8058, sent by mail providers)
 import { unsubscribe } from '../../../store-core/lessons.js';
 import { page } from '../../../store-core/lessons-page.js';
+import { DELETION_CONTACT } from '../../../store-core/contact.js';
 
 const run = (context) => {
   const u = new URL(context.request.url);
@@ -13,8 +14,8 @@ const logUnsub = (method, r) => console.log(JSON.stringify({ kind: 'lesson_unsub
 export async function onRequestGet(context) {
   const r = await run(context); logUnsub('GET', r);
   return r.ok
-    ? page(200, "You're unsubscribed", ["You won't get any more of Hwi's practice lessons."])
-    : page(400, 'That link is not valid', ['It may be incomplete. Copy the whole link from the email, or email reserve@thespicemelange.org and we will remove you by hand.']);
+    ? page(200, "You're unsubscribed", ["You won't get any more of Hwi's practice lessons.", `We deleted your address and send history and kept only a hashed record so we never email you again. Questions or deletion: ${DELETION_CONTACT}.`])
+    : page(400, 'That link is not valid', [`It may be incomplete. Copy the whole link from the email, or write to ${DELETION_CONTACT} and we will remove you by hand.`]);
 }
 export async function onRequestPost(context) {
   const r = await run(context); logUnsub('POST', r);

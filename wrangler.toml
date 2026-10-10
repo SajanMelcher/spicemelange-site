@@ -41,8 +41,12 @@ SUI_NETWORK = "testnet"
 # Signal feed on preview (testnet orders only).
 # SIGNALS_ADMIN_KEY is a preview Pages secret; a copy is kept outside the repo.
 SIGNALS_ENABLED = "1"
-# Hwi's lessons on preview: signup open (testnet); the preview sender Worker mails only its test list.
+# Hwi's lessons + free course on preview (Siona GL7): signup ONLY for this test allowlist; everyone else is refused and
+# nothing is stored. The preview sender Worker mails only its own (same) test lists.
 LESSONS_PRODUCTION_SENDING = "0"
+COURSE_PRODUCTION_SENDING = "0"
+LESSONS_TEST_RECIPIENTS = "delivered@resend.dev"
+COURSE_TEST_RECIPIENTS = "delivered@resend.dev,delivered+pilgrim@resend.dev,delivered+fremen@resend.dev,delivered+naib@resend.dev"
 
 [[env.preview.kv_namespaces]]
 binding = "STORE_KV"

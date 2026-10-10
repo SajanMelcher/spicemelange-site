@@ -2,7 +2,7 @@
 // /learn/ (Ixians R1 + R6): Hwi's free 7-lesson Golden Path course, shaped by a short quiz. DRAFT (preview only, noindex)
 // until Siona's leak scan and Sajan's yes. Never asks income, savings, debts, balances or age.
 import Base from '../../layouts/Base.astro';
-import { COURSE, RISK } from '../../../store-core/course-content.js';
+import { COURSE, RISK, XAI_LINE } from '../../../store-core/course-content.js';
 const q = [
   { k: 'track', label: 'How much have you traded before?', opts: [['pilgrim', 'New to this'], ['fremen', "I've bought some crypto"], ['naib', 'I trade actively']] },
   { k: 'goal', label: 'What would you most like from these lessons?', opts: [['longview', 'Understand the long view (why Bitcoin is "the spice")'], ['botsafety', 'Let a bot help me without losing control'], ['builder', 'Build or connect AI agents to markets'], ['evaluate', 'Judge trading bots before trusting one']] },
@@ -26,6 +26,7 @@ const q = [
       {q.map((x) => (
         <fieldset class="space-y-1"><legend class="font-semibold text-sand-100">{x.label}</legend>
           {x.opts.map(([v, l]) => <label class="flex items-start gap-2 text-sand-200/90"><input type="radio" name={x.k} value={v} class="mt-1" /> <span>{l}</span></label>)}
+          {x.k === 'agent' && <p class="text-xs text-sand-300/70">{XAI_LINE}</p>}
         </fieldset>
       ))}
       <label class="block"><span class="font-semibold text-sand-100">Email</span><input id="fc-email" type="email" required maxlength="254" autocomplete="email" class="mt-1 w-full rounded-md border border-sand-200/20 bg-night-900 px-3 py-2" /></label>
@@ -36,7 +37,7 @@ const q = [
     </form>
     <div class="mt-10 space-y-2 text-xs text-sand-300/75">
       <p>{RISK}</p>
-      <p>These are Grok Bot templates and lessons, with no token. Hwi Noree is an AI assistant, not a person and not a financial adviser.</p>
+      <p>These are Grok Bot templates and lessons, with no token. {XAI_LINE} Hwi Noree is an AI assistant, not a person and not a financial adviser.</p>
       <p>Dune-inspired names are an affectionate nod to Frank Herbert's novels. Not affiliated with the Herbert estate or Legendary.</p>
     </div>
   </section>

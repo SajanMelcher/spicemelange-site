@@ -6,6 +6,7 @@
  */
 import { sha256Hex } from './core.js';
 import { lessonsConfig, legalGate, resendPost, escHtml, ptHour, SEND_HOUR_PT } from './lessons.js';
+import { suppress, suppressedSince } from './suppress.js';
 import { COURSE, RISK, REPLY, TRACKS, GOALS, TIMES, DEFAULTS, schedule, GAP_DAYS } from './course-content.js';
 
 const DAY = 86_400_000;
@@ -23,7 +24,8 @@ function safeEqual(a, b) {
 
 export function courseConfig(env = {}) {
   const l = lessonsConfig({ ...env, LESSONS_PRODUCTION_SENDING: env.COURSE_PRODUCTION_SENDING, LESSONS_TEST_RECIPIENTS: env.COURSE_TEST_RECIPIENTS ?? env.LESSONS_TEST_RECIPIENTS });
-  return { ...l, signupOpen: l.production || l.net === 'testnet', contacts: truthy(env.COURSE_RESEND_CONTACTS), contactsUrl: String(env.COURSE_RESEND_CONTACTS_URL ?? 'https://api.resend.com/contacts') };
+  // GL7: preview (testnet) signups only from the test allowlist (COURSE_TEST_RECIPIENTS); GL4: Resend contact sync stays OFF.
+  return { ...l, signupOpen: l.production, contacts: truthy(env.COURSE_RESEND_CONTACTS), contactsUrl: String(env.COURSE_RESEND_CONTACTS_URL ?? 'https://api.resend.com/contacts') };
 }
 
 /** Validate quiz answers. Unknown keys are ignored; skipped answers take the safe defaults; junk is rejected. */
@@ -57,14 +59,16 @@ export async function courseSubscribe(ccfg, { body, ipKey = 'unknown', nowMs = D
   const b = body ?? {};
   const e = String(b.email ?? '').trim().toLowerCase();
   if (!ccfg.db) return { ok: false, status: 503, reason: 'db_not_bound' };
-  if (!ccfg.signupOpen && !ccfg.testRecipients.includes(e)) return { ok: false, status: 503, reason: 'course_not_open' };
   if (b.consent !== true) return { ok: false, status: 400, reason: 'consent_required' };
   if (!EMAIL_RE.test(e)) return { ok: false, status: 400, reason: 'bad_email' };
+  if (!ccfg.signupOpen && !ccfg.testRecipients.includes(e)) return { ok: false, status: 503, reason: 'course_not_open' };
   const q = cleanQuiz(b); if (!q.ok) return { ok: false, status: 400, reason: q.reason };
   if (!(await hit(ccfg.db, `course:ip:${ipKey}`, HOURLY_PER_IP, nowMs)) || !(await hit(ccfg.db, 'course:all', HOURLY_TOTAL, nowMs))) return { ok: false, status: 429, reason: 'rate_limited' };
-  const cur = await ccfg.db.prepare('SELECT * FROM course_subs WHERE net = ?1 AND email = ?2').bind(ccfg.net, e).first();
   // Same answer whatever the state, so the endpoint never reveals whether an address is subscribed.
   const same = { ok: true, status: 'check_your_inbox' };
+  // GL2: an address that unsubscribed is never emailed again; store nothing for it (re-enabling is by written request).
+  if (await suppressedSince(ccfg.db, 'course', e, 0)) return same;
+  const cur = await ccfg.db.prepare('SELECT * FROM course_subs WHERE net = ?1 AND email = ?2').bind(ccfg.net, e).first();
   if (cur) {
     if (['active', 'done', 'handed_off', 'suppressed'].includes(cur.status)) return same;
     if (Number(cur.confirm_sends) >= MAX_CONFIRM_SENDS) return same;
@@ -94,10 +98,35 @@ export async function courseUnsubscribe(env, { subId, token, nowMs = Date.now(),
   const ccfg = courseConfig(env), db = ccfg.db;
   if (!db || !SUB_RE.test(subId ?? '') || !/^cu_[A-Za-z0-9_-]{32}$/.test(token ?? '')) return { ok: false, status: 400, reason: 'bad_link' };
   const r = await db.prepare('SELECT * FROM course_subs WHERE id = ?1').bind(subId).first();
-  if (!r || !safeEqual(r.unsub_token, token)) return { ok: false, status: 400, reason: 'bad_link' };
-  if (r.status !== 'unsubscribed') await db.prepare(`UPDATE course_subs SET status = 'unsubscribed', unsub_ms = ?1 WHERE id = ?2`).bind(nowMs, subId).run();
-  await syncContact(ccfg, { ...r, status: 'unsubscribed' }, fetchImpl).catch(() => {});
+  if (!r) return { ok: true, status: 'unsubscribed' }; // already removed: a second click is a quiet no-op
+  if (!safeEqual(r.unsub_token, token)) return { ok: false, status: 400, reason: 'bad_link' };
+  await minimizeCourseSub(ccfg, r, nowMs, fetchImpl);
   return { ok: true, status: 'unsubscribed' };
+}
+/**
+ * GL2 data minimization on unsubscribe (link, RFC 8058 POST, or a "stop" reply): keep ONLY a hashed-email suppression
+ * record + the date. Deletes the row (address, quiz answers, utm/ref, consent, tokens), its send history and reply
+ * suggestions, and the Resend contact if contact sync was ever on for it (sync is OFF: our key is send-only).
+ */
+export async function minimizeCourseSub(ccfg, r, nowMs, fetchImpl = fetch) {
+  const db = ccfg.db;
+  await suppress(db, 'course', r.email, nowMs);
+  let contactDelete = null;
+  if (r.resend_contact_id && ccfg.apiKey) {
+    contactDelete = await fetchImpl(`${ccfg.contactsUrl}/${encodeURIComponent(r.resend_contact_id)}`, { method: 'DELETE', headers: { authorization: `Bearer ${ccfg.apiKey}` } }).then((x) => x.status).catch(() => 0);
+  }
+  await db.prepare('DELETE FROM course_suggestions WHERE sub_id = ?1').bind(r.id).run();
+  await db.prepare('DELETE FROM course_sends WHERE sub_id = ?1').bind(r.id).run();
+  await db.prepare('DELETE FROM course_subs WHERE id = ?1').bind(r.id).run();
+  return { contactDelete };
+}
+/** GL2: unconfirmed (pending) and failed (expired) course signups are deleted 7 days after the request. */
+export async function deleteStaleCourse(db, nowMs, net = null) {
+  const w = `status IN ('pending','expired') AND consent_ms < ?1 AND (?2 IS NULL OR net = ?2)`, cut = nowMs - PENDING_EXPIRE_MS;
+  await db.prepare(`DELETE FROM course_suggestions WHERE sub_id IN (SELECT id FROM course_subs WHERE ${w})`).bind(cut, net).run();
+  await db.prepare(`DELETE FROM course_sends WHERE sub_id IN (SELECT id FROM course_subs WHERE ${w})`).bind(cut, net).run();
+  const d = await db.prepare(`DELETE FROM course_subs WHERE ${w}`).bind(cut, net).run();
+  return Number(d?.meta?.changes ?? 0);
 }
 
 /** R7: Resend contact with the teaching tags as properties. Worker-only (API key never in the repo). Off unless COURSE_RESEND_CONTACTS=1. */
@@ -132,7 +161,7 @@ export async function courseHandoff(db, { email, net }) {
   if (!db) return null;
   const r = await db.prepare(`SELECT id, track, status FROM course_subs WHERE net = ?1 AND email = ?2`).bind(net, String(email).toLowerCase()).first().catch(() => null);
   if (!r) return null;
-  if (!['unsubscribed', 'suppressed', 'handed_off'].includes(r.status)) await db.prepare(`UPDATE course_subs SET status = 'handed_off' WHERE id = ?1`).bind(r.id).run();
+  if (!['unsubscribed', 'suppressed', 'handed_off'].includes(r.status)) await db.prepare(`UPDATE course_subs SET status = 'handed_off', handoff_ms = ?2 WHERE id = ?1`).bind(r.id, Date.now()).run();
   return r.track;
 }
 export const HANDOFF_LINE = {
@@ -216,11 +245,11 @@ export async function runCourseConfirmations(env, { nowMs = Date.now(), fetchImp
   const c = courseConfig(env);
   const out = { kind: 'course_confirm', mode: c.production ? 'production' : 'test', sent: 0, skipped: 0, failed: 0, expired: 0, details: [] };
   const g = gate(c, dryRun); if (g) return { ...out, ok: g === 'sending_off', reason: g };
-  const ex = await c.db.prepare(`UPDATE course_subs SET status = 'expired' WHERE net = ?1 AND status = 'pending' AND consent_ms < ?2`).bind(c.net, nowMs - PENDING_EXPIRE_MS).run();
-  out.expired = Number(ex?.meta?.changes ?? 0);
+  out.expired = await deleteStaleCourse(c.db, nowMs, c.net); // GL2: deleted, not just marked
   const { results = [] } = await c.db.prepare(`SELECT * FROM course_subs WHERE net = ?1 AND status = 'pending' AND confirm_sent_ms IS NULL AND confirm_sends < ?2 ORDER BY consent_ms LIMIT 100`).bind(c.net, MAX_CONFIRM_SENDS).all();
   for (const s of results) {
     if (!allowed(c, s.email)) { out.skipped++; out.details.push({ sub: s.id, result: 'skipped_not_test_recipient' }); continue; }
+    if (await suppressedSince(c.db, 'course', s.email, 0)) { out.skipped++; out.details.push({ sub: s.id, result: 'skipped_suppressed' }); continue; }
     if (dryRun) { out.details.push({ sub: s.id, result: 'dry_run' }); continue; }
     const cl = await c.db.prepare(`UPDATE course_subs SET confirm_sent_ms = ?1, confirm_sends = confirm_sends + 1 WHERE id = ?2 AND confirm_sent_ms IS NULL AND status = 'pending'`).bind(nowMs, s.id).run();
     if (Number(cl?.meta?.changes ?? 0) !== 1) continue;
@@ -294,8 +323,7 @@ export async function courseInbound(env, { from, text, nowMs = Date.now() }) {
   const kw = KEYWORDS.find((k) => new RegExp(`\\b${k}\\b`).test(first));
   if (!kw) return { ok: true, matched: true, keyword: null };
   if (kw === 'stop') {
-    await c.db.prepare(`UPDATE course_subs SET status = 'unsubscribed', unsub_ms = ?1 WHERE id = ?2`).bind(nowMs, s.id).run();
-    await c.db.prepare(`INSERT INTO course_suggestions (id, sub_id, received_ms, keyword, proposal, status) VALUES (?1, ?2, ?3, 'stop', ?4, 'applied')`).bind('sg_' + rnd(9), s.id, nowMs, propose(s, kw)).run();
+    await minimizeCourseSub(c, s, nowMs); // GL2: same minimization as the link; nothing about the reply is kept
     return { ok: true, matched: true, keyword: 'stop', applied: true };
   }
   await c.db.prepare(`INSERT INTO course_suggestions (id, sub_id, received_ms, keyword, proposal) VALUES (?1, ?2, ?3, ?4, ?5)`).bind('sg_' + rnd(9), s.id, nowMs, kw, propose(s, kw)).run();

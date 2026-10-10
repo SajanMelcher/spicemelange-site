@@ -1,7 +1,7 @@
 // Free Golden Path course (R2, R6-R10): quiz validation, double opt-in, tailored assembly, cadence, replies, handoff, contacts.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { createHmac } from 'node:crypto';
 import { makeD1 } from './d1-shim.mjs';
 import { sha256Hex } from '../store-core/core.js';
@@ -48,7 +48,7 @@ test('quiz: defaults when skipped, junk rejected, no sensitive fields kept, cons
   assert.doesNotMatch(cols, /income|saving|debt|balance|age\b/);
 });
 test('quiz: rate limited per IP hash (5/h) and the same answer whether or not the address is known', async () => {
-  const t = setup();
+  const t = setup({ SUI_NETWORK: 'mainnet', COURSE_PRODUCTION_SENDING: '1' }); // public signup (production) for the limiter
   for (let i = 0; i < 5; i++) assert.equal((await signup(t, { email: `a${i}@example.com` })).ok, true);
   assert.equal((await signup(t, { email: 'a9@example.com' })).reason, 'rate_limited');
   assert.equal((await signup(t, { email: 'a9@example.com' }, 'ip2')).ok, true);
@@ -107,13 +107,46 @@ test('production course runs hold behind the same legal gate', async () => {
   const nope = async (u, i) => (/privacy|terms/.test(String(u)) ? new Response('', { status: 404 }) : t.fetchImpl(u, i));
   assert.equal((await runCourse(t.env, { nowMs: T0, fetchImpl: nope })).reason, 'held: privacy/terms not live');
 });
-test('unsubscribe stops everything and updates the contact; delete removes quiz answers and the contact', async () => {
+test('GL2 unsubscribe: row, quiz answers, utm/ref, sends and Resend contact deleted; only a hashed suppression + date kept', async () => {
+  const t = setup();
+  await optIn(t, { email: 'delivered@resend.dev', track: 'naib', src: { utm_source: 'x' } });
+  assert.equal((await runCourse(t.env, { nowMs: T0 + 5, fetchImpl: t.fetchImpl, force: true })).sent, 1);
+  await courseInbound(t.env, { from: 'delivered@resend.dev', text: 'slower' });
+  const r = row(t, 'delivered@resend.dev');
+  assert.equal((await courseUnsubscribe(t.env, { subId: r.id, token: r.unsub_token, nowMs: T0 + 9, fetchImpl: t.fetchImpl })).ok, true);
+  assert.equal(t.contacts.at(-1).method, 'DELETE'); assert.match(t.contacts.at(-1).url, /\/contacts\/ct_1$/);
+  assert.equal(row(t, 'delivered@resend.dev'), undefined);
+  for (const tb of ['course_sends', 'course_suggestions']) assert.equal(t.db.raw.prepare(`SELECT COUNT(*) n FROM ${tb}`).get().n, 0, tb);
+  const sup = t.db.raw.prepare('SELECT * FROM email_suppressions').all();
+  assert.equal(sup.length, 1); assert.deepEqual(Object.keys(sup[0]).sort(), ['email_hash', 'list', 'unsub_ms']);
+  assert.equal(sup[0].list, 'course'); assert.equal(sup[0].unsub_ms, T0 + 9); assert.match(sup[0].email_hash, /^[0-9a-f]{64}$/);
+  assert.ok(!JSON.stringify(t.db.raw.prepare('SELECT * FROM email_suppressions').all()).includes('resend.dev'));
+  // second click: quiet no-op; a new quiz signup stores nothing and sends nothing
+  assert.equal((await courseUnsubscribe(t.env, { subId: r.id, token: r.unsub_token, fetchImpl: t.fetchImpl })).ok, true);
+  assert.deepEqual(await signup(t, { email: 'delivered@resend.dev' }, 'ip9', T0 + DAY), { ok: true, status: 'check_your_inbox' });
+  assert.equal(row(t, 'delivered@resend.dev'), undefined);
+  const before = t.sent.length;
+  await runCourseConfirmations(t.env, { nowMs: T0 + DAY, fetchImpl: t.fetchImpl });
+  assert.equal(t.sent.length, before);
+});
+test('GL2 unconfirmed course signups are deleted after 7 days (not just marked expired)', async () => {
+  const t = setup();
+  await signup(t, { email: 'delivered+pilgrim@resend.dev', src: { ref: 'abc' } });
+  await runCourseConfirmations(t.env, { nowMs: T0 + 6 * DAY, fetchImpl: t.fetchImpl });
+  assert.ok(row(t, 'delivered+pilgrim@resend.dev'));
+  assert.equal((await runCourseConfirmations(t.env, { nowMs: T0 + 8 * DAY, fetchImpl: t.fetchImpl })).expired, 1);
+  assert.equal(row(t, 'delivered+pilgrim@resend.dev'), undefined);
+});
+test('GL4: Resend contact sync is OFF in both wrangler.toml files', () => {
+  for (const f of ['../wrangler.toml', '../workers/hwi-lessons/wrangler.toml']) {
+    const s = readFileSync(new URL(f, import.meta.url), 'utf8');
+    assert.doesNotMatch(s, /^\s*COURSE_RESEND_CONTACTS\s*=\s*"(1|true|yes|on)"/mi, f);
+  }
+  assert.equal(courseConfig({}).contacts, false);
+});
+test('deletion request: courseDelete removes quiz answers and the contact', async () => {
   const t = setup();
   await optIn(t, { email: 'delivered@resend.dev', track: 'naib' });
-  const r = row(t, 'delivered@resend.dev');
-  assert.equal((await courseUnsubscribe(t.env, { subId: r.id, token: r.unsub_token, fetchImpl: t.fetchImpl })).ok, true);
-  assert.equal(t.contacts.at(-1).method, 'PATCH'); assert.equal(t.contacts.at(-1).body.unsubscribed, true);
-  assert.equal((await runCourse(t.env, { nowMs: T0 + 5, fetchImpl: t.fetchImpl, force: true })).sent, 0);
   const d = await courseDelete(t.env, { email: 'delivered@resend.dev', fetchImpl: t.fetchImpl });
   assert.equal(d.deleted, 1); assert.equal(t.contacts.at(-1).method, 'DELETE'); assert.equal(row(t, 'delivered@resend.dev'), undefined);
 });
@@ -126,7 +159,8 @@ test('replies: keywords become PENDING suggestions (no change); "stop" unsubscri
   const sg = t.db.raw.prepare('SELECT * FROM course_suggestions').all();
   assert.equal(sg.length, 1); assert.equal(sg[0].status, 'pending'); assert.ok(!JSON.stringify(sg).includes('bit much'));
   assert.equal((await courseInbound(t.env, { from: 'delivered+fremen@resend.dev', text: 'STOP' })).applied, true);
-  assert.equal(row(t, 'delivered+fremen@resend.dev').status, 'unsubscribed');
+  assert.equal(row(t, 'delivered+fremen@resend.dev'), undefined); // GL2: minimized like a link unsubscribe
+  assert.equal(t.db.raw.prepare('SELECT COUNT(*) n FROM course_suggestions').get().n, 0);
   assert.equal((await courseInbound(t.env, { from: 'stranger@example.com', text: 'stop' })).matched, false);
 });
 test('webhook signature: valid svix signature accepted; wrong, stale or missing secret refused', async () => {
@@ -170,6 +204,6 @@ test('R10: CTA variant by SKU; every day has a buyer ending; endings never in th
 });
 test('course text: no return promises, no private data, risk line in every lesson block set', () => {
   const all = JSON.stringify(COURSE);
-  assert.doesNotMatch(all, /guarantee|\bAPY\b|\d+% (a|per) (year|month)|Sajan|0x[0-9a-f]{8}|free forever|sealed with Seal/i);
+  assert.doesNotMatch(all, /guarantee|\bAPY\b|\d+% (a|per) (year|month)|Sajan|0x[0-9a-f]{8}|never cost extra|sealed with Seal|archived on Walrus|moving templates to Seal|can't place orders|only you can remove|one lesson a day/i);
   assert.equal(schedule('weekly').length, 4); assert.equal(schedule('brief').length, 7);
 });

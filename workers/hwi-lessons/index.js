@@ -7,6 +7,7 @@
 //                          LESSONS_TEST_RECIPIENTS; no D1 change, never counts as a real send
 // Production sending is OFF unless LESSONS_PRODUCTION_SENDING=1, and refuses without the LESSONS_FOOTER secret.
 import { runLessons, runConfirmations, scheduledRun, lessonsConfig, lessonEmail, legalGate } from '../../store-core/lessons.js';
+import { purge } from '../../store-core/purge.js';
 import { courseScheduled, runCourse, runCourseConfirmations, courseConfig, courseDelete, syncContact } from '../../store-core/course.js';
 
 const j = (s, b) => new Response(JSON.stringify(b, null, 1), { status: s, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
@@ -17,6 +18,8 @@ function safeEqual(a, b) {
 const summary = (r) => ({ ...r, details: (r.details ?? []).map(({ sub, day, kind, result, http }) => ({ sub, day, kind, result, http })) });
 export default {
   async scheduled(event, env, ctx) {
+    // GL2/GL3: retention purge every run (IP hashes ~1 h, unconfirmed signups 7 d, finished subs 30 d, suggestions 90 d)
+    if (env.STORE_DB) ctx.waitUntil(purge(env.STORE_DB, event.scheduledTime).then((n) => console.log('retention purge', JSON.stringify(n))).catch((e) => console.log('purge error', String(e?.message ?? e))));
     ctx.waitUntil(scheduledRun(env, { nowMs: event.scheduledTime }).then((r) => console.log(JSON.stringify({ at: new Date(event.scheduledTime).toISOString(), confirmations: r.confirmations.details ? summary(r.confirmations) : r.confirmations, lessons: r.lessons.details ? summary(r.lessons) : r.lessons }))));
     // Free Golden Path course (R2): own flag COURSE_PRODUCTION_SENDING (OFF); same 9 AM PT hour and legal gate.
     ctx.waitUntil(courseScheduled(env, { nowMs: event.scheduledTime }).then((r) => console.log(JSON.stringify({ course: { confirmations: r.confirmations.details ? summary(r.confirmations) : r.confirmations, lessons: r.lessons.details ? summary(r.lessons) : r.lessons } }))).catch((e) => console.log('course error', String(e?.message ?? e))));

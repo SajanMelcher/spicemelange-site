@@ -6,14 +6,14 @@
  * Nothing ever reads orders.email (the receipt address): there are no back-sends to past buyers.
  *
  * ONE production flag: LESSONS_PRODUCTION_SENDING=1.
- *   - off (default): signup is open on testnet (preview) only; the sender mails ONLY addresses listed in
- *     LESSONS_TEST_RECIPIENTS, and only on testnet. On mainnet with the flag off, nothing is sent and
- *     signup is closed.
+ *   - off (default): signup and mail ONLY for addresses listed in LESSONS_TEST_RECIPIENTS (the preview allowlist,
+ *     Siona GL7); everyone else is refused at signup.
  *   - on: signup open everywhere; the sender mails every active, paid, opted-in subscription.
  */
 import { LESSONS } from './lessons-content.js';
 import { courseHandoff, HANDOFF_LINE } from './course.js';
 import { sha256Hex } from './core.js';
+import { suppress, suppressedSince } from './suppress.js';
 
 export const LESSON_DAYS = 14;
 export const MIN_GAP_MS = 20 * 3_600_000; // a daily cron with some slack: never two lessons within 20 h
@@ -39,7 +39,9 @@ export function lessonsConfig(env = {}) {
   const testRecipients = production ? [] : String(env.LESSONS_TEST_RECIPIENTS ?? '').split(',').map((s) => s.trim().toLowerCase()).filter((s) => EMAIL_RE.test(s));
   return {
     net, production, testRecipients,
-    signupOpen: production || net === 'testnet',
+    // GL7: the public preview (testnet) takes signups only from the test allowlist; mainnet only once production is ON.
+    signupOpen: production,
+    signupShown: production || (net === 'testnet' && testRecipients.length > 0),
     db: env.STORE_DB,
     apiKey: env.RESEND_API_KEY ? String(env.RESEND_API_KEY) : '',
     from: String(env.LESSONS_FROM ?? '"Hwi Noree, The Spice Melange" <hwi@thespicemelange.org>'),
@@ -57,10 +59,12 @@ export function lessonsConfig(env = {}) {
 /** Step 1 of the double opt-in: record the request (pending). Never sends anything itself. */
 export async function subscribe(lcfg, { orderId, token, email, source, nowMs = Date.now() }) {
   const e = String(email ?? '').trim().toLowerCase();
-  if (!lcfg.signupOpen && !lcfg.testRecipients.includes(e)) return { ok: false, status: 503, reason: 'lessons_not_open' };
   if (!lcfg.db) return { ok: false, status: 503, reason: 'db_not_bound' };
   if (!EMAIL_RE.test(e)) return { ok: false, status: 400, reason: 'bad_email' };
+  if (!lcfg.signupOpen && !lcfg.testRecipients.includes(e)) return { ok: false, status: 503, reason: 'lessons_not_open' };
   if (source !== 'checkout' && source !== 'order_page') return { ok: false, status: 400, reason: 'bad_source' };
+  // GL2: an address that unsubscribed is never emailed again (not even a confirmation). Re-enabling is by request.
+  if (await suppressedSince(lcfg.db, 'lessons', e, 0)) return { ok: false, status: 409, reason: 'unsubscribed_earlier' };
   if (!ORDER_RE.test(orderId ?? '') || !TOKEN_RE.test(token ?? '')) return { ok: false, status: 401, reason: 'bad_order_or_token' };
   const o = await lcfg.db.prepare('SELECT id, net, token_hash, status FROM orders WHERE id = ?1').bind(orderId).first();
   if (!o || o.net !== lcfg.net || !safeEqual(o.token_hash, await sha256Hex(token))) return { ok: false, status: 401, reason: 'bad_order_or_token' };
@@ -70,7 +74,7 @@ export async function subscribe(lcfg, { orderId, token, email, source, nowMs = D
     if (cur.status === 'done') return { ok: true, status: 'done', day: LESSON_DAYS };
     if (cur.status === 'active' && cur.email === e) return { ok: true, status: 'active', nextDay: Number(cur.next_day), waitingForPayment };
     if (Number(cur.confirm_sends) >= MAX_CONFIRM_SENDS) return { ok: false, status: 429, reason: 'too_many_confirmations' };
-    // new email, or re-opting in after unsubscribe/expiry: back to pending, a fresh confirm token, confirm again
+    // new email, or re-opting in after expiry: back to pending, a fresh confirm token, confirm again
     await lcfg.db.prepare(`UPDATE lesson_subs SET email = ?1, consent_ms = ?2, consent_source = ?3, status = 'pending', confirmed_ms = NULL,
       confirm_token = ?4, confirm_sent_ms = NULL, unsub_ms = NULL WHERE id = ?5`).bind(e, nowMs, source, 'lc_' + rnd(24), cur.id).run();
     return { ok: true, status: 'pending', confirmEmail: waitingForPayment ? 'after_payment' : 'within_minutes', waitingForPayment };
@@ -92,13 +96,23 @@ export async function confirm(db, { subId, token, nowMs = Date.now() }) {
   return { ok: true, status: 'active' };
 }
 
-/** One-click unsubscribe. Always allowed, whatever the flags say. Idempotent; never reveals whether an id exists. */
+/**
+ * One-click unsubscribe. Always allowed, whatever the flags say. Idempotent; never reveals whether an id exists.
+ * GL2 data minimization: keeps ONLY a hashed-email suppression record + the date; deletes the subscription row
+ * (address, consent source, tokens) and its send history. A second click on a well-formed link is a quiet no-op.
+ */
 export async function unsubscribe(db, { subId, token, nowMs = Date.now() }) {
   if (!db || !/^ls_[A-Za-z0-9_-]{16}$/.test(subId ?? '') || !/^lu_[A-Za-z0-9_-]{32}$/.test(token ?? '')) return { ok: false, status: 400, reason: 'bad_link' };
-  const r = await db.prepare('SELECT id, unsub_token, status FROM lesson_subs WHERE id = ?1').bind(subId).first();
-  if (!r || !safeEqual(r.unsub_token, token)) return { ok: false, status: 400, reason: 'bad_link' };
-  if (r.status !== 'unsubscribed') await db.prepare(`UPDATE lesson_subs SET status = 'unsubscribed', unsub_ms = ?1 WHERE id = ?2`).bind(nowMs, subId).run();
+  const r = await db.prepare('SELECT id, email, unsub_token FROM lesson_subs WHERE id = ?1').bind(subId).first();
+  if (!r) return { ok: true, status: 'unsubscribed' }; // already removed (or never existed): nothing to send to either way
+  if (!safeEqual(r.unsub_token, token)) return { ok: false, status: 400, reason: 'bad_link' };
+  await minimizeLessonSub(db, r, nowMs);
   return { ok: true, status: 'unsubscribed' };
+}
+export async function minimizeLessonSub(db, r, nowMs) {
+  await suppress(db, 'lessons', r.email, nowMs);
+  await db.prepare('DELETE FROM lesson_sends WHERE sub_id = ?1').bind(r.id).run();
+  await db.prepare('DELETE FROM lesson_subs WHERE id = ?1').bind(r.id).run();
 }
 
 export const unsubUrl = (lcfg, sub) => `${lcfg.baseUrl}/api/lessons/unsubscribe?s=${encodeURIComponent(sub.id)}&t=${encodeURIComponent(sub.unsub_token)}`;
@@ -132,9 +146,9 @@ export function lessonEmail(lcfg, sub, day) {
     + `<div style="display:none;max-height:0;overflow:hidden">${escHtml(L.preview)}</div>` + BOX
     + `<p style="margin:0 0 18px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#a0742f">Hwi's practice lessons · Day ${day} of ${LESSON_DAYS}</p>`
     + L.html
-    + footerHtml(lcfg, `<p style="${SMALL}">${escHtml(why)}</p><p style="${SMALL}"><a href="${escHtml(u)}" style="color:#7a6a55">Unsubscribe in one click</a> · The Spice Melange · thespicemelange.org</p>`)
+    + footerHtml(lcfg, `<p style="${SMALL}">${escHtml(why)}</p><p style="${SMALL}"><a href="${escHtml(u)}" style="color:#7a6a55">Unsubscribe in one click</a> · <a href="${escHtml(lcfg.baseUrl)}/privacy/" style="color:#7a6a55">Privacy</a> · The Spice Melange · thespicemelange.org</p>`)
     + `</div></body></html>`;
-  const text = `Hwi's practice lessons · Day ${day} of ${LESSON_DAYS}\n\n${L.text}\n\n--\n${why}\nUnsubscribe in one click: ${u}\nThe Spice Melange · https://thespicemelange.org\n${lcfg.footer ? lcfg.footer + '\n' : ''}`;
+  const text = `Hwi's practice lessons · Day ${day} of ${LESSON_DAYS}\n\n${L.text}\n\n--\n${why}\nUnsubscribe in one click: ${u}\nPrivacy: ${lcfg.baseUrl}/privacy/\nThe Spice Melange · https://thespicemelange.org\n${lcfg.footer ? lcfg.footer + '\n' : ''}`;
   return {
     from: lcfg.from, to: [sub.email], reply_to: lcfg.replyTo, subject: L.subject, html, text,
     headers: {
@@ -199,15 +213,15 @@ export async function runConfirmations(env, { nowMs = Date.now(), fetchImpl = fe
   const lcfg = lessonsConfig(env);
   const out = { mode: lcfg.production ? 'production' : 'test', net: lcfg.net, sent: 0, skipped: 0, failed: 0, expired: 0, details: [] };
   const g = gate(lcfg, dryRun); if (g) return { ...out, ok: g === 'sending_off', reason: g };
-  // never-confirmed and never-paid requests lapse after 7 days
-  const ex = await lcfg.db.prepare(`UPDATE lesson_subs SET status = 'expired' WHERE net = ?1 AND status = 'pending' AND consent_ms < ?2`).bind(lcfg.net, nowMs - UNPAID_EXPIRE_MS).run();
-  out.expired = Number(ex?.meta?.changes ?? 0);
+  // GL2: never-confirmed (or never-paid) requests are DELETED after 7 days, with any send rows (none exist before confirm)
+  out.expired = await deleteStalePending(lcfg.db, nowMs, lcfg.net);
   const { results = [] } = await lcfg.db.prepare(`SELECT s.* FROM lesson_subs s JOIN orders o ON o.id = s.order_id
     WHERE s.net = ?1 AND s.status = 'pending' AND s.confirm_sent_ms IS NULL AND s.confirm_sends < ?2 AND (o.status = 'paid' OR ?4 = 1)
     ORDER BY s.consent_ms LIMIT ?3`).bind(lcfg.net, MAX_CONFIRM_SENDS, limit, lcfg.production ? 0 : 1).all();
   for (const sub of results) {
     const tag = { sub: sub.id, kind: 'confirm' };
     if (!allowed(lcfg, sub.email)) { out.skipped++; out.details.push({ ...tag, result: 'skipped_not_test_recipient' }); continue; }
+    if (await suppressedSince(lcfg.db, 'lessons', sub.email, 0)) { out.skipped++; out.details.push({ ...tag, result: 'skipped_suppressed' }); continue; }
     if (dryRun) { out.details.push({ ...tag, result: 'dry_run' }); continue; }
     // claim first (confirm_sent_ms) so a racing run can't send twice
     const c = await lcfg.db.prepare(`UPDATE lesson_subs SET confirm_sent_ms = ?1, confirm_sends = confirm_sends + 1 WHERE id = ?2 AND confirm_sent_ms IS NULL AND status = 'pending'`).bind(nowMs, sub.id).run();
@@ -244,6 +258,7 @@ export async function runLessons(env, { nowMs = Date.now(), fetchImpl = fetch, d
     const day = Number(sub.next_day);
     const tag = { sub: sub.id, day };
     if (!allowed(lcfg, sub.email)) { out.skipped++; out.details.push({ ...tag, result: 'skipped_not_test_recipient' }); continue; }
+    if (await suppressedSince(lcfg.db, 'lessons', sub.email, sub.confirmed_ms)) { out.skipped++; out.details.push({ ...tag, result: 'skipped_suppressed' }); continue; }
     if (dryRun) { out.details.push({ ...tag, result: 'dry_run', cta: ctaVariant(sub.sku) }); continue; }
     if (day === 1) sub.course_track = await lcfg.db.prepare(`SELECT track FROM course_subs WHERE net = ?1 AND email = ?2`).bind(lcfg.net, sub.email).first().then((x) => x?.track ?? null).catch(() => null);
     try {
@@ -265,6 +280,14 @@ export async function runLessons(env, { nowMs = Date.now(), fetchImpl = fetch, d
     }
   }
   return { ...out, ok: true };
+}
+/** GL2: delete pending/expired lesson requests older than 7 days (and their send rows). Returns rows deleted. */
+export async function deleteStalePending(db, nowMs, net = null) {
+  const cut = nowMs - UNPAID_EXPIRE_MS;
+  const w = `status IN ('pending','expired') AND consent_ms < ?1 AND (?2 IS NULL OR net = ?2)`;
+  await db.prepare(`DELETE FROM lesson_sends WHERE sub_id IN (SELECT id FROM lesson_subs WHERE ${w})`).bind(cut, net).run();
+  const d = await db.prepare(`DELETE FROM lesson_subs WHERE ${w}`).bind(cut, net).run();
+  return Number(d?.meta?.changes ?? 0);
 }
 async function advance(db, subId, day, nowMs) {
   await db.prepare(`UPDATE lesson_subs SET next_day = ?1, last_sent_ms = ?2, fail_count = 0, status = CASE WHEN ?1 > ?3 THEN 'done' ELSE status END WHERE id = ?4 AND next_day = ?5`)
