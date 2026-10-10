@@ -21,7 +21,7 @@ The **Golden Path** in the novels is a plan that only makes sense over a very lo
 ## What "training" means
 Your bot starts in **training mode**. It paper-trades DeepBook pools against live prices. A paper order only counts as filled when real trades print *through* its price, and only for the volume that actually traded. That keeps the practice honest: no imaginary fills.
 
-Training lasts fourteen days, and nothing turns it off by accident. Going live takes three switches, and only you can flip them. We'll walk through them on day 14.
+Training lasts fourteen days, and nothing turns it off by accident. Going live takes three switches. Only you should flip them, and your bot is told never to. We'll walk through them on day 14.
 
 ## What I will and won't do
 - I teach. I never give financial advice and I never promise returns. Trading can lose money, including all of it.
@@ -43,7 +43,7 @@ Write down the training day it reports. That's your day 1.
 ## Remember
 - Bitcoin is the spice: the long-horizon store. Trades feed it.
 - Training is paper, with honest fills only.
-- Only you can switch to live.
+- Only you should switch to live, and your bot is told never to.
 
 I'm glad you're here. See you tomorrow.
 

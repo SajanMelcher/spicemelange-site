@@ -18,5 +18,5 @@ test('Day 11 HALT wording (HTML + text) and no "never cost extra" anywhere in th
 test('Day 2 HALT wording, and no "only you remove" variant in any of the 14 days', () => {
   const d2 = LESSONS.find((l) => l.day === 2);
   for (const s of [d2.text, d2.html]) assert.match(s, /A crash writes a (<code[^>]*>)?`?HALT`?(<\/code>)? file\. You remove it, and your bot is told never to remove it\./);
-  for (const l of LESSONS) for (const s of [l.text, l.html]) assert.doesNotMatch(s, /only (<strong>)?you(<\/strong>)? (can )?remove/i, `day ${l.day}`);
+  for (const l of LESSONS) for (const s of [l.text, l.html]) assert.doesNotMatch(s, /only (<strong>)?you(<\/strong>)? (can )?remove|only (<strong>)?you(<\/strong>)? can\b|only (<strong>)?you(<\/strong>)? edit/i, `day ${l.day}`);
 });

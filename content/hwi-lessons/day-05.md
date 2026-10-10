@@ -26,7 +26,7 @@ Each rhythm comes with a signature made by the store's release key, the same key
 Your bot reads two things: the desk rhythm and your own local settings. Then it adapts **within its guards**:
 - It may choose to re-center ladders during a suggested window.
 - It may use fewer rungs on a quiet week, or more on a wide swing, but never more than your rung cap.
-- It never raises a loss cap, a size cap or a rung cap because the rhythm "said so". It can't. Only you edit those.
+- It never raises a loss cap, a size cap or a rung cap because the rhythm "said so". Only you should edit those, and your bot is told never to.
 
 In training, every adaptation is on paper, and the bot logs each one: what the rhythm suggested, what it did, and why. That log is how you learn whether the rhythm fits your style.
 
