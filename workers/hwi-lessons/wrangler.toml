@@ -15,6 +15,10 @@ workers_dev = true
 # Every 10 min: confirmation emails go out within minutes; lessons only when America/Los_Angeles reads 9 AM (in code, DST-proof).
 crons = ["*/10 * * * *"]
 
+# Workers Logs: keep invocation logs (incl. scheduled runs) so missed cron ticks can be diagnosed. Logs carry no addresses.
+[observability]
+enabled = true
+
 [vars]
 SUI_NETWORK = "mainnet"
 LESSONS_PRODUCTION_SENDING = "1" # ON 2026-10-10 (Sajan 7:16 AM PT; R0 verified on production; Hwi confirmed). Lesson runs still hold until /privacy/ + terms Resend line are live.

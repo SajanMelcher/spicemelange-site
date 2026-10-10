@@ -9,6 +9,20 @@
 import { runLessons, runConfirmations, scheduledRun, lessonsConfig, lessonEmail, legalGate } from '../../store-core/lessons.js';
 import { purge } from '../../store-core/purge.js';
 
+const HB_NAME = 'hwi-lessons-cron';
+export async function heartbeat(env, event, nowMs = Date.now()) {
+  if (!env.STORE_DB) return;
+  await env.STORE_DB.prepare(`INSERT INTO cron_heartbeat (worker, last_cron_at, last_cron, ran_at, runs) VALUES (?1, ?2, ?3, ?4, 1)
+    ON CONFLICT(worker) DO UPDATE SET last_cron_at = excluded.last_cron_at, last_cron = excluded.last_cron, ran_at = excluded.ran_at, runs = runs + 1`)
+    .bind(String(env.HEARTBEAT_NAME ?? HB_NAME), Number(event?.scheduledTime ?? nowMs), String(event?.cron ?? ''), nowMs).run();
+}
+async function lastHeartbeat(env, nowMs = Date.now()) {
+  try {
+    const r = await env.STORE_DB.prepare('SELECT last_cron_at, last_cron, ran_at, runs FROM cron_heartbeat WHERE worker = ?1').bind(String(env.HEARTBEAT_NAME ?? HB_NAME)).first();
+    if (!r) return { lastCronAt: null, cronStale: true };
+    return { lastCronAt: new Date(r.last_cron_at).toISOString(), lastCron: r.last_cron, cronRuns: r.runs, cronAgeMin: Math.round((nowMs - r.last_cron_at) / 60_000), cronStale: nowMs - r.last_cron_at > 25 * 60_000 };
+  } catch (e) { return { lastCronAt: null, heartbeatError: String(e?.message ?? e).slice(0, 80) }; }
+}
 const j = (s, b) => new Response(JSON.stringify(b, null, 1), { status: s, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
 function safeEqual(a, b) {
   if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
@@ -17,6 +31,8 @@ function safeEqual(a, b) {
 const summary = (r) => ({ ...r, details: (r.details ?? []).map(({ sub, day, kind, result, http }) => ({ sub, day, kind, result, http })) });
 export default {
   async scheduled(event, env, ctx) {
+    // Heartbeat first (awaited, never throws): proves the trigger fired even if the work below fails.
+    await heartbeat(env, event).catch((e) => console.log('heartbeat error', String(e?.message ?? e)));
     // GL2/GL3: retention purge every run (IP hashes ~1 h, unconfirmed signups 7 d, finished subs 30 d, suggestions 90 d)
     if (env.STORE_DB) ctx.waitUntil(purge(env.STORE_DB, event.scheduledTime, { salt: env.SUPPRESSION_SALT }).then((n) => console.log('retention purge', JSON.stringify(n))).catch((e) => console.log('purge error', String(e?.message ?? e))));
     ctx.waitUntil(scheduledRun(env, { nowMs: event.scheduledTime }).then((r) => console.log(JSON.stringify({ at: new Date(event.scheduledTime).toISOString(), confirmations: r.confirmations.details ? summary(r.confirmations) : r.confirmations, lessons: r.lessons.details ? summary(r.lessons) : r.lessons }))));
@@ -27,7 +43,7 @@ export default {
       const c = lessonsConfig(env);
       const gate = await legalGate(c);
       return j(200, { ok: true, net: c.net, productionSending: c.production, testRecipients: c.testRecipients.length, resendKey: Boolean(c.apiKey), footer: Boolean(c.footer), suppressionSalt: Boolean(c.suppressSalt), from: c.from, replyTo: c.replyTo,
-        lessonGate: gate.open ? 'open' : gate.reason, privacyStatus: gate.privacyStatus, termsResendLine: gate.termsLine });
+        lessonGate: gate.open ? 'open' : gate.reason, privacyStatus: gate.privacyStatus, termsResendLine: gate.termsLine, ...(await lastHeartbeat(env)) });
     }
     if (request.method !== 'POST' || !['/run', '/run-confirmations', '/test-send'].includes(u.pathname)) return j(404, { ok: false });
     const m = /^Bearer\s+(\S+)$/i.exec(request.headers.get('authorization') ?? '');
