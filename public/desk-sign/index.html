@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light dark">
+<title>Desk signing</title>
+<link rel="stylesheet" href="./style.css">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script type="module" src="./app.js"></script>
+</head>
+<body>
+<main>
+  <h1>Desk signing</h1>
+  <p class="small">Your key is made on this phone and never leaves it. This page sends nothing anywhere; you copy the result into chat yourself.</p>
+  <p id="keystate" class="keystate">Checking for a key on this phone…</p>
+  <noscript><p class="banner red">This page needs JavaScript.</p></noscript>
+  <p id="err" class="banner red" hidden></p>
+
+  <section id="approve" hidden>
+    <h2 id="ap-title">Approve a change</h2>
+    <p id="ap-note" class="note"></p>
+    <p id="ap-expiry" class="small"></p>
+    <p id="ap-red" class="banner red" hidden></p>
+    <p id="ap-amber" class="banner amber" hidden></p>
+    <ul id="ap-list" class="changes"></ul>
+    <label id="ap-confirm-wrap" class="confirm" hidden><input type="checkbox" id="ap-confirm"> I want to loosen these limits.</label>
+    <div class="row">
+      <button id="ap-yes" class="primary" type="button">Approve and sign</button>
+      <button id="ap-no" type="button">Decline</button>
+    </div>
+    <details class="small"><summary>Technical details</summary><pre id="ap-tech"></pre></details>
+    <div id="ap-done" hidden>
+      <p class="banner green">Signed. Copy this and paste it in the chat:</p>
+      <textarea id="ap-sig" readonly rows="4"></textarea>
+      <div class="row">
+        <button id="ap-copy" class="primary" type="button">Copy</button>
+        <button id="ap-share" type="button" hidden>Share…</button>
+      </div>
+    </div>
+    <p id="ap-declined" class="banner" hidden>Declined. Nothing was signed or sent.</p>
+  </section>
+
+  <section id="setup" hidden>
+    <h2>Set up this phone</h2>
+    <div id="su-none" hidden>
+      <p>One tap makes your signing key on this phone. Then copy the public key into the chat.</p>
+      <button id="su-create" class="primary" type="button">Create key</button>
+    </div>
+    <div id="su-have" hidden>
+      <p>Public key (safe to share, paste it in the chat with “pin this approver key”):</p>
+      <textarea id="su-pub" readonly rows="3"></textarea>
+      <div class="row"><button id="su-copy" class="primary" type="button">Copy public key</button></div>
+      <p class="small">Fingerprint: <code id="su-fp"></code></p>
+    </div>
+    <div id="su-backup" hidden>
+      <h3>Backup (optional, only possible right now)</h3>
+      <p class="small">If you lose this phone, a backup lets you restore the same key. It is encrypted with a passphrase you choose (10+ characters). Keep the backup and the passphrase in different places. Without a backup, a lost phone means a new key.</p>
+      <input id="bk-pass" type="password" autocomplete="new-password" placeholder="Passphrase">
+      <input id="bk-pass2" type="password" autocomplete="new-password" placeholder="Passphrase again">
+      <div class="row">
+        <button id="bk-make" type="button">Make encrypted backup</button>
+        <button id="bk-skip" type="button">No backup</button>
+      </div>
+      <div id="bk-out" hidden>
+        <textarea id="bk-text" readonly rows="5"></textarea>
+        <div class="row"><button id="bk-copy" type="button">Copy backup</button><a id="bk-dl" class="button" download="desk-sign-backup.json">Download backup</a></div>
+      </div>
+    </div>
+    <details id="restore" hidden>
+      <summary>Restore from an encrypted backup</summary>
+      <textarea id="rs-text" rows="5" placeholder="Paste the backup text"></textarea>
+      <input id="rs-pass" type="password" autocomplete="current-password" placeholder="Passphrase">
+      <button id="rs-go" type="button">Restore key</button>
+    </details>
+    <p class="small" id="su-tip">Tip: on iPhone, use Share → Add to Home Screen and open it from there. Safari can clear a website’s storage after 7 days without a visit; the Home Screen app keeps it.</p>
+  </section>
+</main>
+</body>
+</html>

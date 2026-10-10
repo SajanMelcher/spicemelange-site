@@ -1,0 +1,2 @@
+{ "name": "Desk signing", "short_name": "Desk sign", "start_url": "/desk-sign/", "scope": "/desk-sign/", "display": "standalone",
+  "background_color": "#faf7f2", "theme_color": "#2c4a6e", "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }] }

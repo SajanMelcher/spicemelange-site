@@ -1,0 +1,25 @@
+:root { --fg:#1d1b18; --bg:#faf7f2; --muted:#6b645a; --line:#d9d1c4; --red:#b3261e; --amber:#8a5a00; --green:#1e6b34; --btn:#2c4a6e; }
+@media (prefers-color-scheme: dark) { :root { --fg:#eee8dd; --bg:#16140f; --muted:#a69e90; --line:#3a352c; --red:#ff8a80; --amber:#ffcc66; --green:#7fd68f; --btn:#6f9fd8; } }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font:17px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+main { max-width:40rem; margin:0 auto; padding:1rem 1rem 3rem; padding-top:max(1rem, env(safe-area-inset-top)); }
+h1 { font-size:1.5rem; margin:.25rem 0 .5rem; } h2 { font-size:1.25rem; margin:1.25rem 0 .5rem; } h3 { font-size:1.05rem; margin:1rem 0 .25rem; }
+.small { font-size:.88rem; color:var(--muted); }
+.keystate { padding:.5rem .75rem; border:1px solid var(--line); border-radius:.5rem; }
+.note { font-weight:600; }
+.banner { padding:.6rem .75rem; border-radius:.5rem; border:2px solid var(--line); font-weight:600; }
+.banner.red { border-color:var(--red); color:var(--red); }
+.banner.amber { border-color:var(--amber); color:var(--amber); }
+.banner.green { border-color:var(--green); color:var(--green); }
+.changes { padding-left:1.1rem; } .changes li { margin:.35rem 0; }
+.tag { display:inline-block; font-size:.75rem; font-weight:700; padding:0 .4rem; border-radius:.3rem; border:1px solid currentColor; margin-left:.35rem; }
+.tag.looser { color:var(--red); } .tag.tighter { color:var(--green); } .tag.unknown, .tag.code { color:var(--amber); } .tag.text { color:var(--muted); }
+.row { display:flex; gap:.6rem; flex-wrap:wrap; margin:.75rem 0; }
+button, .button { font:inherit; padding:.7rem 1.1rem; border-radius:.6rem; border:1px solid var(--btn); background:transparent; color:var(--btn); text-decoration:none; cursor:pointer; min-height:44px; }
+button.primary { background:var(--btn); color:var(--bg); }
+button:disabled { opacity:.45; cursor:not-allowed; }
+textarea, input { width:100%; font:15px/1.35 ui-monospace, Menlo, monospace; padding:.55rem; border:1px solid var(--line); border-radius:.5rem; background:transparent; color:var(--fg); margin:.3rem 0; }
+input { font:16px/1.4 -apple-system, BlinkMacSystemFont, sans-serif; }
+pre { white-space:pre-wrap; word-break:break-all; font-size:.78rem; }
+code { word-break:break-all; }
+.confirm { display:block; margin:.75rem 0; font-weight:600; color:var(--red); } .confirm input { width:auto; margin-right:.4rem; }

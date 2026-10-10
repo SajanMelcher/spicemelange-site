@@ -1,0 +1,5 @@
+noble-ed25519.js is @noble/ed25519 3.2.0 index.js, byte-for-byte unmodified (MIT, Paul Miller; see noble-ed25519.LICENSE.txt).
+Source tarball: registry.npmjs.org/@noble/ed25519/-/ed25519-3.2.0.tgz
+npm integrity (tarball): sha512-criDgRlnUA09hchYrTy/JUWPIEap5rZxQe6wDWzRx51oWWpDRcUpuNzlgPxDJaOK6AsW9c0wKcj3rKRv6t+bPQ== (matched 2026-10-10)
+sha256 of noble-ed25519.js: a4f631d1876b5d9e43a86cd71194ca27b5e1451edf4ba4db9a418f40a475569a
+It has no imports and is loaded only when the browser lacks WebCrypto Ed25519.
