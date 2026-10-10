@@ -3,11 +3,14 @@ import '../styles/global.css';
 import Sigil from '../components/Sigil.astro';
 import Eye from '../components/Eye.astro';
 import { SITE, NAV, DISCLAIMER, mailto } from '../data/site';
-interface Props { title?: string; description?: string; noindex?: boolean }
-const { title, noindex = false, description = 'The Spice Melange: a patient bitcoin desk on the Golden Path. Education, open tools for DeepBook on Sui, and a small team of agents.' } = Astro.props;
+interface Props { title?: string; description?: string; noindex?: boolean; image?: string; imageAlt?: string; imageWidth?: number; imageHeight?: number }
+const DEFAULT_OG_IMAGE = '/og/spice-melange-og.png';
+const DEFAULT_OG_ALT = 'The Spice Melange: The Spice Must Flow. A patient bitcoin desk on the Golden Path. Amber desert dunes under a dark sky with a golden path arc.';
+const { title, noindex = false, image = DEFAULT_OG_IMAGE, imageAlt = DEFAULT_OG_ALT, imageWidth = 1200, imageHeight = 630, description = 'The Spice Melange: a patient bitcoin desk on the Golden Path. Education, open tools for DeepBook on Sui, and a small team of agents.' } = Astro.props;
 const fullTitle = title ? `${title} · ${SITE.name}` : `${SITE.name} · The Spice Must Flow`;
 const path = Astro.url.pathname.replace(/\/?$/, '/');
 const canonical = new URL(Astro.url.pathname, SITE.url).href;
+const ogImage = new URL(image, SITE.url).href;
 const navPath = (h: string) => (h.startsWith('http') ? new URL(h).pathname : h);
 ---
 <!doctype html>
@@ -25,8 +28,18 @@ const navPath = (h: string) => (h.startsWith('http') ? new URL(h).pathname : h);
   <meta property="og:title" content={fullTitle} />
   <meta property="og:description" content={description} />
   <meta property="og:url" content={canonical} />
-  <meta name="twitter:card" content="summary" />
+  <meta property="og:site_name" content={SITE.name} />
+  <meta property="og:image" content={ogImage} />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content={String(imageWidth)} />
+  <meta property="og:image:height" content={String(imageHeight)} />
+  <meta property="og:image:alt" content={imageAlt} />
+  <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:site" content={SITE.xHandle} />
+  <meta name="twitter:title" content={fullTitle} />
+  <meta name="twitter:description" content={description} />
+  <meta name="twitter:image" content={ogImage} />
+  <meta name="twitter:image:alt" content={imageAlt} />
 </head>
 <body class="min-h-dvh flex flex-col">
   <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-spice-500 focus:px-4 focus:py-2 focus:text-night-950">Skip to content</a>

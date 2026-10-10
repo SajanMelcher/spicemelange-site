@@ -20,3 +20,7 @@
   Cross-Origin-Resource-Policy: same-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()
   Cache-Control: no-cache, no-transform
+/og/spice-melange-og.png
+  Content-Type: image/png
+  Cache-Control: public, max-age=86400
+  Access-Control-Allow-Origin: *
