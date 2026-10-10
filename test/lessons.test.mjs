@@ -1,10 +1,10 @@
 // Hwi's 14-day practice lessons: DOUBLE opt-in, gating (one production flag + footer), daily sender, unsubscribe, content. No network.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { makeD1 } from './d1-shim.mjs';
 import { sha256Hex } from '../store-core/core.js';
-import { lessonsConfig, subscribe, confirm, unsubscribe, runLessons, runConfirmations, scheduledRun, lessonEmail, confirmEmail, ptHour, LESSON_DAYS, MIN_GAP_MS } from '../store-core/lessons.js';
+import { lessonsConfig, subscribe, confirm, unsubscribe, runLessons, runConfirmations, scheduledRun, lessonEmail, confirmEmail, ptHour, legalGate, LESSON_DAYS, MIN_GAP_MS } from '../store-core/lessons.js';
 import { LESSONS } from '../store-core/lessons-content.js';
 import { PAGE_CSP } from '../store-core/lessons-page.js';
 
@@ -12,11 +12,12 @@ const MIG = readdirSync(new URL('../migrations/', import.meta.url)).filter((f) =
 const TOK = 'smt_' + 'A'.repeat(43), TOK2 = 'smt_' + 'B'.repeat(43);
 const FOOT = 'Test Sender · 1 Example St, Town, CA 90000 · reserve@thespicemelange.org';
 const T0 = Date.UTC(2026, 9, 10, 16, 0, 0), DAY = 86_400_000; // 9:00 AM PDT
+const SALT = 's'.repeat(32);
 async function setup(envOver = {}) {
   const db = makeD1(MIG);
   const add = async (id, tok, net = 'testnet', status = 'paid', email = null) => db.prepare(`INSERT INTO orders (id, sku, net, amount_atomic, token_hash, created_ms, expires_ms, status, attempts, pay_to, email) VALUES (?1,'fish-speakers',?2,'1',?3,?4,?5,?6,0,'0x1',?7)`).bind(id, net, await sha256Hex(tok), T0, T0 + 3600e3, status, email).run();
   await add('SM-AAAAAAAAAA', TOK); await add('SM-BBBBBBBBBB', TOK2, 'testnet', 'open'); await add('SM-CCCCCCCCCC', TOK, 'mainnet');
-  const env = { STORE_DB: db, SUI_NETWORK: 'testnet', RESEND_API_KEY: 're_test', LESSONS_TEST_RECIPIENTS: 'delivered@resend.dev', LESSONS_BASE_URL: 'https://hwi-lessons.example.dev', LESSONS_FOOTER: FOOT, ...envOver };
+  const env = { STORE_DB: db, SUI_NETWORK: 'testnet', RESEND_API_KEY: 're_test', LESSONS_TEST_RECIPIENTS: 'delivered@resend.dev', LESSONS_BASE_URL: 'https://hwi-lessons.example.dev', LESSONS_FOOTER: FOOT, SUPPRESSION_SALT: SALT, ...envOver };
   const sent = [];
   const legal = { privacy: 200, terms: '<h2>9. Privacy</h2><p>Lesson emails go out <em>through Resend</em>, our email provider.</p>' };
   const fetchImpl = async (url, init) => {
@@ -46,8 +47,10 @@ test('content: 14 lessons, each with subject, practice task, education line, ~3 
     assert.doesNotMatch(l.text, /guarantee|\bAPY\b|\d+% (a|per) (year|month)|Sajan|0x[0-9a-f]{8}/i);
   });
 });
-test('config: signup open on testnet, closed on mainnet unless the one flag is on; test list ignored on mainnet; sender', () => {
-  assert.equal(lessonsConfig({ SUI_NETWORK: 'testnet' }).signupOpen, true);
+test('config: GL7 signup is allowlist-only until the one flag is on (testnet preview too); test list ignored once on; sender', () => {
+  assert.equal(lessonsConfig({ SUI_NETWORK: 'testnet' }).signupOpen, false);
+  assert.equal(lessonsConfig({ SUI_NETWORK: 'testnet' }).signupShown, false);
+  assert.equal(lessonsConfig({ SUI_NETWORK: 'testnet', LESSONS_TEST_RECIPIENTS: 'a@b.co' }).signupShown, true);
   assert.equal(lessonsConfig({ SUI_NETWORK: 'mainnet' }).signupOpen, false);
   assert.equal(lessonsConfig({ SUI_NETWORK: 'mainnet', LESSONS_PRODUCTION_SENDING: '1' }).signupOpen, true);
   assert.deepEqual(lessonsConfig({ SUI_NETWORK: 'mainnet', LESSONS_TEST_RECIPIENTS: 'a@b.co' }).testRecipients, ['a@b.co']);
@@ -128,10 +131,13 @@ test('sender: off on mainnet without the flag, nothing fetched', async () => {
   const r = await runLessons({ ...env, SUI_NETWORK: 'mainnet', LESSONS_TEST_RECIPIENTS: '' }, { nowMs: T0, fetchImpl });
   assert.equal(r.reason, 'sending_off'); assert.equal(sent.length, 0);
 });
-test('test mode: only test recipients get confirmations or lessons', async () => {
+test('test mode (GL7): non-allowlisted addresses are refused at signup (nothing stored) and never mailed', async () => {
   const t = await setup();
   await t.add('SM-DDDDDDDDDD', TOK2);
-  await subscribe(t.lcfg, { orderId: 'SM-DDDDDDDDDD', token: TOK2, email: 'real@person.example', source: 'checkout', nowMs: T0 });
+  assert.equal((await subscribe(t.lcfg, { orderId: 'SM-DDDDDDDDDD', token: TOK2, email: 'real@person.example', source: 'checkout', nowMs: T0 })).reason, 'lessons_not_open');
+  assert.equal(t.db.raw.prepare('SELECT COUNT(*) n FROM lesson_subs').get().n, 0);
+  // even a row that got in some other way is skipped by the sender
+  t.db.raw.prepare(`INSERT INTO lesson_subs (id, net, order_id, email, consent_ms, consent_source, status, next_day, confirm_token, unsub_token) VALUES ('ls_xxxxxxxxxxxxxxxx','testnet','SM-DDDDDDDDDD','real@person.example',?,'checkout','pending',1,'lc_x','lu_x')`).run(T0);
   const c = await runConfirmations(t.env, { nowMs: T0, fetchImpl: t.fetchImpl });
   assert.equal(c.sent, 0); assert.equal(c.skipped, 1); assert.equal(t.sent.length, 0);
 });
@@ -196,29 +202,72 @@ test('failed send does not advance and is retried; failed confirmation is retrie
   assert.equal((await runLessons(t.env, { nowMs: T0 + 4, fetchImpl: flaky })).sent, 1);
   assert.equal(row(t.db).next_day, 2);
 });
-test('unsubscribe: one click stops sending; re-opt-in needs a NEW confirmation', async () => {
+test('GL2 unsubscribe: one click stops sending and deletes the row + send history; only a hashed suppression is kept', async () => {
   const t = await setup();
   await optIn(t);
   const r = row(t.db);
   assert.equal((await unsubscribe(t.db, { subId: r.id, token: 'lu_' + 'x'.repeat(32) })).reason, 'bad_link');
-  assert.equal((await unsubscribe(t.db, { subId: r.id, token: r.unsub_token })).ok, true);
+  await runLessons(t.env, { nowMs: T0 + 2, fetchImpl: t.fetchImpl }); // day 1 sent, so send history exists
+  assert.equal(t.db.raw.prepare('SELECT COUNT(*) n FROM lesson_sends').get().n, 1);
+  assert.equal((await unsubscribe(t.db, { subId: r.id, token: r.unsub_token, nowMs: T0 + 3, salt: SALT })).ok, true);
+  // GL2: row (address, consent source, tokens) and send history deleted; only hash + date kept
+  assert.equal(t.db.raw.prepare('SELECT COUNT(*) n FROM lesson_subs').get().n, 0);
+  assert.equal(t.db.raw.prepare('SELECT COUNT(*) n FROM lesson_sends').get().n, 0);
+  const sup = t.db.raw.prepare('SELECT * FROM email_suppressions').all();
+  assert.equal(sup.length, 1); assert.equal(sup[0].list, 'lessons'); assert.equal(sup[0].unsub_ms, T0 + 3);
+  assert.match(sup[0].email_hash, /^[0-9a-f]{64}$/); assert.ok(!JSON.stringify(sup).includes('resend.dev'));
+  assert.equal((await unsubscribe(t.db, { subId: r.id, token: r.unsub_token, salt: SALT })).ok, true); // second click: quiet no-op
   const base = t.sent.length;
-  await runLessons(t.env, { nowMs: T0 + 5, fetchImpl: t.fetchImpl });
+  await runLessons(t.env, { nowMs: T0 + 2 * DAY, fetchImpl: t.fetchImpl });
   assert.equal(t.sent.length, base);
   // old confirm link can't revive it
   assert.equal((await confirm(t.db, { subId: r.id, token: r.confirm_token })).ok, false);
-  await sub(t.lcfg, { source: 'order_page' });
-  assert.equal(row(t.db).status, 'pending'); assert.equal(row(t.db).confirmed_ms, null);
-  await runLessons(t.env, { nowMs: T0 + 6, fetchImpl: t.fetchImpl });
-  assert.equal(t.sent.length, base); // pending: nothing until confirmed again
+  // LOW: a fresh request gets the SAME reply as a never-unsubscribed address, one confirmation email, and only the confirm lifts the block
+  const fresh = await sub(t.lcfg, { source: 'order_page', nowMs: T0 + 2 * DAY });
+  const never = await (await setup()).lcfg; const ref = await sub(never, { source: 'order_page', nowMs: T0 + 2 * DAY });
+  assert.deepEqual(fresh, ref);
+  assert.equal((await runLessons(t.env, { nowMs: T0 + 2 * DAY + 1, fetchImpl: t.fetchImpl })).sent, 0); // pending: nothing yet
+  assert.equal((await runConfirmations(t.env, { nowMs: T0 + 2 * DAY + 2, fetchImpl: t.fetchImpl })).sent, 1);
+  assert.match(t.sent.at(-1).body.subject, /Please confirm/);
+  assert.equal(t.db.raw.prepare('SELECT COUNT(*) n FROM email_suppressions').get().n, 1, 'block stays until confirmed');
+  const r2 = row(t.db);
+  assert.equal((await confirm(t.db, { subId: r2.id, token: r2.confirm_token, nowMs: T0 + 2 * DAY + 3, salt: SALT })).ok, true);
+  assert.equal(t.db.raw.prepare('SELECT COUNT(*) n FROM email_suppressions').get().n, 0, 'confirm lifts the block');
+  assert.equal((await runLessons(t.env, { nowMs: T0 + 2 * DAY + 4, fetchImpl: t.fetchImpl })).sent, 1);
+});
+test('LOW/GL15: no salt -> senders fail closed; unsubscribe still never fails (marks unsubscribed, nothing more is sent)', async () => {
+  const t = await setup();
+  await optIn(t);
+  const noSalt = { ...t.env, SUPPRESSION_SALT: '' };
+  assert.equal((await runLessons(noSalt, { nowMs: T0 + 2, fetchImpl: t.fetchImpl })).reason, 'suppression_salt_not_set');
+  assert.equal((await runConfirmations(noSalt, { nowMs: T0 + 2, fetchImpl: t.fetchImpl })).reason, 'suppression_salt_not_set');
+  const r = row(t.db);
+  const u = await unsubscribe(t.db, { subId: r.id, token: r.unsub_token, nowMs: T0 + 3 });
+  assert.equal(u.ok, true); assert.equal(u.minimized, false); assert.equal(row(t.db).status, 'unsubscribed');
+  assert.equal((await runLessons(t.env, { nowMs: T0 + 4, fetchImpl: t.fetchImpl })).sent, 0);
+  // a broken DB on the minimize step still yields a successful unsubscribe
+  const t2 = await setup(); await optIn(t2); const r2 = row(t2.db);
+  t2.db.raw.exec('DROP TABLE email_suppressions');
+  assert.equal((await unsubscribe(t2.db, { subId: r2.id, token: r2.unsub_token, salt: SALT })).ok, true);
+  assert.equal(row(t2.db).status, 'unsubscribed');
+});
+test('suppression hash is salted (HMAC): differs by salt, never the bare sha256 of the address', async () => {
+  const { emailHash } = await import('../store-core/suppress.js');
+  const { createHash } = await import('node:crypto');
+  const a = await emailHash('a'.repeat(32), 'X@Y.co'), b = await emailHash('b'.repeat(32), 'x@y.co');
+  assert.notEqual(a, b); assert.equal(a, await emailHash('a'.repeat(32), 'x@y.co'));
+  assert.notEqual(a, createHash('sha256').update('suppress|x@y.co').digest('hex'));
+  await assert.rejects(() => emailHash('', 'x@y.co'), /suppression_salt_not_set/);
 });
 test('confirmations capped at 3 per order; pending requests expire after 7 days', async () => {
-  const t = await setup({ LESSONS_TEST_RECIPIENTS: 'delivered@resend.dev,delivered1@resend.dev,delivered2@resend.dev' });
+  const t = await setup({ LESSONS_TEST_RECIPIENTS: 'delivered@resend.dev,delivered1@resend.dev,delivered2@resend.dev,other@resend.dev' });
   for (let i = 0; i < 3; i++) { await sub(t.lcfg, { email: `delivered${i ? i : ''}@resend.dev` }); await runConfirmations(t.env, { nowMs: T0 + i, fetchImpl: t.fetchImpl }); }
   assert.equal((await sub(t.lcfg, { email: 'other@resend.dev' })).reason, 'too_many_confirmations');
   const u = await setup();
   await subscribe(u.lcfg, { orderId: 'SM-BBBBBBBBBB', token: TOK2, email: 'delivered@resend.dev', source: 'checkout', nowMs: T0 });
+  assert.equal((await runConfirmations(u.env, { nowMs: T0 + 6 * DAY, fetchImpl: u.fetchImpl })).expired, 0);
   assert.equal((await runConfirmations(u.env, { nowMs: T0 + 8 * DAY, fetchImpl: u.fetchImpl })).expired, 1);
+  assert.equal(u.db.raw.prepare('SELECT COUNT(*) n FROM lesson_subs').get().n, 0, 'GL2: unconfirmed request deleted, not kept as expired');
 });
 test('mainnet with the flag OFF: only test-list addresses can sign up, get a confirmation and lessons (unpaid test order OK); nobody else', async () => {
   const t = await setup({ SUI_NETWORK: 'mainnet', LESSONS_TEST_RECIPIENTS: 'tester@example.com' });
@@ -253,6 +302,13 @@ test('legal gate: production lesson runs hold (and say why) until /privacy/ is 2
   // network failure fails closed
   const down = async (u, i) => (/privacy|terms/.test(String(u)) ? Promise.reject(new Error('down')) : t.fetchImpl(u, i));
   assert.equal((await runLessons(t.env, { nowMs: T0 + 2 * DAY, fetchImpl: down })).held, true);
+});
+test("legal gate marker 'through Resend' matches the section 9 bullet in the LICENSE.md that /terms/ renders", async () => {
+  const bullet = readFileSync(new URL('../src/content-static/LICENSE.md', import.meta.url), 'utf8').split('\n').find((l) => /Lesson and course emails/.test(l)) ?? assert.fail('bullet missing');
+  assert.equal(lessonsConfig({}).termsMarker, 'through resend');
+  const html = `<h2>9. Your data</h2><ul><li>${bullet.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')}</li></ul>`;
+  const g = await legalGate(lessonsConfig({ LESSONS_BASE_URL: 'https://x.example' }), async (u) => new Response(String(u).endsWith('/terms/') ? html : 'ok'));
+  assert.equal(g.termsLine, true); assert.equal(g.open, true);
 });
 test('legal gate does not apply to test mode', async () => {
   const t = await setup(); t.legal.privacy = 404;

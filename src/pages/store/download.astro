@@ -23,7 +23,8 @@ import { SITE } from '../../data/site';
     </form>
     <form id="hl-form" class="card mt-8 max-w-xl space-y-4 text-sm" aria-labelledby="hl-title" hidden>
       <h2 id="hl-title" class="text-2xl text-sand-50">Get Hwi's 14-day practice lessons</h2>
-      <p class="text-sand-200/90">Optional. One short lesson a day by email while your bot trains on paper: guards, ladders, reading results, when to stop, and going live safely. We email you a confirmation link first; they start only after you click it, and stop on their own after day 14. One-click unsubscribe in every email.</p>
+      <p class="text-sand-200/90">Optional. One short lesson a day by email while your bot trains on paper: guards, ladders, reading results, when to stop, and going live safely. <span id="hl-hold">The lessons are on hold until our privacy page is live, then start daily after you confirm. </span>We email you a confirmation link first; they start only after you click it, and stop on their own after day 14. One-click unsubscribe in every email.</p>
+      <p class="text-xs text-sand-300/80">We'll email your lessons through Resend. See our <a class="text-ibad-300" href="/privacy/">privacy page</a>.</p>
       <p class="text-xs text-sand-300/70">Uses the order ID and token above.</p>
       <div><label class="block text-sand-200/85" for="hl-email">Email</label>
         <input id="hl-email" type="email" required autocomplete="email" class="mt-1 w-full rounded-lg border border-sand-200/20 bg-night-950 px-3 py-2" placeholder="you@example.com" /></div>
@@ -63,7 +64,7 @@ import { SITE } from '../../data/site';
     msg(`Ready: ${r.product ?? 'your template'}, latest version.`);
   }
   // Hwi's practice lessons (opt-in). Shown only while signup is open.
-  fetch('/api/lessons/subscribe').then((x) => x.json()).then((r) => { if (r && r.open) ($('hl-form') as unknown as HTMLElement).hidden = false; }).catch(() => {});
+  fetch('/api/lessons/subscribe').then((x) => x.json()).then((r) => { if (r && r.open) ($('hl-form') as unknown as HTMLElement).hidden = false; if (r && r.lessonsLive === true) ($('hl-hold') as unknown as HTMLElement).hidden = true; }).catch(() => {});
   $('hl-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const hm = (t: string) => ($('hl-msg').textContent = t);
@@ -71,7 +72,7 @@ import { SITE } from '../../data/site';
     if (!order || !token) return hm('Enter your order ID and token in the form above first.');
     hm('Signing you up…');
     const r = await fetch('/api/lessons/subscribe', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ orderId: order, email, source: 'order_page' }) }).then((x) => x.json()).catch(() => ({ ok: false, reason: 'network_error' }));
-    if (!r.ok) return hm(r.reason === 'bad_order_or_token' ? 'Order ID and token do not match an order.' : r.reason === 'bad_email' ? 'That email does not look right.' : `Not available: ${r.reason ?? 'error'}`);
+    if (!r.ok) return hm(r.reason === 'bad_order_or_token' ? 'Order ID and token do not match an order.' : r.reason === 'bad_email' ? 'That email does not look right.' : r.reason === 'lessons_not_open' ? 'Lesson signups are not open for this address yet.' : `Not available: ${r.reason ?? 'error'}`);
     hm(r.status === 'done' ? 'You already finished all 14 lessons.' : r.status === 'active' ? `You're confirmed. Your next lesson (day ${r.nextDay}) arrives at the next 9:00 AM Pacific send.` : r.waitingForPayment ? 'Almost done: once your payment is confirmed we email you a link. Click it to confirm, then the lessons start.' : 'Almost done: check your inbox in a few minutes and click the confirm link. No lessons are sent until you do.');
   });
   $('dl-form').addEventListener('submit', (e) => { e.preventDefault(); go($('dl-order').value.trim(), $('dl-token').value.trim()); });

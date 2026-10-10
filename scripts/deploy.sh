@@ -16,4 +16,6 @@ else
 fi
 npm run -s test:store
 npm run -s build
+# GL14: the production build must never contain the free course pages.
+if [ "$MODE" = "production" ] && [ -e dist/learn ]; then echo "Refusing: dist/learn/ present in a production build." >&2; exit 1; fi
 $W pages deploy dist --project-name spicemelange-site --branch "$TARGET" --commit-dirty=true

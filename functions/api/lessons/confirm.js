@@ -19,7 +19,7 @@ export async function onRequestPost(context) {
   const o = context.request.headers.get('origin');
   // the pages send no Referrer (no-referrer), so a browser form post carries Origin: null; the secret token is the real check
   if (o && o !== 'null' && o !== new URL(context.request.url).origin) return page(403, 'Not allowed', ['Please use the button on the confirmation page.']);
-  const r = await confirm(context.env.STORE_DB, ids(context));
+  const r = await confirm(context.env.STORE_DB, { ...ids(context), salt: context.env.SUPPRESSION_SALT });
   if (r.ok) return page(200, "You're confirmed", ["Thank you. Your first lesson arrives at the next 9:00 AM Pacific send, then one a day for 14 days. Unsubscribe any time with the link in each email."]);
   if (r.reason === 'unsubscribed' || r.reason === 'expired') return page(410, 'This request has ended', ['Sign up again on the store\'s re-download page if you\'d like the lessons.']);
   return page(400, 'That link is not valid', ['It may be incomplete or from an older request. Copy the whole link from the newest email.']);

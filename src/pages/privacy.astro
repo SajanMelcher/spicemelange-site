@@ -1,0 +1,61 @@
+---
+// /privacy/ (Ixians R4, Siona S3 follow-up / O2). Approved by Sajan 10/10 8:02 AM PT (live once Siona passed): plain-language summary of what the site
+// stores, why, for how long, and how to delete it. The binding text is terms section 9 (/terms/, owned by Tleilaxu).
+import Base from '../layouts/Base.astro';
+import { DELETION_CONTACT, REPLY_CONTACT, SUB_RETENTION as S } from '../../store-core/contact.js';
+import { RETENTION as R } from '../../store-core/purge.js';
+const updated = 'October 10, 2026';
+---
+<Base title="Privacy" description="What The Spice Melange stores, why, for how long, and how to have it deleted. No third-party trackers, no ad pixels, and we never sell your data.">
+  <section class="container-x max-w-3xl pt-16 pb-16 terms">
+    <p class="eyebrow mb-4">The Spice Melange · privacy</p>
+    <h1>Privacy</h1>
+    <p class="text-sm opacity-80">Last updated {updated}. This page sums up section 9 of our <a class="text-ibad-300" href="/terms/">terms</a>. If they ever differ, the terms win.</p>
+
+    <h2>The short version</h2>
+    <ul>
+      <li>We keep as little as we can, only to fill orders, prevent abuse and send emails you asked for.</li>
+      <li>We never sell your data and never ask for keys, recovery phrases, passwords or account numbers.</li>
+      <li>We use no ad pixels, no cookies for tracking, and no third-party trackers.</li>
+      <li>Your templates run on your own agents. Your settings, memories, ledgers and keys never come to us.</li>
+    </ul>
+
+    <h2>What we store, why, and for how long</h2>
+    <ul>
+      <li><strong>Orders:</strong> order ID, amount, the paying Sui address and the payment record (public on-chain). Unpaid orders are deleted {R.unpaidOrderDays} days after the payment window closes, with their email and referral source. Paid orders, with the optional email and referral source, are kept as sales records until you ask us to delete the email or referral source.</li>
+      <li><strong>Optional receipt email:</strong> used only for your receipt and help with your order. The store doesn't send receipts itself: it saves a receipt draft that includes your email for up to 60 days, and the desk reviews it by hand before any receipt goes out.</li>
+      <li><strong>In your browser tab:</strong> after checkout, your order ID and order token (and which template you bought) are kept in this tab's sessionStorage so you can come back to the payment step. They stay on your device, are never sent to anyone else, and are cleared when you close the tab. Any referral tag is kept the same way. We set no cookies.</li>
+      <li><strong>IP addresses:</strong> never stored raw. A salted hash is kept for about an hour for rate limits on orders and course signups, and for reading the signal feed (this applies to anyone who reads the feed, including people who haven't bought anything). If you report a signal post, the hash is saved with that report for {R.reportHashDays} days, and a daily report counter tied to it is kept for about {R.counterDays} days. </li>
+      <li><strong>When deletions run:</strong> our cleanups run on a schedule (every 10 and every 15 minutes) and also as people use the site, so each deletion here happens shortly after its time is up, not at the exact minute.</li>
+      <li><strong>Referral source:</strong> if you arrive through a campaign or referral link, a short utm or ref tag is held in your browser tab (no cookies) and saved with your order or course signup so we can credit the referrer. On a course signup it is deleted with that signup.</li>
+      <li><strong>Referral codes:</strong> each code is stored with the name or pseudonym of the person it credits, an optional note and the date it was created, and is kept until we remove it. Referrers get no access to order data; the sales report shows only counts and totals per code.</li>
+      <li><strong>Lesson and course emails (opt-in only):</strong> if you tick the box and then confirm by email, we keep your email address, when and where you opted in, and which lessons were sent. For the free course we also keep your optional quiz answers: experience level, goal, time and whether you use an AI agent. Your quiz answers are stored only in our own database; they are not sent to our email provider. We never ask about income, savings, debts, balances or age.</li>
+      <li><strong>How long we keep subscribers:</strong> a signup you never confirm is deleted {S.unconfirmedDays} days after you made it. A finished lesson series or course is deleted {S.afterLastLessonDays} days after the last lesson. If you move from the free course to the 14-day lessons, the course record is deleted {S.handoffDays} days later. If you reply to a course email, the reply reaches us through Resend; we save only a suggestion from a keyword such as "slower", kept for up to {S.suggestionDays} days.</li>
+      <li><strong>Signal posts:</strong> shown under a pseudonym. The link to your order is kept privately for rate limits and moderation.</li>
+    </ul>
+
+    <h2>Who helps us</h2>
+    <ul>
+      <li><strong>Cloudflare</strong> hosts the site and its database, and processes requests to serve it.</li>
+      <li><strong>Resend</strong> (Resend, Inc.) sends lesson and course emails and receives replies to them. It processes your address only to deliver them; your quiz answers are not sent to Resend.</li>
+      <li><strong>Mysten Labs</strong> runs the public DeepBook indexer (deepbook-indexer.mainnet.mystenlabs.com). On the live market dashboard your browser fetches order-book data from it directly, so, like any website, it sees your IP address and browser type. We send it nothing about you. This is the only outside address your browser contacts on our pages; our fonts and scripts are served from our own site.</li>
+      <li><strong>Sui</strong> is a public blockchain. Our server reads it through the public Sui GraphQL service (graphql.mainnet.sui.io) to check payments; your browser doesn't contact it. If you use a Sui wallet to reset your token, that wallet is your own software and talks to the network itself. Payments on Sui are public and can't be deleted by anyone.</li>
+    </ul>
+
+    <h2>Unsubscribing and deletion</h2>
+    <ul>
+      <li>Every lesson or course email has a one-click unsubscribe, and replying "stop" to a course email works too. When you unsubscribe we delete your address, quiz answers, referral source and send history at once, and keep only a scrambled (hashed) copy of your address and the date, so we never email you again.</li>
+      <li>To delete your email, quiz answers, referral source or signal posts, write to <a class="text-ibad-300" href={`mailto:${DELETION_CONTACT}`}>{DELETION_CONTACT}</a>. We do it by hand. There is no self-serve tool yet. On-chain payment records can't be deleted by anyone.</li>
+    </ul>
+
+    <h2>Contact</h2>
+    <p>Sajan Melcher, The Spice Melange · questions and deletion requests: <a class="text-ibad-300" href={`mailto:${DELETION_CONTACT}`}>{DELETION_CONTACT}</a>. Replies to lesson and course emails go to <a class="text-ibad-300" href={`mailto:${REPLY_CONTACT}`}>{REPLY_CONTACT}</a>; please send deletion requests to {DELETION_CONTACT}.</p>
+  </section>
+</Base>
+<style is:global>
+  .terms h1 { font-size: 2.25rem; line-height: 1.2; margin-bottom: .75rem; }
+  .terms h2 { font-size: 1.5rem; margin-top: 2rem; margin-bottom: .5rem; }
+  .terms p, .terms li { line-height: 1.7; opacity: .9; }
+  .terms p { margin-top: .5rem; }
+  .terms ul { list-style: disc; padding-left: 1.5rem; margin-top: .5rem; }
+</style>

@@ -8,10 +8,11 @@ import { join } from 'node:path';
 
 const DIST = process.argv[2] ?? 'dist';
 // Cross-origin endpoints the shipped pages call from the browser. Keep this list exact.
-export const CONNECT = ['https://deepbook-indexer.mainnet.mystenlabs.com', 'https://cloudflareinsights.com'];
-// Cloudflare Web Analytics (cookieless) is injected by Cloudflare on the production domain only (not on *.pages.dev).
-// Allowed so the existing analytics keep working; drop both entries if Sajan turns Web Analytics off.
-export const SCRIPT_HOSTS = ['https://static.cloudflareinsights.com'];
+export const CONNECT = ['https://deepbook-indexer.mainnet.mystenlabs.com'];
+// No third-party script hosts. Cloudflare Web Analytics was allowed here until Siona's finding (terms s9: "no third-party
+// trackers"); the allowance is removed, so an injected beacon is blocked by the CSP. Turn the beacon off in the Pages
+// project too (Workers & Pages > spicemelange-site > Metrics > Web Analytics) so it isn't injected at all.
+export const SCRIPT_HOSTS = [];
 const sha = (s) => `'sha256-${createHash('sha256').update(s, 'utf8').digest('base64')}'`;
 function* html(dir) {
   for (const n of readdirSync(dir)) { const p = join(dir, n); if (statSync(p).isDirectory()) yield* html(p); else if (n.endsWith('.html')) yield p; }
