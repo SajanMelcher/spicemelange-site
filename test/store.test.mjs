@@ -298,7 +298,8 @@ test('templates: Grok Bot catalog copy, prices, and a public versions.json with 
   assert.equal(v.templates['dune-saga-collection'].version, TEMPLATES.current);
   const [yy, mm, dd, nn = 0] = TEMPLATES.current.split('.').map(Number);
   assert.equal(v.templates['dune-saga-collection'].versionKey, (yy * 10000 + mm * 100 + dd) * 1000 + nn);
-  assert.equal(v.templates['leto-journals'].version, '2026.10.09'); assert.equal(v.templates['leto-journals'].versionKey, 20261009000);
+  // Leto's Secret Journals joins date releases from 2026.10.10.2 (desk reading guide); before that it stayed at 2026.10.09.
+  const leto = v.templates['leto-journals'].version; assert.ok(compareVersions(leto, '2026.10.09') >= 0); assert.equal(v.templates['leto-journals'].versionKey, versionKey(leto));
   for (const s of seven) assert.equal(v.templates[s].version, TEMPLATES.current);
   assert.ok(v.packs['dune-saga-collection'] && v.packs['leto-journals'] && !v.packs['full-desk']);
   assert.equal(v.packs['dune-saga-collection'].version, TEMPLATES.current);
@@ -340,7 +341,8 @@ test('version order: 2026.10.09.1 is newer than 2026.10.09 (update check, versio
   const v = versionsDoc();
   // A bot that installed 2026.10.09 sees the staged release as newer.
   for (const [k, t] of Object.entries(v.templates)) { if (k === 'leto-journals') continue; assert.equal(compareVersions(t.version, '2026.10.09'), 1); assert.equal(t.versionKey, versionKey(t.version)); }
-  assert.equal(compareVersions(v.templates['leto-journals'].version, '2026.10.09'), 0); // unchanged pack: no false update
+  // Leto: a newer version only when a release actually covers it (no false update).
+  assert.equal(v.templates['leto-journals'].version, TEMPLATES.releases.find((r) => r.skus === 'all' || r.skus.includes('leto-journals')).version);
   // Releases are kept newest first, and latestFor picks the newest covering release.
   const vs = TEMPLATES.releases.map((r) => r.version);
   assert.deepEqual([...vs].sort((a, b) => compareVersions(b, a)), vs);
