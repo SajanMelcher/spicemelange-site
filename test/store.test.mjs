@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { makeD1 } from './d1-shim.mjs';
 import { loadConfig, createOrder, verifyOrder, checkLink, signLink, orderStatus, authorizeDownload, resetChallenge, resetToken, SUI_USDC, CHAIN_ID, atomicToDecimal } from '../store-core/core.js';
-import { tokenFrom } from '../store-core/http.js';
+import { tokenFrom, LEGACY_TOKEN_QUERY_CUTOFF } from '../store-core/http.js';
 import { verifyPersonalMessage, personalMessageDigest, suiAddress } from '../store-core/suisig.js';
 import { ed25519 } from '@noble/curves/ed25519';
 import { secp256k1 } from '@noble/curves/secp256k1';
@@ -391,7 +391,9 @@ test('token transport: Authorization Bearer, then JSON body, then legacy ?token=
   const req = (h) => new Request(u, { headers: h });
   assert.equal(tokenFrom(req({ authorization: 'Bearer smt_header' }), { token: 'smt_body' }, u), 'smt_header');
   assert.equal(tokenFrom(req({}), { token: 'smt_body' }, u), 'smt_body');
-  assert.equal(tokenFrom(req({}), null, u), 'smt_query');
+  assert.equal(tokenFrom(req({}), null, u, LEGACY_TOKEN_QUERY_CUTOFF - 1), 'smt_query', 'legacy ?token= until the cutoff');
+  assert.equal(tokenFrom(req({}), null, u, LEGACY_TOKEN_QUERY_CUTOFF), null, 'rejected from the cutoff on');
+  assert.equal(new Date(LEGACY_TOKEN_QUERY_CUTOFF).toISOString(), '2026-10-24T07:00:00.000Z');
   assert.equal(tokenFrom(req({}), null, null), null);
 });
 

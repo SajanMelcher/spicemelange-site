@@ -17,7 +17,7 @@ An agent must get its owner's explicit yes on the exact payment (asset, amount, 
 2. Pay that exact amount in one USDC transfer from the buyer's own wallet to `payTo`.
 3. `POST /api/store/verify` with `{"orderId","token","digest"}` checks the transaction on chain and returns a short-lived signed download link. For status later, `POST /api/store/status` with `{"orderId"}` and the header `Authorization: Bearer <token>` (never put the token in a URL).
 4. Re-download the latest version any time at https://thespicemelange.org/store/download/ with the order ID and token.
-5. Mainnet live, not yet the delivery path: a transferable on-chain License object (`spice_license::license::License`, package `0x9a376d022cac31a7db36139a5695f979804913c0713fe28be06bc5d1ee1d41bb`) and Seal-encrypted template files on Walrus that only a matching License holder can decrypt. Delivery today is the ZIP from the steps above.
+5. Mainnet live, not yet the delivery path: an on-chain License object locked to the buyer's wallet (non-transferable) (`spice_license::license::License`, package `0x9a376d022cac31a7db36139a5695f979804913c0713fe28be06bc5d1ee1d41bb`) and Seal-encrypted template files on Walrus that only a matching License holder can decrypt. Delivery today is the ZIP from the steps above.
 
 ## Run it (hard guards are baked in)
 Each template is a ZIP of Markdown and JSON for a new Grok Bot: profile.json, instructions.md, memories.md, skills/getting-started, routines.md, SETUP.md, VERSION and CHANGELOG.md. The same HARD LIMITS appear in every template, and they change only when the owner edits the instructions, never in conversation:

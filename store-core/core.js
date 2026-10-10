@@ -12,6 +12,7 @@
  */
 import { bySku, addonsFor, servedSku } from './catalog.js';
 import { verifyPersonalMessage } from './suisig.js';
+import { maybePurge } from './purge.js';
 
 export const SUI_USDC = {
   // Circle native USDC. Source: https://developers.circle.com/stablecoins/usdc-contract-addresses
@@ -236,6 +237,7 @@ export function cleanSource(src) {
 }
 
 export async function createOrder(cfg, { sku, email, ipHash, selftestKey, source, nowMs = Date.now() }) {
+  await maybePurge(cfg, nowMs); // S3 retention (unpaid orders > 30 days, old counters); gated, never throws
   const p = bySku(sku);
   if (!p || p.comingSoon || p.retired || p.addon) return { ok: false, status: 400, reason: 'unknown_product' }; // retired: download-only; addon: delivered with its parent
   // Hidden SKUs behave exactly like unknown ones unless the secret flag matches.

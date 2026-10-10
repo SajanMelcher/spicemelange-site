@@ -183,7 +183,7 @@
         "issued_ms",
         "url"
       ],
-      "transferable": true,
+      "transferable": false,
       "seal_gating": "Files encrypted under id = utf8(template_id) || ':' || nonce can be decrypted only by an address that owns a License whose template_id matches (seal_policy::seal_approve).",
       "package": "0x9a376d022cac31a7db36139a5695f979804913c0713fe28be06bc5d1ee1d41bb",
       "note": "spice_license and Seal are live on Sui mainnet, but delivery today is still the plain ZIP behind the order flow above. Licenses are not minted for store orders yet."
