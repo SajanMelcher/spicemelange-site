@@ -530,3 +530,15 @@ test('desk-kit add-on: second signed link only for Fish Speakers and collection 
     assert.equal((await checkLink(cfg, { ...q, p: 'moneo', nowMs: T0 + 200_000 })).ok, false);
   }
 });
+
+test('synthetic E2E paid rows never unlock status, download or upgrades on mainnet', async () => {
+  const { cfg } = await setup();
+  const mcfg = { ...cfg, net: 'mainnet' };
+  for (const [net, digest, email] of [['e2e-test', 'E2E-SYNTH-X', 'e2e-selftest@ixians.invalid'], ['mainnet', 'E2E-SYNTH-Y', null], ['mainnet', 'RealLookingDigest1111111111111111111111111', 'e2e-selftest@ixians.invalid']]) {
+    const r = await createOrder(cfg, { sku: 'dune-saga-collection', nowMs: T0 });
+    cfg.db.raw.prepare("UPDATE orders SET net = ?, status = 'paid', digest = ?, email = ?, paid_ms = ? WHERE id = ?").run(net, digest, email, T0 + 1000, r.order.orderId);
+    const st = await orderStatus(mcfg, { orderId: r.order.orderId, token: r.order.token, nowMs: T0 + 5000 });
+    assert.equal(st.ok, false); assert.equal(st.reason, 'unknown_order'); assert.equal(st.downloadUrl, undefined);
+    assert.equal((await authorizeDownload(mcfg, { orderId: r.order.orderId, token: r.order.token, nowMs: T0 + 6000 })).ok, false);
+  }
+});

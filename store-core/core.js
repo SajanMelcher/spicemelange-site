@@ -275,6 +275,8 @@ async function authOrder(cfg, orderId, token) {
   if (!ORDER_RE.test(orderId ?? '') || !TOKEN_RE.test(token ?? '')) return { err: 'bad_order_or_token' };
   const o = await loadOrder(cfg, orderId);
   if (!o || o.net !== cfg.net) return { err: 'unknown_order' };
+  // Synthetic E2E rows never unlock anything outside testnet (E2E runs on preview; prod D1 also refuses them by trigger).
+  if (cfg.net === 'mainnet' && (String(o.digest ?? '').startsWith('E2E-') || /\.invalid$/i.test(String(o.email ?? '')))) return { err: 'unknown_order' };
   if (!safeEqual(o.tokenHash, await sha256Hex(token))) return { err: 'unknown_order' }; // do not reveal existence
   return { o };
 }
