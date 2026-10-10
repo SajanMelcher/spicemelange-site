@@ -8,7 +8,10 @@ import { join } from 'node:path';
 
 const DIST = process.argv[2] ?? 'dist';
 // Cross-origin endpoints the shipped pages call from the browser. Keep this list exact.
-export const CONNECT = ['https://deepbook-indexer.mainnet.mystenlabs.com'];
+export const CONNECT = ['https://deepbook-indexer.mainnet.mystenlabs.com', 'https://cloudflareinsights.com'];
+// Cloudflare Web Analytics (cookieless) is injected by Cloudflare on the production domain only (not on *.pages.dev).
+// Allowed so the existing analytics keep working; drop both entries if Sajan turns Web Analytics off.
+export const SCRIPT_HOSTS = ['https://static.cloudflareinsights.com'];
 const sha = (s) => `'sha256-${createHash('sha256').update(s, 'utf8').digest('base64')}'`;
 function* html(dir) {
   for (const n of readdirSync(dir)) { const p = join(dir, n); if (statSync(p).isDirectory()) yield* html(p); else if (n.endsWith('.html')) yield p; }
@@ -29,7 +32,7 @@ export function inlineHashes(dist = DIST) {
 export function csp({ scripts, styles }) {
   return [
     "default-src 'self'",
-    `script-src 'self' ${scripts.join(' ')}`.trim(),
+    `script-src 'self' ${SCRIPT_HOSTS.join(' ')} ${scripts.join(' ')}`.trim(),
     "style-src 'self'",
     `style-src-elem 'self' ${styles.join(' ')}`.trim(),
     "style-src-attr 'unsafe-inline'",
