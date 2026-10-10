@@ -1,56 +1,20 @@
 ---
-// DRAFT terms page (preview only), from templates/license-draft.md (Tleilaxu, Siona T3) and the store's existing policy text.
-// Waiting for Sajan's license approval: legal name and governing law are still <SET ME>; needs a lawyer's review. noindex until approved.
+// /terms/: the approved licence (Sajan, 2026-10-10), rendered verbatim from portfolio-desk/store/LICENSE.md
+// (sha256 372a924141bf7e1ba72cfb8be016642b8990bb048236c2ce320a1ce92b38fffb; test/terms.test.mjs pins it). Edit the .md, never this page.
 import Base from '../layouts/Base.astro';
-import { STANDARD } from '../../store-core/catalog-wording.js';
+import { Content } from '../content-static/LICENSE.md';
 ---
-<Base title="Terms (draft)" description="Draft licence and sales terms for The Spice Melange agent templates." noindex={true}>
-  <section class="container-x max-w-3xl pt-16 pb-16 prose-sand">
-    <p class="rounded border border-spice-500/50 bg-spice-500/10 p-3 text-sm text-spice-200"><strong>Draft, waiting for approval.</strong> These terms are not final. The seller's legal name and the governing law are still to be set, and the text is waiting on the owner's licence approval and a legal review.</p>
-    <p class="eyebrow mt-8 mb-4">The Spice Melange · terms</p>
-    <h1 class="text-4xl text-sand-50">Licence and sales terms</h1>
-    <p class="mt-3 text-sm text-sand-300/80">Version 2026.10.10 draft · Seller: &lt;to be set&gt; ("we") · Buyer: the person or entity that paid ("you")</p>
-    <p class="mt-4 text-sand-200/90"><strong>In short:</strong> {STANDARD.license} {STANDARD.terms} {STANDARD.disclaimer}</p>
-
-    <h2 class="mt-8 text-2xl text-sand-50">1. What you get</h2>
-    <p class="mt-2 text-sand-200/90">Each paid order grants you a personal, non-exclusive, non-transferable licence to use the template(s) in that order. It covers every file, skill, routine and journal in the ZIP, and every upgrade we release for it.</p>
-    <ul class="mt-2 list-disc pl-6 text-sand-200/90">
-      <li><strong>Single template ($50 order):</strong> that one template.</li>
-      <li><strong>The Dune Saga Collection ($300 order):</strong> every template in the collection today (the 7 desk templates and Leto's Secret Journals) and every template we add to the collection later, at no extra cost. Separately sold add-ons or services are not included unless we say so in writing.</li>
-    </ul>
-
-    <h2 class="mt-8 text-2xl text-sand-50">2. One owner, one desk</h2>
-    <ul class="mt-2 list-disc pl-6 text-sand-200/90">
-      <li>The licence is for one owner: you, or one entity if an entity bought it. Run the templates on as many of your own bots as you like, but only for your own desk (your own accounts, team folder and agents).</li>
-      <li>You may edit the templates for your own use; your edits stay under this licence.</li>
-      <li>Employees or contractors may operate the desk for you, but not for themselves or anyone else.</li>
-      <li>Running the templates as a service for other people needs a separate written licence from us.</li>
-    </ul>
-
-    <h2 class="mt-8 text-2xl text-sand-50">3. What you may not do</h2>
-    <ul class="mt-2 list-disc pl-6 text-sand-200/90">
-      <li>No resale and no redistribution: don't sell, give away, share, publish, upload, sublicense, rent or lend the templates, whole or in part, modified or not.</li>
-      <li>Don't share your order ID, token or download links. If they leak, reset the token on the <a class="text-ibad-300" href="/store/download/">download page</a>.</li>
-      <li>Don't remove these terms, the disclaimer or the hard-limit blocks from copies you keep. Short quotes for reviews are fine.</li>
-    </ul>
-
-    <h2 class="mt-8 text-2xl text-sand-50">4. Payment, final sale and upgrades</h2>
-    <ul class="mt-2 list-disc pl-6 text-sand-200/90">
-      <li>Paid in USDC on Sui at the price shown when you order. The store never asks for keys and never pulls funds.</li>
-      <li><strong>{STANDARD.terms}</strong></li>
-      <li>Upgrades are free for what your licence covers. An upgrade may change or retire a template's contents, but we won't charge you again for a template you already licensed.</li>
-    </ul>
-
-    <h2 class="mt-8 text-2xl text-sand-50">5. Not financial advice; no guarantees</h2>
-    <p class="mt-2 text-sand-200/90">The templates are educational software for setting up AI agents. Nothing in them is financial, investment, tax or legal advice, or a recommendation to buy, sell or hold any asset. Trading and crypto assets are risky and you can lose money. <strong>No returns are promised or implied.</strong> You are responsible for every action your agents take, for your own accounts, keys and settings, and for the laws that apply to you. The templates are provided "as is", without warranties. To the fullest extent the law allows, our total liability is limited to the amount you paid for the order.</p>
-
-    <h2 class="mt-8 text-2xl text-sand-50">6. No Dune affiliation</h2>
-    <p class="mt-2 text-sand-200/90">The archetype names and voices are a nod to Frank Herbert's Dune novels. The templates are an independent, original work, not affiliated with, sponsored or endorsed by the Herbert estate, any publisher, or any film, TV or game studio. All trademarks belong to their owners.</p>
-
-    <h2 class="mt-8 text-2xl text-sand-50">7. Ending the licence</h2>
-    <p class="mt-2 text-sand-200/90">The licence lasts as long as you keep these terms. If you resell or redistribute the templates, it ends: stop using them and delete your copies, and we may refuse upgrades for that order. Sections 3, 5 and 6 still apply after it ends.</p>
-
-    <h2 class="mt-8 text-2xl text-sand-50">8. General</h2>
-    <p class="mt-2 text-sand-200/90">Governing law and venue: &lt;to be set&gt;. If a clause can't be enforced, the rest still applies. These terms, the disclaimer in each template and the store's order page are the whole agreement for the templates.</p>
+<Base title="Terms" description="Licence and sales terms for The Spice Melange agent templates: single owner, one desk, no resale, all sales final except where the law requires otherwise, not financial advice.">
+  <section class="container-x max-w-3xl pt-16 pb-16 terms">
+    <p class="eyebrow mb-4">The Spice Melange · terms</p>
+    <Content />
   </section>
 </Base>
+<style is:global>
+  .terms h1 { font-size: 2.25rem; line-height: 1.2; color: rgb(var(--sand-50, 250 246 238)); margin-bottom: .75rem; }
+  .terms h2 { font-size: 1.5rem; margin-top: 2rem; margin-bottom: .5rem; }
+  .terms p, .terms li { line-height: 1.7; opacity: .9; }
+  .terms p { margin-top: .5rem; }
+  .terms ul { list-style: disc; padding-left: 1.5rem; margin-top: .5rem; }
+  .terms code { font-size: .9em; }
+</style>
