@@ -1,10 +1,10 @@
 // Hwi's 14-day practice lessons: DOUBLE opt-in, gating (one production flag + footer), daily sender, unsubscribe, content. No network.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { makeD1 } from './d1-shim.mjs';
 import { sha256Hex } from '../store-core/core.js';
-import { lessonsConfig, subscribe, confirm, unsubscribe, runLessons, runConfirmations, scheduledRun, lessonEmail, confirmEmail, ptHour, LESSON_DAYS, MIN_GAP_MS } from '../store-core/lessons.js';
+import { lessonsConfig, subscribe, confirm, unsubscribe, runLessons, runConfirmations, scheduledRun, lessonEmail, confirmEmail, ptHour, legalGate, LESSON_DAYS, MIN_GAP_MS } from '../store-core/lessons.js';
 import { LESSONS } from '../store-core/lessons-content.js';
 import { PAGE_CSP } from '../store-core/lessons-page.js';
 
@@ -253,6 +253,16 @@ test('legal gate: production lesson runs hold (and say why) until /privacy/ is 2
   // network failure fails closed
   const down = async (u, i) => (/privacy|terms/.test(String(u)) ? Promise.reject(new Error('down')) : t.fetchImpl(u, i));
   assert.equal((await runLessons(t.env, { nowMs: T0 + 2 * DAY, fetchImpl: down })).held, true);
+});
+test("legal gate marker 'through Resend' matches Tleilaxu's section 9 bullet (store/LICENSE.md.proposed-resend)", async () => {
+  // Bullet text as proposed by Tleilaxu (10/10). If the live proposal file is on this box, check it too.
+  let bullet = 'These emails are sent through Resend (Resend, Inc.), our email provider, which processes your address only to deliver them.';
+  const f = '/home/box/agent-data/shared/portfolio-desk/store/LICENSE.md.proposed-resend';
+  if (existsSync(f)) bullet = readFileSync(f, 'utf8').split('\n').find((l) => /Lesson and course emails/.test(l)) ?? assert.fail('bullet missing from proposal');
+  assert.equal(lessonsConfig({}).termsMarker, 'through resend');
+  const html = `<h2>9. Your data</h2><ul><li>${bullet.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')}</li></ul>`;
+  const g = await legalGate(lessonsConfig({ LESSONS_BASE_URL: 'https://x.example' }), async (u) => new Response(String(u).endsWith('/terms/') ? html : 'ok'));
+  assert.equal(g.termsLine, true); assert.equal(g.open, true);
 });
 test('legal gate does not apply to test mode', async () => {
   const t = await setup(); t.legal.privacy = 404;
