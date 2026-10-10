@@ -15,6 +15,10 @@ workers_dev = true
 # Every 10 min: confirmation emails go out within minutes; lessons only when America/Los_Angeles reads 9 AM (in code, DST-proof).
 crons = ["*/10 * * * *"]
 
+# Workers Logs: keep invocation logs (incl. scheduled runs) so missed cron ticks can be diagnosed. Logs carry no addresses.
+[observability]
+enabled = true
+
 [vars]
 SUI_NETWORK = "mainnet"
 COURSE_PRODUCTION_SENDING = "0" # free Golden Path course: OFF until Siona + Sajan approve (R2)
