@@ -13,6 +13,7 @@
 import { bySku, addonsFor, servedSku } from './catalog.js';
 import { verifyPersonalMessage } from './suisig.js';
 import { maybePurge } from './purge.js';
+import { TEMPLATES } from './versions.js';
 
 export const SUI_USDC = {
   // Circle native USDC. Source: https://developers.circle.com/stablecoins/usdc-contract-addresses
@@ -62,6 +63,9 @@ export function loadConfig(env = {}) {
   if (net === 'mainnet' && !truthy(env.STORE_ALLOW_MAINNET)) return { enabled: false, reason: 'mainnet_not_approved' };
   const payTo = String(env.STORE_PAYTO ?? '').trim();
   if (!/^0x[0-9a-fA-F]{64}$/.test(payTo) || /^0x0+$/.test(payTo)) return { enabled: false, reason: 'payto_not_set' };
+  // S2 pin: on mainnet the configured payee must equal the signed pin (templates.json store.payTo), or the store stays shut.
+  const pin = TEMPLATES.store?.payTo;
+  if (net === 'mainnet' && pin && normalizeAddress(payTo) !== pin) return { enabled: false, reason: 'payto_pin_mismatch' };
   const secret = String(env.DOWNLOAD_HMAC_SECRET ?? '');
   if (secret.length < 32) return { enabled: false, reason: 'hmac_secret_not_set' };
   if (!env.STORE_KV) return { enabled: false, reason: 'kv_not_bound' };

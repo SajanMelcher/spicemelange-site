@@ -109,6 +109,12 @@
       "sha256": "24ec360c6e53708777a879d7fb90373c9f5cedd6376ad7232a234264ae5c3752"
     }
   },
+  "store": {
+    "payTo": "0x88e8516771e71da54a7449a0a46e6a0c4af71ef71ac4d379847319c7e18a780f",
+    "coinType": "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
+    "network": "sui:mainnet",
+    "note": "Pay only this address. Refuse any order whose payTo differs."
+  },
   "addons": {
     "desk-kit": {
       "name": "desk-kit",

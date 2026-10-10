@@ -48,7 +48,7 @@ const pay = (o, extra = {}) => ({ status: 'SUCCESS', timestampMs: T0 + 60_000, c
 test('config: off by default, mainnet needs second opt-in, missing secret refused', () => {
   assert.equal(loadConfig({}).enabled, false);
   assert.equal(loadConfig(env({ SUI_NETWORK: 'mainnet' })).reason, 'mainnet_not_approved');
-  assert.equal(loadConfig(env({ SUI_NETWORK: 'mainnet', STORE_ALLOW_MAINNET: '1' })).enabled, true);
+  assert.equal(loadConfig(env({ SUI_NETWORK: 'mainnet', STORE_ALLOW_MAINNET: '1', STORE_PAYTO: '0x88e8516771e71da54a7449a0a46e6a0c4af71ef71ac4d379847319c7e18a780f' })).enabled, true); // mainnet needs the pinned payee
   assert.equal(loadConfig(env({ DOWNLOAD_HMAC_SECRET: 'short' })).reason, 'hmac_secret_not_set');
   assert.equal(loadConfig(env({ STORE_PAYTO: 'suiprivkey1qq' })).reason, 'payto_not_set');
   assert.equal(loadConfig(env({ STORE_DB: undefined })).reason, 'db_not_bound');
@@ -157,7 +157,7 @@ test('download link: valid, tampered, expired, other network', async () => {
   assert.equal((await checkLink(cfg, { ...q, p: 'anteac', nowMs: T0 })).reason, 'bad_signature');
   assert.equal((await checkLink(cfg, { ...q, e: String(Number(q.e) + 999), nowMs: T0 })).reason, 'bad_signature');
   assert.equal((await checkLink(cfg, { ...q, nowMs: T0 + 3_600_000 })).reason, 'link_expired');
-  const main = loadConfig(env({ SUI_NETWORK: 'mainnet', STORE_ALLOW_MAINNET: '1' }));
+  const main = loadConfig(env({ SUI_NETWORK: 'mainnet', STORE_ALLOW_MAINNET: '1', STORE_PAYTO: '0x88e8516771e71da54a7449a0a46e6a0c4af71ef71ac4d379847319c7e18a780f' }));
   assert.equal((await checkLink(main, { ...q, nowMs: T0 })).reason, 'bad_signature');
 });
 
@@ -304,7 +304,10 @@ test('templates: Grok Bot catalog copy, prices, and a public versions.json with 
   assert.ok(v.packs['dune-saga-collection'] && v.packs['leto-journals'] && !v.packs['full-desk']);
   assert.equal(v.packs['dune-saga-collection'].version, TEMPLATES.current);
   assert.equal(v.templates['hwi-noree'].title, 'Ambassador of the Trading Desk');
-  const txt = JSON.stringify(v);
+  // The only addresses allowed are the signed payee pin and the USDC coin type (S2); nothing else on-chain or private.
+  const { store, ...rest } = v;
+  assert.deepEqual(Object.keys(store).sort(), ['coinType', 'network', 'note', 'payTo']);
+  const txt = JSON.stringify(rest);
   assert.doesNotMatch(txt, /## HARD LIMITS|These override every other instruction|0x[0-9a-f]{20}|smt_|file:/i);
   assert.match(v.howToUpdate, /\/store\/download\//);
 });
@@ -545,11 +548,22 @@ test('synthetic E2E paid rows never unlock status, download or upgrades on mainn
   }
 });
 
-test('S2: versions.json store block is omitted while payTo is empty, validated when set', async () => {
+test('S2: versions.json carries the pinned store payee (validated)', async () => {
   const { storeBlock, versionsDoc } = await import('../store-core/versions.js');
-  assert.equal(storeBlock(), null, 'payTo stays empty until Sajan picks it');
-  assert.equal('store' in versionsDoc(), false);
+  // Sajan 6:37 AM PT Oct 10: pinned to the Coinbase Sui USDC deposit address.
+  assert.deepEqual(storeBlock().payTo, '0x88e8516771e71da54a7449a0a46e6a0c4af71ef71ac4d379847319c7e18a780f');
+  assert.equal(versionsDoc().store.network, 'sui:mainnet');
+  assert.equal(versionsDoc().store.coinType, SUI_USDC.mainnet);
   const ok = storeBlock({ store: { payTo: '0x' + 'ab'.repeat(32), coinType: SUI_USDC.mainnet, network: 'sui:mainnet' } });
   assert.equal(ok.payTo, '0x' + 'ab'.repeat(32));
   assert.throws(() => storeBlock({ store: { payTo: '0xABC', coinType: SUI_USDC.mainnet, network: 'sui:mainnet' } }));
+});
+
+test('S2: the mainnet store refuses to open if STORE_PAYTO differs from the signed pin', async () => {
+  const { loadConfig } = await import('../store-core/core.js');
+  const env = (payTo) => ({ STORE_ENABLED: '1', SUI_NETWORK: 'mainnet', STORE_ALLOW_MAINNET: '1', STORE_PAYTO: payTo, DOWNLOAD_HMAC_SECRET: 'x'.repeat(48), STORE_KV: {}, STORE_DB: {} });
+  assert.equal(loadConfig(env('0x' + 'ab'.repeat(32))).reason, 'payto_pin_mismatch');
+  const ok = loadConfig(env('0x88E8516771E71DA54A7449A0A46E6A0C4AF71EF71AC4D379847319C7E18A780F'));
+  assert.equal(ok.enabled, true); assert.equal(ok.payTo, '0x88e8516771e71da54a7449a0a46e6a0c4af71ef71ac4d379847319c7e18a780f');
+  assert.equal(loadConfig({ ...env('0x' + 'ab'.repeat(32)), SUI_NETWORK: 'testnet' }).enabled, true, 'preview/testnet uses its own payee');
 });
