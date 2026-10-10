@@ -7,6 +7,8 @@
 #   RELEASE_SKUS="a b c" limits the release entry to those slugs (default: all). Upstream ZIPs already named
 #     <slug>-v<VERSION>.zip are copied byte for byte (hashes = upstream SHA256SUMS).
 #   RELEASE_KEY=<pem> ed25519 release key (default: portfolio-desk/store/release-key/, never in the repo).
+#   PREVIEW=1 rehearses the whole release on a non-main branch: uploads to the PREVIEW KV only, commits to that branch,
+#     deploys the branch preview and verifies its signed versions.json. Production KV and main are untouched.
 #   DRY_RUN=1 builds, sanitizes and tests but uploads, commits and deploys nothing.
 #   The retired full-desk file is never re-uploaded: past Full Desk orders keep their original pack.
 # Steps: bump version in store-core/templates.json -> rebuild ZIPs (products-private/build.py) -> 0-hit sanitize
@@ -18,8 +20,12 @@ SUMMARY="${1:?usage: release-templates.sh \"<summary>\" [notes...]}"; shift
 VERSION="${TEMPLATE_VERSION:-$(date +%Y.%m.%d)}"
 [[ "$VERSION" =~ ^[0-9]{4}\.[0-9]{2}\.[0-9]{2}(\.[0-9]+)?$ ]] || { echo "Bad version $VERSION (want YYYY.MM.DD or YYYY.MM.DD.N)" >&2; exit 1; }
 [ -f products-private/build.py ] && [ -x products-private/sanitize.sh ] || { echo "Refusing: products-private/ (build.py, sanitize.sh) missing on this machine." >&2; exit 1; }
-if [ -z "${DRY_RUN:-}" ]; then
-  [ "$(git rev-parse --abbrev-ref HEAD)" = main ] || { echo "Refusing: run from main." >&2; exit 1; }
+BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+if [ -n "${PREVIEW:-}" ] && [ -z "${DRY_RUN:-}" ]; then
+  [ "$BRANCH" != main ] || { echo "Refusing: PREVIEW=1 runs from a non-main branch." >&2; exit 1; }
+  [ -z "$(git status --porcelain)" ] || { echo "Refusing: working tree not clean." >&2; exit 1; }
+elif [ -z "${DRY_RUN:-}" ]; then
+  [ "$BRANCH" = main ] || { echo "Refusing: run from main." >&2; exit 1; }
   [ -z "$(git status --porcelain)" ] || { echo "Refusing: working tree not clean." >&2; exit 1; }
   git pull --ff-only -q
 fi
@@ -76,7 +82,8 @@ for z in "$ZDIR"/*.zip; do
   sku=$(basename "$z" .zip); sku="${sku%-v$VERSION}"
   [ "$sku" = full-desk ] && { echo "skip file:full-desk (retired; past orders keep the original)"; continue; }
   meta="{\"name\":\"golden-path-$sku-$VERSION.zip\",\"type\":\"application/zip\",\"version\":\"$VERSION\",\"sha256\":\"$(sha256sum "$z" | cut -d' ' -f1)\"}"
-  for ns in "$PROD_NS" "$PREV_NS"; do
+  NSS="$PROD_NS $PREV_NS"; [ -n "${PREVIEW:-}" ] && NSS="$PREV_NS"
+  for ns in $NSS; do
     $W kv key put "file:$sku" --path "$z" --namespace-id "$ns" --metadata "$meta" --remote >/dev/null
   done
   echo "uploaded file:$sku ($VERSION)"
@@ -85,11 +92,18 @@ done
 # 5. Commit, push, deploy (deploy.sh re-runs the tests and refuses a dirty or non-main tree).
 git add store-core/templates.json public/templates/versions.json public/templates/versions.json.sig
 git commit -q -m "Templates release $VERSION: $SUMMARY"
-git push -q origin main
-npm run deploy
+if [ -n "${PREVIEW:-}" ]; then
+  git push -q -u origin "$BRANCH"
+  npm run deploy:preview
+  SITE="https://$(echo "$BRANCH" | tr 'A-Z' 'a-z' | sed 's/[^a-z0-9]/-/g').spicemelange-site.pages.dev"
+else
+  git push -q origin main
+  npm run deploy
+  SITE="https://thespicemelange.org"
+fi
 
 # 6. Verify the public remote config (Pages can take a few seconds to propagate).
 sleep 15
-curl -fsS https://thespicemelange.org/templates/versions.json | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['current']=='$VERSION', d['current']; print('live versions.json current =', d['current'])"
-curl -fsS -o /tmp/vj https://thespicemelange.org/templates/versions.json && curl -fsS -o /tmp/vj.sig https://thespicemelange.org/templates/versions.json.sig \
+curl -fsS $SITE/templates/versions.json | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['current']=='$VERSION', d['current']; print('$SITE versions.json current =', d['current'])"
+curl -fsS -o /tmp/vj "$SITE/templates/versions.json" && curl -fsS -o /tmp/vj.sig "$SITE/templates/versions.json.sig" \
   && node -e "const c=require('crypto'),f=require('fs');const raw=Buffer.from(f.readFileSync('public/templates/release-key.pub','utf8').trim(),'base64');const k=c.createPublicKey({key:Buffer.concat([Buffer.from('302a300506032b6570032100','hex'),raw]),format:'der',type:'spki'});if(!c.verify(null,f.readFileSync('/tmp/vj'),k,Buffer.from(f.readFileSync('/tmp/vj.sig','utf8').trim(),'base64')))throw new Error('live signature FAILED');console.log('live versions.json signature verifies')"
