@@ -21,13 +21,14 @@ export function versionsDoc(site = 'https://thespicemelange.org') {
   const entry = (t) => {
     const r = latestFor(t.sku);
     const version = r?.version ?? T.current;
-    return [t.sku, { name: t.name, title: t.title, version, versionKey: versionKey(version), released: r?.date ?? null, summary: r?.summary ?? '' }];
+    return [t.sku, { name: t.name, title: t.title, version, versionKey: versionKey(version), released: r?.date ?? null, summary: r?.summary ?? '', ...(t.sha256 ? { sha256: t.sha256 } : {}) }];
   };
   return {
     schema: 'spicemelange.templates.versions/v1',
     current: T.current,
     updated: T.releases[0]?.date ?? null,
     versionRule: 'Versions are YYYY.MM.DD with an optional .N for a same-day re-release. Newer = larger versionKey (YYYYMMDD*1000+N); e.g. 2026.10.09.1 is newer than 2026.10.09.',
+    sha256Note: 'sha256 is the SHA-256 of the ZIP the store currently serves for that slug; verify a re-download against it.',
     howToUpdate: `Re-download the latest at ${site}/store/download/ with your order ID and token. Always serves the current version.`,
     changelog: `${site}/templates/changelog/`,
     // Every update-checked product is listed under `templates` by slug (the packs' skills look there), seats first,

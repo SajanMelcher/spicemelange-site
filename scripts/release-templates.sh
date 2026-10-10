@@ -45,6 +45,17 @@ else
 fi
 bash products-private/sanitize.sh "$ZDIR"
 
+# Record each ZIP's SHA-256 in templates.json (published as versions.json sha256 for auto-update verification).
+python3 - "$ZDIR" "$VERSION" <<'PY'
+import hashlib, json, os, sys
+zdir, v = sys.argv[1], sys.argv[2]; p = 'store-core/templates.json'; t = json.load(open(p))
+for x in t['templates'] + t['packs']:
+    for n in (f"{x['sku']}-v{v}.zip", f"{x['sku']}.zip"):
+        f = os.path.join(zdir, n)
+        if os.path.exists(f): x['sha256'] = hashlib.sha256(open(f, 'rb').read()).hexdigest(); break
+open(p, 'w').write(json.dumps(t, indent=2, ensure_ascii=False) + '\n')
+PY
+
 # 3. Tests.
 npm run -s test:store
 

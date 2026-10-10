@@ -337,3 +337,11 @@ test('version order: 2026.10.09.1 is newer than 2026.10.09 (update check, versio
   assert.deepEqual([...vs].sort((a, b) => compareVersions(b, a)), vs);
   assert.equal(v.current, vs[0]);
 });
+
+test('versions.json: every update-checked entry carries a 64-hex sha256 of the served ZIP', async () => {
+  const { versionsDoc } = await import('../store-core/versions.js');
+  const v = versionsDoc();
+  for (const [k, t] of Object.entries(v.templates)) assert.match(t.sha256 ?? '', /^[0-9a-f]{64}$/, k);
+  assert.equal(v.templates['hwi-noree'].sha256, '79a9a0c3d958c8cbbe503f59c550509506960689a1b243bf97ba2c2bd39efef0');
+  assert.equal(v.templates['dune-saga-collection'].sha256, '5fb75c118841f8aa2ae403f43c55ac6943be6b99f4fc87b904f5945213074417');
+});
