@@ -48,7 +48,7 @@ export default {
     if (u.pathname === '/health') {
       const c = lessonsConfig(env);
       const gate = await legalGate(c);
-      return j(200, { ok: true, net: c.net, productionSending: c.production, testRecipients: c.testRecipients.length, resendKey: Boolean(c.apiKey), footer: Boolean(c.footer), from: c.from, replyTo: c.replyTo,
+      return j(200, { ok: true, net: c.net, productionSending: c.production, testRecipients: c.testRecipients.length, resendKey: Boolean(c.apiKey), footer: Boolean(c.footer), suppressionSalt: Boolean(c.suppressSalt), from: c.from, replyTo: c.replyTo,
         lessonGate: gate.open ? 'open' : gate.reason, privacyStatus: gate.privacyStatus, termsResendLine: gate.termsLine , ...(await lastHeartbeat(env)), box: await lastHeartbeat({ ...env, HEARTBEAT_NAME: `${env.HEARTBEAT_NAME ?? HB_NAME}:box` }) });
     }
     if (request.method === 'POST' && u.pathname === '/tick') {

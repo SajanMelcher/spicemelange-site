@@ -16,4 +16,7 @@ else
 fi
 npm run -s test:store
 npm run -s build
+# The free course is live on production (Sajan 9:31 AM PT 10/10; GL14 retired): refuse a prod build WITHOUT it,
+# so a stale branch can't silently take /learn/ down.
+if [ "$MODE" = "production" ] && [ ! -e dist/learn/index.html ]; then echo "Refusing: dist/learn/ missing from a production build." >&2; exit 1; fi
 $W pages deploy dist --project-name spicemelange-site --branch "$TARGET" --commit-dirty=true
