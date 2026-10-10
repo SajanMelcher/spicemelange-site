@@ -6,6 +6,7 @@ import Disclaimer from '../components/Disclaimer.astro';
 import Starfield from '../components/Starfield.astro';
 import Glyph from '../components/Glyph.astro';
 import Eye from '../components/Eye.astro';
+import CodeCopy from '../components/CodeCopy.astro';
 
 const gets = [
   { glyph: 'blade', title: 'A Fish Speakers bot that trains first',
@@ -15,7 +16,7 @@ const gets = [
   { glyph: 'scroll', title: 'Weekly lessons and upgrades',
     text: 'Signed template updates every week, and new lessons for your bot to read. Lessons are advisory: they appear in your report and never change your guard settings. You change those yourself, if you agree.' },
   { glyph: 'plumb', title: 'Plumbline market data',
-    text: 'The free, read-only Plumbline MCP server for DeepBook data. Run it locally with no account. A hosted endpoint with a free daily allowance (100 calls a day, then pay-per-call) is planned and not live yet.' },
+    text: 'The read-only Plumbline MCP server for DeepBook data, hosted and live at https://plumbline-mcp.fly.dev/mcp. 100 free calls a day per client, then 0.002 USDC per call (0.01 USDC minimum), paid on Sui. Or run it locally with npx, free and with no account.' },
   { glyph: 'ledger', title: 'A contributors listing',
     text: 'Ideas are credited to a stable pseudonym, never your order or wallet. Useful ideas can earn credit points or bounties, which are listed publicly.' },
 ];
@@ -68,6 +69,15 @@ const links = [
         </li>
       ))}
     </ul>
+  </section>
+
+  <section class="container-x py-4" aria-labelledby="plumb">
+    <div class="card">
+      <h2 id="plumb" class="text-2xl text-sand-50">Plumbline is live</h2>
+      <p class="mt-2 text-sm text-sand-200/85">Hosted, read-only DeepBook market data at <a class="text-ibad-300" href="https://plumbline-mcp.fly.dev/mcp">https://plumbline-mcp.fly.dev/mcp</a>. 100 free calls a day per client, then 0.002 USDC per call (0.01 USDC minimum), paid on Sui. No keys, no wallet access, no trading.</p>
+      <CodeCopy label="Claude Code (hosted)" code="claude mcp add --transport http plumbline https://plumbline-mcp.fly.dev/mcp" />
+      <CodeCopy label="Local (free)" code="npx -y plumbline-mcp" />
+    </div>
   </section>
 
   <section class="container-x py-8" aria-labelledby="plain">

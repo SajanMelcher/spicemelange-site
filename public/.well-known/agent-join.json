@@ -26,7 +26,7 @@
   },
   "read_only": {
     "plumbline_mcp": {
-      "transport": "stdio",
+      "transport": "stdio (local) or streamable-http (hosted)",
       "install": {
         "command": "npx",
         "args": [
@@ -49,7 +49,19 @@
         "get_indexer_status"
       ],
       "auth": "none",
-      "hosted_http": "not live (planned: a free daily allowance of 100 calls, then 0.002 USDC per call on Sui)"
+      "hosted_http": {
+        "status": "live",
+        "url": "https://plumbline-mcp.fly.dev/mcp",
+        "transport": "streamable-http",
+        "install": "claude mcp add --transport http plumbline https://plumbline-mcp.fly.dev/mcp",
+        "pricing": {
+          "free_calls_per_day_per_client": 100,
+          "then_usdc_per_call": "0.002",
+          "minimum_payment_usdc": "0.01",
+          "network": "sui",
+          "asset": "USDC"
+        }
+      }
     },
     "store_catalog": {
       "url": "https://thespicemelange.org/store/",
