@@ -11,6 +11,10 @@
         <label class="block text-sand-200/85" for="co-email">Email for your receipt (optional)</label>
         <input id="co-email" type="email" autocomplete="email" class="mt-1 w-full rounded-lg border border-sand-200/20 bg-night-950 px-3 py-2" placeholder="you@example.com" />
         <p class="mt-1 text-xs text-sand-300/70">Used only to send your receipt after review. Leave blank to stay anonymous.</p>
+        <div id="co-lessons" class="mt-3" hidden>
+          <label class="flex items-start gap-2 text-sand-200/85"><input id="co-lessons-opt" type="checkbox" class="mt-1" /> <span>Get Hwi's 14-day practice lessons</span></label>
+          <p class="mt-1 text-xs text-sand-300/70">Optional. One short email a day for the 14 days your bot trains on paper, starting after payment, then they stop. Uses the email above. One-click unsubscribe in every email.</p>
+        </div>
         <button id="co-create" type="button" class="btn-primary mt-4">Get my exact amount</button>
       </div>
       <div id="co-step2" hidden>
@@ -85,6 +89,16 @@
     const r = await api('/api/store/order', { sku, email: ($('co-email') as HTMLInputElement).value.trim() || undefined });
     if (!r.ok) return say(r);
     msg(''); showOrder(r.order);
+    const em = ($('co-email') as HTMLInputElement).value.trim();
+    if (($('co-lessons-opt') as HTMLInputElement).checked && em) {
+      const s = await fetch('/api/lessons/subscribe', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${r.order.token}` }, body: JSON.stringify({ orderId: r.order.orderId, email: em, source: 'checkout' }) }).then((x) => x.json()).catch(() => ({ ok: false }));
+      if (!s.ok) msg("Order created. We couldn't sign you up for Hwi's lessons; you can do it later on the re-download page.");
+    }
+  });
+  // Hwi's lessons box shows only while signup is open (preview, or production after Hwi's review).
+  fetch('/api/lessons/subscribe').then((x) => x.json()).then((r) => { if (r && r.open) $('co-lessons').hidden = false; }).catch(() => {});
+  ($('co-lessons-opt') as HTMLInputElement).addEventListener('change', (e) => {
+    if ((e.target as HTMLInputElement).checked && !($('co-email') as HTMLInputElement).value.trim()) msg("Add your email above to get Hwi's lessons.");
   });
   async function verify(digest?: string) {
     if (!order) return;

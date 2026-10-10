@@ -21,6 +21,15 @@ import { SITE } from '../../data/site';
       <p id="dl-addon-note" class="text-xs text-sand-300/70" hidden>desk-kit is the guarded DeepBook bot for The Fish Speakers. It trains on paper for 14 days by default and goes live only when you set both switches. Check its SHA-256 against <a class="text-ibad-300" href="/templates/versions.json">versions.json</a> (addons → desk-kit) before you run it.</p>
       <p class="text-xs text-sand-300/70">The link is valid for 30 minutes. Keep your token private: anyone with it can download your order.</p>
     </form>
+    <form id="hl-form" class="card mt-8 max-w-xl space-y-4 text-sm" aria-labelledby="hl-title" hidden>
+      <h2 id="hl-title" class="text-2xl text-sand-50">Get Hwi's 14-day practice lessons</h2>
+      <p class="text-sand-200/90">Optional. One short lesson a day by email while your bot trains on paper: guards, ladders, reading results, when to stop, and going live safely. They start after your order is paid and stop on their own after day 14. One-click unsubscribe in every email. The same lessons are also in your template's <code>education/</code> folder.</p>
+      <p class="text-xs text-sand-300/70">Uses the order ID and token above.</p>
+      <div><label class="block text-sand-200/85" for="hl-email">Email</label>
+        <input id="hl-email" type="email" required autocomplete="email" class="mt-1 w-full rounded-lg border border-sand-200/20 bg-night-950 px-3 py-2" placeholder="you@example.com" /></div>
+      <button type="submit" class="btn-primary">Send me the lessons</button>
+      <p id="hl-msg" class="text-spice-300" aria-live="polite"></p>
+    </form>
     <form id="rs-form" class="card mt-8 max-w-xl space-y-4 text-sm" aria-labelledby="rs-title">
       <h2 id="rs-title" class="text-2xl text-sand-50">Lost or leaked your token?</h2>
       <p class="text-sand-200/90">Reset it with the Sui wallet that paid for the order. Your wallet signs a one-time message (no transaction, no funds move); you get a new token and the old one stops working.</p>
@@ -51,6 +60,18 @@ import { SITE } from '../../data/site';
     if (ad) { const b = $('dl-addon') as unknown as HTMLAnchorElement; b.href = ad.downloadUrl; b.hidden = false; ($('dl-addon-note') as HTMLElement).hidden = false; }
     msg(`Ready: ${r.product ?? 'your template'}, latest version.`);
   }
+  // Hwi's practice lessons (opt-in). Shown only while signup is open.
+  fetch('/api/lessons/subscribe').then((x) => x.json()).then((r) => { if (r && r.open) ($('hl-form') as unknown as HTMLElement).hidden = false; }).catch(() => {});
+  $('hl-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const hm = (t: string) => ($('hl-msg').textContent = t);
+    const order = $('dl-order').value.trim(), token = $('dl-token').value.trim(), email = $('hl-email').value.trim();
+    if (!order || !token) return hm('Enter your order ID and token in the form above first.');
+    hm('Signing you up…');
+    const r = await fetch('/api/lessons/subscribe', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ orderId: order, email, source: 'order_page' }) }).then((x) => x.json()).catch(() => ({ ok: false, reason: 'network_error' }));
+    if (!r.ok) return hm(r.reason === 'bad_order_or_token' ? 'Order ID and token do not match an order.' : r.reason === 'bad_email' ? 'That email does not look right.' : `Not available: ${r.reason ?? 'error'}`);
+    hm(r.status === 'done' ? 'You already finished all 14 lessons.' : r.waitingForPayment ? 'Signed up. Lessons start with the first daily send after your payment is confirmed.' : `Signed up. Your next lesson (day ${r.nextDay}) arrives with the next daily send.`);
+  });
   $('dl-form').addEventListener('submit', (e) => { e.preventDefault(); go($('dl-order').value.trim(), $('dl-token').value.trim()); });
   if (pre.order) $('dl-order').value = pre.order;
   if (pre.token) $('dl-token').value = pre.token;
