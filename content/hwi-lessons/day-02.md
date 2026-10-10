@@ -24,7 +24,7 @@ In *Dune*, the Fremen live in sietches: hidden rock shelters that keep water in 
 
 **2. Unset means no.** Every guard number starts as `<SET ME>`. Until you fill it in with a valid value, the guard refuses every order. A missing setting is treated as the strictest possible setting, never the loosest.
 
-**3. They fail closed.** If the guard's heartbeat is missing, stale or failed, if prices are stale, or if errors repeat, the bot stops placing orders. A crash writes a `HALT` file, and only you remove it.
+**3. They fail closed.** If the guard's heartbeat is missing, stale or failed, if prices are stale, or if errors repeat, the bot stops placing orders. A crash writes a `HALT` file. You remove it, and your bot is told never to remove it.
 
 ## Why a daily loss cap and no leverage?
 Bad days happen to every trader. A daily cap turns a bad day into a *small* bad day: the bot stops buying, waits for tomorrow, and you get time to look. Leverage does the opposite. With borrowed money, a dip can trigger a forced sale (a liquidation) at the worst moment, and you can lose more than you put in. So your bot simply doesn't use it.
