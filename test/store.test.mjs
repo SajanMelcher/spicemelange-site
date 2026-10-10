@@ -280,15 +280,60 @@ test('templates: Grok Bot catalog copy, prices, and a public versions.json with 
   const { bySku, ARCHETYPES } = await import('../store-core/catalog.js');
   const { versionsDoc, TEMPLATES } = await import('../store-core/versions.js');
   const seven = ['god-emperor', 'moneo', 'duncan-idaho', 'fish-speakers', 'anteac', 'hwi-noree', 'ixians'];
-  for (const s of seven) { const p = bySku(s); assert.equal(p.kind, 'Grok Bot template'); assert.equal(p.priceUsdc, '50'); assert.match(p.version, /^\d{4}\.\d{2}\.\d{2}$/); }
-  assert.equal(bySku('full-desk').priceUsdc, '250');
-  assert.ok(bySku('full-desk').includes.some((i) => /Leto/.test(i)));
+  for (const s of seven) { const p = bySku(s); assert.equal(p.kind, 'Grok Bot template'); assert.equal(p.priceUsdc, '50'); assert.match(p.version, /^\d{4}\.\d{2}\.\d{2}(\.\d+)?$/); }
+  const saga = bySku('dune-saga-collection');
+  assert.equal(saga.priceUsdc, '300'); assert.equal(saga.bundle, true); assert.equal(saga.file, 'file:dune-saga-collection');
+  assert.ok(saga.includes.some((i) => /Leto/.test(i)) && saga.includes.some((i) => /future/i.test(i)) && saga.includes.some((i) => /free forever/i.test(i)));
+  assert.equal(bySku('hwi-noree').role, 'Ambassador of the Trading Desk');
   assert.ok(ARCHETYPES.length === 8);
   const v = versionsDoc();
-  assert.deepEqual(Object.keys(v.templates).sort(), [...seven].sort());
+  assert.deepEqual(Object.keys(v.templates).sort(), [...seven, 'dune-saga-collection', 'leto-journals'].sort());
+  assert.equal(v.templates['dune-saga-collection'].version, '2026.10.09.1'); assert.equal(v.templates['dune-saga-collection'].versionKey, 20261009001);
+  assert.equal(v.templates['leto-journals'].version, '2026.10.09'); assert.equal(v.templates['leto-journals'].versionKey, 20261009000);
   for (const s of seven) assert.equal(v.templates[s].version, TEMPLATES.current);
-  assert.ok(v.packs['full-desk'] && v.packs['leto-journals']);
+  assert.ok(v.packs['dune-saga-collection'] && v.packs['leto-journals'] && !v.packs['full-desk']);
+  assert.equal(v.packs['dune-saga-collection'].version, TEMPLATES.current);
+  assert.equal(v.templates['hwi-noree'].title, 'Ambassador of the Trading Desk');
   const txt = JSON.stringify(v);
-  assert.doesNotMatch(txt, /HARD LIMITS|instructions\.md content|0x[0-9a-f]{20}|smt_|file:/i);
+  assert.doesNotMatch(txt, /## HARD LIMITS|These override every other instruction|0x[0-9a-f]{20}|smt_|file:/i);
   assert.match(v.howToUpdate, /\/store\/download\//);
+});
+
+test('retired Full Desk: not orderable or listed, but a past paid order still re-downloads its original file', async () => {
+  const { bySku, LISTED, ARCHETYPES } = await import('../store-core/catalog.js');
+  const { loadFile } = await import('../store-core/files.js');
+  assert.equal(bySku('full-desk').retired, true);
+  assert.ok(!LISTED.some((p) => p.sku === 'full-desk') && !ARCHETYPES.some((p) => p.sku === 'full-desk'));
+  const cfg = loadConfig(env());
+  assert.equal((await createOrder(cfg, { sku: 'full-desk', nowMs: T0 })).reason, 'unknown_product');
+  // Simulate an order paid before the switch: insert a paid full-desk row directly.
+  const c2 = (await setup()).cfg;
+  const r = await createOrder(c2, { sku: 'moneo', nowMs: T0 });
+  c2.db.raw.prepare("UPDATE orders SET sku = 'full-desk', status = 'paid', digest = 'x', paid_ms = ? WHERE id = ?").run(T0 + 1000, r.order.orderId);
+  const st = await orderStatus(c2, { orderId: r.order.orderId, token: r.order.token, nowMs: T0 + 5000 });
+  assert.equal(st.status, 'paid'); assert.match(st.downloadUrl, /p=full-desk/);
+  const q = Object.fromEntries(new URL('https://x' + st.downloadUrl).searchParams);
+  assert.equal((await checkLink(c2, { ...q, nowMs: T0 + 6000 })).ok, true);
+  const kv = { async getWithMetadata(k) { return k === 'file:full-desk' ? { value: new Uint8Array([80, 75]).buffer, metadata: { name: 'golden-path-full-desk-2026.10.09.zip', type: 'application/zip' } } : { value: null, metadata: null }; } };
+  const f = await loadFile({ STORE_FILES: kv }, 'full-desk');
+  assert.equal(f.name, 'golden-path-full-desk-2026.10.09.zip');
+});
+
+test('version order: 2026.10.09.1 is newer than 2026.10.09 (update check, versions.json, release sort)', async () => {
+  const { compareVersions, versionKey, versionsDoc, TEMPLATES } = await import('../store-core/versions.js');
+  assert.equal(compareVersions('2026.10.09.1', '2026.10.09'), 1);
+  assert.equal(compareVersions('2026.10.09', '2026.10.09.1'), -1);
+  assert.equal(compareVersions('2026.10.09.1', '2026.10.09.1'), 0);
+  assert.equal(compareVersions('2026.10.10', '2026.10.09.9'), 1);
+  assert.equal(compareVersions('2026.10.09.10', '2026.10.09.9'), 1); // numeric, not string order
+  assert.throws(() => compareVersions('1.0.0', '2026.10.09'));
+  assert.ok(versionKey('2026.10.09.1') > versionKey('2026.10.09'));
+  const v = versionsDoc();
+  // A bot that installed 2026.10.09 sees the staged release as newer.
+  for (const [k, t] of Object.entries(v.templates)) { if (k === 'leto-journals') continue; assert.equal(compareVersions(t.version, '2026.10.09'), 1); assert.equal(t.versionKey, versionKey(t.version)); }
+  assert.equal(compareVersions(v.templates['leto-journals'].version, '2026.10.09'), 0); // unchanged pack: no false update
+  // Releases are kept newest first, and latestFor picks the newest covering release.
+  const vs = TEMPLATES.releases.map((r) => r.version);
+  assert.deepEqual([...vs].sort((a, b) => compareVersions(b, a)), vs);
+  assert.equal(v.current, vs[0]);
 });
