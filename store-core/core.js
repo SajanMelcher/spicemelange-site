@@ -163,15 +163,19 @@ export async function fetchTx(cfg, digest, fetchImpl = fetch) {
   };
 }
 /** Auto-detect: recent digests touching payTo (newest last). Candidates are fully re-verified. */
-export async function recentDigests(cfg, fetchImpl = fetch, n = 25) {
+export async function recentDigests(cfg, fetchImpl = fetch, n = 25, addr = cfg.payTo) {
   const d = await gql(cfg.graphqlUrl,
     'query($a:SuiAddress!,$n:Int){ transactions(last:$n, filter:{affectedAddress:$a}){ nodes{ digest } } }',
-    { a: cfg.payTo, n }, fetchImpl);
+    { a: addr, n }, fetchImpl);
   return (d?.transactions?.nodes ?? []).map((x) => x.digest).filter((x) => DIGEST_RE.test(x ?? ''));
 }
 
 /** Pure check of a fetched tx against an order. No I/O. Mirrors Plumbline's verify(). */
+// Each order verifies against the payee recorded when it was created (orders.pay_to), so a payee
+// change never breaks orders already issued. Rows from before migration 0002 fall back to cfg.payTo.
+export const orderPayee = (cfg, order) => (order?.payTo ? normalizeAddress(order.payTo) : cfg.payTo);
 export function checkTx(cfg, order, tx, digest, nowMs) {
+  const payee = orderPayee(cfg, order);
   if (!tx) return { ok: false, reason: 'transaction_not_found', retryable: true };
   if (tx.digest && tx.digest !== digest) return { ok: false, reason: 'digest_mismatch' };
   if (tx.status !== 'SUCCESS') return { ok: false, reason: 'transaction_failed' };
@@ -183,7 +187,7 @@ export function checkTx(cfg, order, tx, digest, nowMs) {
   let credited = 0n;
   for (const bc of tx.balanceChanges ?? []) {
     if (!bc.owner || !bc.coinType || !/^-?\d{1,40}$/.test(String(bc.amount))) continue;
-    if (normalizeAddress(bc.owner) === cfg.payTo && normalizeCoinType(bc.coinType) === cfg.asset) credited += BigInt(bc.amount);
+    if (normalizeAddress(bc.owner) === payee && normalizeCoinType(bc.coinType) === cfg.asset) credited += BigInt(bc.amount);
   }
   if (credited <= 0n) return { ok: false, reason: 'no_usdc_payment_to_store' };
   if (credited !== BigInt(order.amountAtomic)) {
@@ -199,7 +203,7 @@ const isConstraint = (e) => /UNIQUE|constraint|PRIMARY KEY/i.test(String(e?.mess
 const rowToOrder = (r) => r && ({
   id: r.id, sku: r.sku, net: r.net, amountAtomic: r.amount_atomic, tokenHash: r.token_hash,
   createdMs: Number(r.created_ms), expiresMs: Number(r.expires_ms), status: r.status, email: r.email,
-  attempts: Number(r.attempts), digest: r.digest, sender: r.sender, paidMs: r.paid_ms == null ? null : Number(r.paid_ms),
+  attempts: Number(r.attempts), digest: r.digest, payTo: r.pay_to ?? null, sender: r.sender, paidMs: r.paid_ms == null ? null : Number(r.paid_ms),
 });
 
 /** Atomically take a hold on (net, amount) unless a live hold exists. Returns true if this order got it. */
@@ -247,16 +251,16 @@ export async function createOrder(cfg, { sku, email, ipHash, selftestKey, nowMs 
   }
   if (amount === null) return { ok: false, status: 503, reason: 'busy_try_again' };
   await cfg.db.prepare(
-    `INSERT INTO orders (id, sku, net, amount_atomic, token_hash, created_ms, expires_ms, status, email, attempts)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'open', ?8, 0)`,
-  ).bind(id, p.sku, cfg.net, amount, await sha256Hex(token), nowMs, expiresMs, email || null).run();
+    `INSERT INTO orders (id, sku, net, amount_atomic, token_hash, created_ms, expires_ms, status, email, attempts, pay_to)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'open', ?8, 0, ?9)`,
+  ).bind(id, p.sku, cfg.net, amount, await sha256Hex(token), nowMs, expiresMs, email || null, cfg.payTo).run();
   return {
     ok: true,
     order: {
       orderId: id, token, sku: p.sku, product: p.name, network: `sui:${cfg.net}`,
       payTo: cfg.payTo, coinType: cfg.asset, amount: atomicToDecimal(amount), amountAtomic: amount,
       expiresAt: new Date(expiresMs).toISOString(),
-      howToPay: `Send EXACTLY ${atomicToDecimal(amount)} USDC on Sui ${cfg.net} to ${cfg.payTo} in one transaction before ${new Date(expiresMs).toISOString()}. Any other amount will not match. Keep your order token private.`,
+      howToPay: `Send EXACTLY ${atomicToDecimal(amount)} USDC on Sui ${cfg.net} to ${cfg.payTo} in one transaction before ${new Date(expiresMs).toISOString()}. Send it from a Sui wallet as a single transfer; exchange withdrawals may batch or round, so use an exact-amount wallet transfer. Any other amount will not match. Keep your order token private.`,
     },
   };
 }
@@ -304,7 +308,7 @@ export async function verifyOrder(cfg, { orderId, token, digest, nowMs = Date.no
   try {
     const chain = await fetchChainId(cfg, fetchImpl);
     if (chain !== CHAIN_ID[cfg.net]) return { ok: false, status: 502, reason: 'rpc_wrong_chain', retryable: true };
-    const candidates = digest ? [digest] : (await recentDigests(cfg, fetchImpl)).reverse();
+    const candidates = digest ? [digest] : (await recentDigests(cfg, fetchImpl, 25, orderPayee(cfg, o))).reverse();
     let last = { ok: false, reason: 'payment_not_found_yet', retryable: true };
     for (const d of candidates) {
       const owner = await digestOwner(cfg, d);

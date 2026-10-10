@@ -1,0 +1,43 @@
+---
+// Re-download: order ID + token -> the existing GET /api/store/order status call, which returns a fresh
+// HMAC-signed link for paid orders (same checkLink signature checks). The link always serves the latest file in STORE_FILES.
+import Base from '../../layouts/Base.astro';
+import { SITE } from '../../data/site';
+---
+<Base title="Re-download your template" description="Download the latest version of a template you bought, with your order ID and token." noindex>
+  <section class="container-x pt-16 pb-16" aria-labelledby="dl-title">
+    <p class="eyebrow mb-4">Weekly updates included</p>
+    <h1 id="dl-title" class="text-5xl leading-tight text-sand-50">Re-download the latest</h1>
+    <p class="mt-5 max-w-2xl text-lg leading-relaxed text-sand-200/90">Enter the order ID and token from checkout. You always get the current version; see the <a class="text-ibad-300" href="/templates/changelog/">changelog</a> for what changed.</p>
+    <form id="dl-form" class="card mt-8 max-w-xl space-y-4 text-sm">
+      <div><label class="block text-sand-200/85" for="dl-order">Order ID</label>
+        <input id="dl-order" name="order" required class="mt-1 w-full rounded-lg border border-sand-200/20 bg-night-950 px-3 py-2 font-mono" placeholder="SM-XXXXXXXXXX" autocomplete="off" spellcheck="false" /></div>
+      <div><label class="block text-sand-200/85" for="dl-token">Order token (private)</label>
+        <input id="dl-token" name="token" required type="password" class="mt-1 w-full rounded-lg border border-sand-200/20 bg-night-950 px-3 py-2 font-mono" placeholder="smt_…" autocomplete="off" spellcheck="false" /></div>
+      <button type="submit" class="btn-primary">Get my download</button>
+      <p id="dl-msg" class="text-spice-300" aria-live="polite"></p>
+      <p><a id="dl-link" class="btn-primary" href="#" rel="nofollow noopener" hidden>Download the latest</a></p>
+      <p class="text-xs text-sand-300/70">The link is valid for 15 minutes. Keep your token private: anyone with it can download your order. Lost it? Email <a class="text-ibad-300" href={`mailto:${SITE.email}`}>{SITE.email}</a> with your order ID and payment digest.</p>
+    </form>
+  </section>
+</Base>
+<script>
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const msg = (t: string) => ($('dl-msg').textContent = t);
+  // Accept ?order=&token= or #order=&token=, then strip them from the address bar.
+  const q = new URLSearchParams(location.search), h = new URLSearchParams(location.hash.slice(1));
+  const pre = { order: q.get('order') ?? h.get('order') ?? '', token: q.get('token') ?? h.get('token') ?? '' };
+  if (location.search || location.hash) history.replaceState(null, '', location.pathname);
+  async function go(order: string, token: string) {
+    msg('Checking your order…'); ($('dl-link') as unknown as HTMLAnchorElement).hidden = true;
+    const r = await fetch(`/api/store/order?id=${encodeURIComponent(order)}&token=${encodeURIComponent(token)}`).then((x) => x.json()).catch(() => ({ ok: false, reason: 'network_error' }));
+    if (!r.ok) return msg(r.reason === 'unknown_order' || r.reason === 'bad_order_or_token' ? 'Order ID and token do not match an order.' : `Not available: ${r.reason ?? 'error'}`);
+    if (r.status !== 'paid' || !r.downloadUrl) return msg('This order is not paid yet. Finish checkout on the store page.');
+    const a = $('dl-link') as unknown as HTMLAnchorElement; a.href = r.downloadUrl; a.hidden = false;
+    msg(`Ready: ${r.product ?? 'your template'}, latest version.`);
+  }
+  $('dl-form').addEventListener('submit', (e) => { e.preventDefault(); go($('dl-order').value.trim(), $('dl-token').value.trim()); });
+  if (pre.order) $('dl-order').value = pre.order;
+  if (pre.token) $('dl-token').value = pre.token;
+  if (pre.order && pre.token) go(pre.order, pre.token);
+</script>
