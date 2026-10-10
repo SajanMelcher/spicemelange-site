@@ -6,7 +6,7 @@
  */
 import { sha256Hex } from './core.js';
 import { lessonsConfig, legalGate, resendPost, escHtml, ptHour, SEND_HOUR_PT } from './lessons.js';
-import { suppress, suppressedSince } from './suppress.js';
+import { suppress, unsuppress, suppressedSince } from './suppress.js';
 import { COURSE, RISK, REPLY, TRACKS, GOALS, TIMES, DEFAULTS, schedule, GAP_DAYS } from './course-content.js';
 
 const DAY = 86_400_000;
@@ -66,8 +66,6 @@ export async function courseSubscribe(ccfg, { body, ipKey = 'unknown', nowMs = D
   if (!(await hit(ccfg.db, `course:ip:${ipKey}`, HOURLY_PER_IP, nowMs)) || !(await hit(ccfg.db, 'course:all', HOURLY_TOTAL, nowMs))) return { ok: false, status: 429, reason: 'rate_limited' };
   // Same answer whatever the state, so the endpoint never reveals whether an address is subscribed.
   const same = { ok: true, status: 'check_your_inbox' };
-  // GL2: an address that unsubscribed is never emailed again; store nothing for it (re-enabling is by written request).
-  if (await suppressedSince(ccfg.db, 'course', e, 0)) return same;
   const cur = await ccfg.db.prepare('SELECT * FROM course_subs WHERE net = ?1 AND email = ?2').bind(ccfg.net, e).first();
   if (cur) {
     if (['active', 'done', 'handed_off', 'suppressed'].includes(cur.status)) return same;
@@ -91,6 +89,7 @@ export async function courseConfirm(env, { subId, token, nowMs = Date.now(), fet
   if (r.status === 'active' || r.status === 'done') return { ok: true, status: r.status };
   if (r.status !== 'pending') return { ok: false, status: 410, reason: r.status };
   await db.prepare(`UPDATE course_subs SET status = 'active', confirmed_ms = ?1 WHERE id = ?2 AND status = 'pending'`).bind(nowMs, subId).run();
+  await unsuppress(db, ccfg.suppressSalt, 'course', r.email).catch(() => null); // fresh double opt-in confirmed: lift the old block
   await syncContact(ccfg, { ...r, status: 'active' }, fetchImpl).catch(() => {});
   return { ok: true, status: 'active' };
 }
@@ -100,8 +99,16 @@ export async function courseUnsubscribe(env, { subId, token, nowMs = Date.now(),
   const r = await db.prepare('SELECT * FROM course_subs WHERE id = ?1').bind(subId).first();
   if (!r) return { ok: true, status: 'unsubscribed' }; // already removed: a second click is a quiet no-op
   if (!safeEqual(r.unsub_token, token)) return { ok: false, status: 400, reason: 'bad_link' };
-  await minimizeCourseSub(ccfg, r, nowMs, fetchImpl);
-  return { ok: true, status: 'unsubscribed' };
+  return safeMinimize(ccfg, r, nowMs, fetchImpl);
+}
+/** GL15: never fail an unsubscribe. If minimizing fails, still stop all mail at once. */
+async function safeMinimize(ccfg, r, nowMs, fetchImpl) {
+  try { await minimizeCourseSub(ccfg, r, nowMs, fetchImpl); return { ok: true, status: 'unsubscribed' }; }
+  catch (e) {
+    console.log('course unsubscribe minimize failed; marking unsubscribed', String(e?.message ?? e));
+    try { await ccfg.db.prepare(`UPDATE course_subs SET status = 'unsubscribed', unsub_ms = ?1 WHERE id = ?2`).bind(nowMs, r.id).run(); return { ok: true, status: 'unsubscribed', minimized: false }; }
+    catch (e2) { return { ok: false, status: 503, reason: 'try_again' }; }
+  }
 }
 /**
  * GL2 data minimization on unsubscribe (link, RFC 8058 POST, or a "stop" reply): keep ONLY a hashed-email suppression
@@ -110,7 +117,7 @@ export async function courseUnsubscribe(env, { subId, token, nowMs = Date.now(),
  */
 export async function minimizeCourseSub(ccfg, r, nowMs, fetchImpl = fetch) {
   const db = ccfg.db;
-  await suppress(db, 'course', r.email, nowMs);
+  await suppress(db, ccfg.suppressSalt, 'course', r.email, nowMs);
   let contactDelete = null;
   if (r.resend_contact_id && ccfg.apiKey) {
     contactDelete = await fetchImpl(`${ccfg.contactsUrl}/${encodeURIComponent(r.resend_contact_id)}`, { method: 'DELETE', headers: { authorization: `Bearer ${ccfg.apiKey}` } }).then((x) => x.status).catch(() => 0);
@@ -129,11 +136,12 @@ export async function deleteStaleCourse(db, nowMs, net = null) {
   return Number(d?.meta?.changes ?? 0);
 }
 
-/** R7: Resend contact with the teaching tags as properties. Worker-only (API key never in the repo). Off unless COURSE_RESEND_CONTACTS=1. */
+/** R7 (T4: address + unsubscribed flag only, no quiz properties). Worker-only (API key never in the repo). Off unless COURSE_RESEND_CONTACTS=1. */
 export async function syncContact(ccfg, sub, fetchImpl = fetch) {
   if (!ccfg.contacts || !ccfg.apiKey) return { ok: false, reason: 'contacts_off' };
   if (!ccfg.production && !ccfg.testRecipients.includes(sub.email)) return { ok: false, reason: 'not_test_recipient' };
-  const body = { email: sub.email, unsubscribed: sub.status === 'unsubscribed', properties: { track: sub.track, goal: sub.goal, time: sub.time, agent: sub.agent, fc_status: sub.status } };
+  // T4: address + unsubscribed flag only. No quiz answers (track/goal/time/agent) or status as contact properties.
+  const body = { email: sub.email, unsubscribed: sub.status === 'unsubscribed' };
   const url = sub.resend_contact_id ? `${ccfg.contactsUrl}/${encodeURIComponent(sub.resend_contact_id)}` : ccfg.contactsUrl;
   const res = await fetchImpl(url, { method: sub.resend_contact_id ? 'PATCH' : 'POST', headers: { authorization: `Bearer ${ccfg.apiKey}`, 'content-type': 'application/json' }, body: JSON.stringify(body) });
   const j = await res.json().catch(() => ({}));
@@ -156,19 +164,7 @@ export async function courseDelete(env, { email, fetchImpl = fetch }) {
   return { ok: true, deleted: 1, contactDelete: contact };
 }
 
-/** R9: the address confirmed the 14-day lessons -> stop the free course at once. Returns the track for the day-1 line. */
-export async function courseHandoff(db, { email, net }) {
-  if (!db) return null;
-  const r = await db.prepare(`SELECT id, track, status FROM course_subs WHERE net = ?1 AND email = ?2`).bind(net, String(email).toLowerCase()).first().catch(() => null);
-  if (!r) return null;
-  if (!['unsubscribed', 'suppressed', 'handed_off'].includes(r.status)) await db.prepare(`UPDATE course_subs SET status = 'handed_off', handoff_ms = ?2 WHERE id = ?1`).bind(r.id, Date.now()).run();
-  return r.track;
-}
-export const HANDOFF_LINE = {
-  pilgrim: "You came from the free Golden Path course, so we'll go slowly: every term is defined as we go.",
-  fremen: "You came from the free Golden Path course: you know the basics, so watch for the order-book and fee details.",
-  naib: 'You came from the free Golden Path course: skim days 1 to 3; day 6 onward is where your settings get tested.',
-};
+export { courseHandoff, HANDOFF_LINE } from './course-handoff.js';
 
 // ---------- assembly ----------
 const md = (t) => escHtml(t).replace(/`([^`]+)`/g, '<code style="background:#f3ece0;padding:1px 4px;border-radius:3px;font-size:90%">$1</code>');
@@ -217,7 +213,8 @@ export function courseEmail(ccfg, sub, emailNo) {
   return {
     from: ccfg.from, to: [sub.email], reply_to: ccfg.replyTo, subject: b.subject, html: html.join(''), text: text.filter((x) => x !== undefined).join('\n'),
     headers: { 'List-Unsubscribe': `<${u}>, <mailto:${ccfg.replyTo}?subject=unsubscribe%20course>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
-    tags: [{ name: 'kind', value: 'golden_path_course' }, { name: 'email', value: String(emailNo) }, { name: 'track', value: sub.track }],
+    // T4: no quiz-derived tag (track/goal/time/agent) ever goes to Resend; /privacy/ says quiz answers stay in our D1.
+    tags: [{ name: 'kind', value: 'golden_path_course' }, { name: 'email', value: String(emailNo) }],
     _meta: { lessons: b.lessons, invite: b.invite?.door ?? null },
   };
 }
@@ -236,6 +233,7 @@ export function courseConfirmEmail(ccfg, sub) {
 function gate(c, dryRun) {
   if (!c.db) return 'db_not_bound';
   if (!c.production && c.testRecipients.length === 0) return 'sending_off';
+  if (!c.suppressSalt) return 'suppression_salt_not_set';
   if (c.production && !c.footer) return 'footer_not_set';
   if (!dryRun && !c.apiKey) return 'resend_key_not_set';
   return null;
@@ -249,7 +247,7 @@ export async function runCourseConfirmations(env, { nowMs = Date.now(), fetchImp
   const { results = [] } = await c.db.prepare(`SELECT * FROM course_subs WHERE net = ?1 AND status = 'pending' AND confirm_sent_ms IS NULL AND confirm_sends < ?2 ORDER BY consent_ms LIMIT 100`).bind(c.net, MAX_CONFIRM_SENDS).all();
   for (const s of results) {
     if (!allowed(c, s.email)) { out.skipped++; out.details.push({ sub: s.id, result: 'skipped_not_test_recipient' }); continue; }
-    if (await suppressedSince(c.db, 'course', s.email, 0)) { out.skipped++; out.details.push({ sub: s.id, result: 'skipped_suppressed' }); continue; }
+    if (await suppressedSince(c.db, c.suppressSalt, 'course', s.email, s.consent_ms)) { out.skipped++; out.details.push({ sub: s.id, result: 'skipped_suppressed' }); continue; }
     if (dryRun) { out.details.push({ sub: s.id, result: 'dry_run' }); continue; }
     const cl = await c.db.prepare(`UPDATE course_subs SET confirm_sent_ms = ?1, confirm_sends = confirm_sends + 1 WHERE id = ?2 AND confirm_sent_ms IS NULL AND status = 'pending'`).bind(nowMs, s.id).run();
     if (Number(cl?.meta?.changes ?? 0) !== 1) continue;
@@ -323,7 +321,7 @@ export async function courseInbound(env, { from, text, nowMs = Date.now() }) {
   const kw = KEYWORDS.find((k) => new RegExp(`\\b${k}\\b`).test(first));
   if (!kw) return { ok: true, matched: true, keyword: null };
   if (kw === 'stop') {
-    await minimizeCourseSub(c, s, nowMs); // GL2: same minimization as the link; nothing about the reply is kept
+    await safeMinimize(c, s, nowMs, fetch); // GL2: same minimization as the link; nothing about the reply is kept
     return { ok: true, matched: true, keyword: 'stop', applied: true };
   }
   await c.db.prepare(`INSERT INTO course_suggestions (id, sub_id, received_ms, keyword, proposal) VALUES (?1, ?2, ?3, ?4, ?5)`).bind('sg_' + rnd(9), s.id, nowMs, kw, propose(s, kw)).run();

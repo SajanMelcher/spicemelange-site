@@ -7,7 +7,7 @@ import { DELETION_CONTACT } from '../../../store-core/contact.js';
 
 const run = (context) => {
   const u = new URL(context.request.url);
-  return unsubscribe(context.env.STORE_DB, { subId: u.searchParams.get('s'), token: u.searchParams.get('t') });
+  return unsubscribe(context.env.STORE_DB, { subId: u.searchParams.get('s'), token: u.searchParams.get('t'), salt: context.env.SUPPRESSION_SALT });
 };
 // R11: log the method (no ids, no email) so link-scanner GET unsubscribes can be spotted next to RFC 8058 POSTs.
 const logUnsub = (method, r) => console.log(JSON.stringify({ kind: 'lesson_unsubscribe', method, ok: r.ok }));

@@ -1,6 +1,5 @@
 ---
 // Shared Sui USDC checkout dialog (store index + detail pages). Buttons: .buy-btn[data-sku][data-name]
-import { DELETION_CONTACT } from '../../store-core/contact.js';
 ---
   <dialog id="checkout" class="m-auto w-[min(36rem,calc(100vw-2rem))] rounded-2xl border border-sand-200/15 bg-night-900 p-0 text-sand-100 backdrop:bg-night-950/80">
     <form method="dialog" class="flex items-center justify-between border-b border-sand-200/10 px-5 py-3">
@@ -12,7 +11,7 @@ import { DELETION_CONTACT } from '../../store-core/contact.js';
         <label class="block text-sand-200/85" for="co-email">Email for your receipt (optional)</label>
         <input id="co-email" type="email" autocomplete="email" class="mt-1 w-full rounded-lg border border-sand-200/20 bg-night-950 px-3 py-2" placeholder="you@example.com" />
         <p class="mt-1 text-xs text-sand-300/70">Used only to send your receipt after review. Leave blank to stay anonymous.</p>
-        <div id="co-lessons" class="mt-3" data-contact={DELETION_CONTACT} hidden>
+        <div id="co-lessons" class="mt-3" hidden>
           <label class="flex items-start gap-2 text-sand-200/85"><input id="co-lessons-opt" type="checkbox" class="mt-1" /> <span>Get Hwi's 14-day practice lessons</span></label>
           <p class="mt-1 text-xs text-sand-300/70">Optional. <span id="co-lessons-hold">The lessons are on hold until our privacy page is live, then start daily after you confirm. </span>After payment we email you a confirmation link; once you click it, you get one short email a day for the 14 days your bot trains on paper, then they stop. Uses the email above. One-click unsubscribe in every email.</p>
           <p class="mt-1 text-xs text-sand-300/80">We'll email your lessons through Resend. See our <a class="text-ibad-300" href="/privacy/">privacy page</a>.</p>
@@ -101,7 +100,7 @@ import { DELETION_CONTACT } from '../../store-core/contact.js';
     const em = ($('co-email') as HTMLInputElement).value.trim();
     if (($('co-lessons-opt') as HTMLInputElement).checked && em) {
       const s = await fetch('/api/lessons/subscribe', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${r.order.token}` }, body: JSON.stringify({ orderId: r.order.orderId, email: em, source: 'checkout' }) }).then((x) => x.json()).catch(() => ({ ok: false }));
-      if (!s.ok) msg(s.reason === 'unsubscribed_earlier' ? `Order created. That address unsubscribed from Hwi's lessons earlier, so we won't email it; write to ${$('co-lessons').dataset.contact} to turn them back on.` : "Order created. We couldn't sign you up for Hwi's lessons; you can do it later on the re-download page.");
+      if (!s.ok) msg("Order created. We couldn't sign you up for Hwi's lessons; you can do it later on the re-download page.");
     }
   });
   // Hwi's lessons box shows only while signup is open (preview, or production after Hwi's review).

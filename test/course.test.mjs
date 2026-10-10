@@ -16,7 +16,7 @@ const T0 = Date.UTC(2026, 9, 10, 16, 0, 0), DAY = 86_400_000;
 const TESTERS = 'delivered@resend.dev,delivered+pilgrim@resend.dev,delivered+fremen@resend.dev,delivered+naib@resend.dev';
 function setup(over = {}) {
   const db = makeD1(MIG);
-  const env = { STORE_DB: db, SUI_NETWORK: 'testnet', RESEND_API_KEY: 're_test', COURSE_TEST_RECIPIENTS: TESTERS, LESSONS_TEST_RECIPIENTS: TESTERS, LESSONS_BASE_URL: 'https://p.example.dev', LESSONS_FOOTER: FOOT, COURSE_RESEND_CONTACTS: '1', ...over };
+  const env = { STORE_DB: db, SUI_NETWORK: 'testnet', RESEND_API_KEY: 're_test', COURSE_TEST_RECIPIENTS: TESTERS, LESSONS_TEST_RECIPIENTS: TESTERS, LESSONS_BASE_URL: 'https://p.example.dev', LESSONS_FOOTER: FOOT, COURSE_RESEND_CONTACTS: '1', SUPPRESSION_SALT: 's'.repeat(32), ...over };
   const sent = [], contacts = [];
   const fetchImpl = async (url, init) => {
     url = String(url);
@@ -60,7 +60,7 @@ test('production flag OFF: mainnet signup closed to the public; nothing sends', 
   assert.equal((await signup(t, { email: 'someone@example.com' })).reason, 'course_not_open');
   assert.equal((await runCourse(t.env, { nowMs: T0, fetchImpl: t.fetchImpl })).reason, 'sending_off');
 });
-test('double opt-in: nothing before confirm; one confirmation; then lessons; contact synced with tags', async () => {
+test('double opt-in: nothing before confirm; one confirmation; then lessons; contact synced with address only (T4)', async () => {
   const t = setup();
   await signup(t, { email: 'delivered+fremen@resend.dev', track: 'fremen', agent: 'yes' });
   assert.equal((await runCourse(t.env, { nowMs: T0, fetchImpl: t.fetchImpl, force: true })).sent, 0);
@@ -69,7 +69,7 @@ test('double opt-in: nothing before confirm; one confirmation; then lessons; con
   assert.match(t.sent[0].body.subject, /Please confirm/);
   const r = row(t, 'delivered+fremen@resend.dev');
   assert.equal((await courseConfirm(t.env, { subId: r.id, token: r.confirm_token, fetchImpl: t.fetchImpl })).ok, true);
-  assert.equal(t.contacts[0].method, 'POST'); assert.deepEqual(t.contacts[0].body.properties, { track: 'fremen', goal: 'botsafety', time: 'standard', agent: 'yes', fc_status: 'active' });
+  assert.equal(t.contacts[0].method, 'POST'); assert.deepEqual(t.contacts[0].body, { email: 'delivered+fremen@resend.dev', unsubscribed: false }); // T4: no quiz properties
   const s = await runCourse(t.env, { nowMs: T0 + 2, fetchImpl: t.fetchImpl });
   assert.equal(s.sent, 1); assert.match(t.sent[1].body.subject, /^Lesson 1 of 7/);
   const m = t.sent[1].body;
@@ -121,13 +121,34 @@ test('GL2 unsubscribe: row, quiz answers, utm/ref, sends and Resend contact dele
   assert.equal(sup.length, 1); assert.deepEqual(Object.keys(sup[0]).sort(), ['email_hash', 'list', 'unsub_ms']);
   assert.equal(sup[0].list, 'course'); assert.equal(sup[0].unsub_ms, T0 + 9); assert.match(sup[0].email_hash, /^[0-9a-f]{64}$/);
   assert.ok(!JSON.stringify(t.db.raw.prepare('SELECT * FROM email_suppressions').all()).includes('resend.dev'));
-  // second click: quiet no-op; a new quiz signup stores nothing and sends nothing
+  // second click: quiet no-op; a fresh quiz signup gets the same reply, one confirmation, and only the confirm lifts the block
   assert.equal((await courseUnsubscribe(t.env, { subId: r.id, token: r.unsub_token, fetchImpl: t.fetchImpl })).ok, true);
   assert.deepEqual(await signup(t, { email: 'delivered@resend.dev' }, 'ip9', T0 + DAY), { ok: true, status: 'check_your_inbox' });
-  assert.equal(row(t, 'delivered@resend.dev'), undefined);
   const before = t.sent.length;
-  await runCourseConfirmations(t.env, { nowMs: T0 + DAY, fetchImpl: t.fetchImpl });
-  assert.equal(t.sent.length, before);
+  assert.equal((await runCourseConfirmations(t.env, { nowMs: T0 + DAY, fetchImpl: t.fetchImpl })).sent, 1);
+  assert.match(t.sent.at(-1).body.subject, /Please confirm/); assert.equal(t.sent.length, before + 1);
+  assert.equal(t.db.raw.prepare('SELECT COUNT(*) n FROM email_suppressions').get().n, 1);
+  const r2 = row(t, 'delivered@resend.dev');
+  assert.equal((await courseConfirm(t.env, { subId: r2.id, token: r2.confirm_token, nowMs: T0 + DAY + 1, fetchImpl: t.fetchImpl })).ok, true);
+  assert.equal(t.db.raw.prepare('SELECT COUNT(*) n FROM email_suppressions').get().n, 0);
+});
+test('T4: no Resend payload (send or contact) carries quiz-derived fields', async () => {
+  const t = setup();
+  for (const [email, track, goal, time, agent] of [['delivered+pilgrim@resend.dev', 'pilgrim', 'longview', 'brief', 'no'], ['delivered+naib@resend.dev', 'naib', 'builder', 'weekly', 'yes']]) {
+    await optIn(t, { email, track, goal, time, agent });
+  }
+  await runCourse(t.env, { nowMs: T0 + 5, fetchImpl: t.fetchImpl, force: true });
+  const lc = row(t, 'delivered+naib@resend.dev');
+  await courseUnsubscribe(t.env, { subId: lc.id, token: lc.unsub_token, fetchImpl: t.fetchImpl });
+  assert.ok(t.sent.length >= 4 && t.contacts.length >= 2);
+  const QUIZ_KEYS = /^(track|goal|time|agent|fc_status|level|experience)$/i;
+  const QUIZ_VALS = new Set(['pilgrim', 'fremen', 'naib', 'longview', 'botsafety', 'builder', 'evaluate', 'brief', 'standard', 'weekly']);
+  const walk = (o, path) => {
+    if (o && typeof o === 'object') for (const [k, v] of Object.entries(o)) { assert.doesNotMatch(k, QUIZ_KEYS, `${path}.${k}`); walk(v, `${path}.${k}`); }
+    else if (typeof o === 'string') assert.ok(!QUIZ_VALS.has(o.toLowerCase()), `${path} = ${o}`);
+  };
+  for (const m of t.sent) { const { html, text, subject, ...meta } = m.body; walk(meta, 'send'); } // body copy is the lesson text itself
+  for (const c of t.contacts) walk(c.body ?? {}, 'contact');
 });
 test('GL2 unconfirmed course signups are deleted after 7 days (not just marked expired)', async () => {
   const t = setup();

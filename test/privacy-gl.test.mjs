@@ -48,7 +48,7 @@ test('GL2 purge: stale unconfirmed, finished (30 d) and handed-off (7 d) rows go
 });
 test('GL5: one deletion contact (hello@) on /privacy/, the terms, and the unsubscribe pages; retention on /privacy/ comes from purge.js', () => {
   assert.equal(DELETION_CONTACT, 'hello@thespicemelange.org');
-  assert.match(read('../src/content-static/LICENSE.md'), new RegExp(`Ask ${DELETION_CONTACT.replace('.', '\\.')} to delete everything`));
+  assert.match(read('../src/content-static/LICENSE.md'), new RegExp(`Questions or deletion:\\*\\* email ${DELETION_CONTACT.replace('.', '\\.')}\\.`));
   const priv = read('../src/pages/privacy.astro');
   assert.match(priv, /DELETION_CONTACT/); assert.doesNotMatch(priv, /reserve@/);
   for (const f of ['../functions/api/lessons/unsubscribe.js', '../functions/api/course/unsubscribe.js']) { const s = read(f); assert.match(s, /DELETION_CONTACT/); assert.doesNotMatch(s, /reserve@thespicemelange/); }
@@ -86,4 +86,16 @@ test('GL8-GL13 + license: course text uses the corrected wording', () => {
   assert.match(read('../src/pages/learn/index.astro'), /no token\. \{XAI_LINE\}/);
   assert.match(all, /upgrades are free forever|upgrades free forever/); assert.doesNotMatch(all, /never cost extra/);
   for (const f of readdirSync(new URL('../content/hwi-lessons/cta/', import.meta.url))) assert.doesNotMatch(read(`../content/hwi-lessons/cta/${f}`), /never cost extra/, f);
+});
+test('Who helps us: every third-party origin in CSP connect-src is named on /privacy/; Resend line has no receipts; replies vs deletion contacts', async () => {
+  const { CONNECT } = await import('../scripts/csp-headers.mjs');
+  const priv = read('../src/pages/privacy.astro');
+  for (const o of CONNECT) assert.ok(priv.includes(new URL(o).host), `${o} not named on /privacy/`);
+  assert.match(priv, /Mysten Labs/);
+  assert.doesNotMatch(priv, /lesson, course and receipt emails/);
+  assert.match(priv, /every 10 and every 15 minutes\) and also as people use the site/);
+  assert.match(priv, /sessionStorage/);
+  const { REPLY_CONTACT } = await import('../store-core/contact.js');
+  assert.match(read('../workers/hwi-lessons/wrangler.toml'), new RegExp(`LESSONS_REPLY_TO = "${REPLY_CONTACT.replace('.', '\\.')}"`));
+  assert.match(priv, /Replies to lesson and course emails go to/);
 });
