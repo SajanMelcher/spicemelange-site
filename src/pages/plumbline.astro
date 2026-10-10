@@ -56,9 +56,11 @@ const config = `{
   </section>
 
   <section class="container-x py-10" aria-labelledby="install">
-    <SectionHead id="install" eyebrow="Install" title="One line, no configuration" lede="Runs over stdio and needs Node.js 18.17 or later." />
+    <SectionHead id="install" eyebrow="Install" title="One line, no configuration" lede="Use the hosted endpoint over HTTP, or run it locally over stdio (Node.js 18.17 or later)." />
     <div class="grid gap-6 lg:grid-cols-2">
       <div class="min-w-0">
+        <CodeCopy label="Claude Code (hosted, live)" code="claude mcp add --transport http plumbline https://plumbline-mcp.fly.dev/mcp" />
+        <CodeCopy label="Hosted endpoint" code="https://plumbline-mcp.fly.dev/mcp" />
         <CodeCopy label="npx" code="npx -y plumbline-mcp" />
         <CodeCopy label="Claude Code" code="claude mcp add plumbline -- npx -y plumbline-mcp" />
         <CodeCopy label="Smithery CLI" code="npx -y @smithery/cli@latest mcp add nazarenechalice/plumbline --client cursor" />
@@ -94,7 +96,7 @@ const config = `{
   </section>
 
   <section class="container-x py-10" aria-labelledby="pricing">
-    <SectionHead id="pricing" eyebrow="Pricing" title="Free, with optional pay-per-call later" />
+    <SectionHead id="pricing" eyebrow="Pricing" title="Free locally, pay-per-call when hosted" />
     <div class="grid gap-5 md:grid-cols-2">
       <div class="card">
         <h3 class="text-2xl text-sand-50">Local (stdio)</h3>
@@ -102,10 +104,10 @@ const config = `{
         <p class="mt-2 text-sand-200/85">The npm package is always free. Run it on your own machine with no account and no keys.</p>
       </div>
       <div class="card relative">
-        <span class="pill absolute right-5 !border-ibad-400/40 !text-ibad-300" style="top:1.25rem">Coming soon</span>
+        <span class="pill absolute right-5 !border-ibad-400/40 !text-ibad-300" style="top:1.25rem">Live</span>
         <h3 class="text-2xl text-sand-50">Hosted HTTP</h3>
         <p class="mt-1 font-serif text-4xl text-spice-300">100 free calls/day</p>
-        <p class="mt-2 text-sand-200/85">Then 0.002 USDC per call, paid in USDC on Sui. Receive-only: the server never holds keys. Not live until a hosted endpoint launches.</p>
+        <p class="mt-2 text-sand-200/85">Per client. Then 0.002 USDC per call (0.01 USDC minimum), paid in USDC on Sui. Receive-only: the server never holds keys. Live at <a class="break-all text-ibad-300" href="https://plumbline-mcp.fly.dev/mcp">https://plumbline-mcp.fly.dev/mcp</a>.</p>
       </div>
     </div>
   </section>

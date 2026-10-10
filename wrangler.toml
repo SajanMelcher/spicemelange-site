@@ -11,6 +11,9 @@ compatibility_date = "2026-10-01"
 STORE_ENABLED = "1"
 SUI_NETWORK = "mainnet"
 STORE_ALLOW_MAINNET = "1"
+# Signal feed LIVE (Sajan 2026-10-10 12:08 AM PT, starter rules: 5 ideas/order/day, points only by grant, non-cashable).
+# SIGNALS_ADMIN_KEY is a production Pages secret (separate from preview); a copy is kept outside the repo.
+SIGNALS_ENABLED = "1"
 
 [[kv_namespaces]]
 binding = "STORE_KV"
@@ -28,6 +31,9 @@ database_id = "cfe878af-064f-4e0d-81d3-aa08b19e2ceb" # orders, amount_holds, red
 [env.preview.vars]
 STORE_ENABLED = "1"
 SUI_NETWORK = "testnet"
+# Signal feed on preview (testnet orders only).
+# SIGNALS_ADMIN_KEY is a preview Pages secret; a copy is kept outside the repo.
+SIGNALS_ENABLED = "1"
 
 [[env.preview.kv_namespaces]]
 binding = "STORE_KV"
