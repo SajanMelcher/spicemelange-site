@@ -1,6 +1,6 @@
 {
   "schema": "spicemelange.templates.versions/v1",
-  "current": "2026.10.10",
+  "current": "2026.10.10.1",
   "updated": "2026-10-10",
   "versionRule": "Versions are YYYY.MM.DD with an optional .N for a same-day re-release. Newer = larger versionKey (YYYYMMDD*1000+N); e.g. 2026.10.09.1 is newer than 2026.10.09.",
   "sha256Note": "sha256 is the SHA-256 of the ZIP the store currently serves for that slug; verify a re-download against it.",
@@ -10,103 +10,103 @@
     "god-emperor": {
       "name": "The God Emperor",
       "title": "Orchestrator",
-      "version": "2026.10.10",
-      "versionKey": 20261010000,
+      "version": "2026.10.10.1",
+      "versionKey": 20261010001,
       "released": "2026-10-10",
-      "summary": "Signed automatic upgrades: every pack pins the release key and verifies versions.json.sig; the token never goes in a URL.",
-      "sha256": "46eb70732fb8b7f2f2e5adbe288b265fb824aca272d827e010e8a6230c16832f"
+      "summary": "Memory discipline fixes: memories only fill <SET ME> settings and never loosen a limit; Leto's Secret Journals rebuilt with a HALT kill switch and no loss sales ever.",
+      "sha256": "dcb00b5d701117031e513fa1ae522eb4ad56672402359c09c2f914523a47c5c9"
     },
     "moneo": {
       "name": "Moneo",
       "title": "Mentat Researcher",
-      "version": "2026.10.10",
-      "versionKey": 20261010000,
+      "version": "2026.10.10.1",
+      "versionKey": 20261010001,
       "released": "2026-10-10",
-      "summary": "Signed automatic upgrades: every pack pins the release key and verifies versions.json.sig; the token never goes in a URL.",
-      "sha256": "ef87262c2cb2029e7becd3a35fb931721fa36558b0e059cf1ae500d73fafec52"
+      "summary": "Memory discipline fixes: memories only fill <SET ME> settings and never loosen a limit; Leto's Secret Journals rebuilt with a HALT kill switch and no loss sales ever.",
+      "sha256": "3f0d5e3909462cb72137c866d32722f8bb82e1abcf97e7d48fab0094b8138c25"
     },
     "duncan-idaho": {
       "name": "Duncan Idaho",
       "title": "Income Base and Ticket Planner",
-      "version": "2026.10.10",
-      "versionKey": 20261010000,
+      "version": "2026.10.10.1",
+      "versionKey": 20261010001,
       "released": "2026-10-10",
-      "summary": "Signed automatic upgrades: every pack pins the release key and verifies versions.json.sig; the token never goes in a URL.",
-      "sha256": "51a3f9c131658c579aaae8a79358d65eac061342b6732637a542fac71d859169"
+      "summary": "Memory discipline fixes: memories only fill <SET ME> settings and never loosen a limit; Leto's Secret Journals rebuilt with a HALT kill switch and no loss sales ever.",
+      "sha256": "f19f46ad2f3b687644bf8b0ca57a2ec1e45a66b40ce59c8f5c0d781f7ef3bfda"
     },
     "fish-speakers": {
       "name": "The Fish Speakers",
       "title": "Execution Operator",
-      "version": "2026.10.10",
-      "versionKey": 20261010000,
+      "version": "2026.10.10.1",
+      "versionKey": 20261010001,
       "released": "2026-10-10",
-      "summary": "Signed automatic upgrades: every pack pins the release key and verifies versions.json.sig; the token never goes in a URL.",
-      "sha256": "01f0fb00803b8ab5d21ec47d1d81b60754a97b746d85fb9096916623e69786f4"
+      "summary": "Memory discipline fixes: memories only fill <SET ME> settings and never loosen a limit; Leto's Secret Journals rebuilt with a HALT kill switch and no loss sales ever.",
+      "sha256": "57cfbb09f95068467c43c6ef8a5c9fa423ef5f6f7d068b60eababa573ffda86f"
     },
     "anteac": {
       "name": "Anteac",
       "title": "Truthsayer Verifier",
-      "version": "2026.10.10",
-      "versionKey": 20261010000,
+      "version": "2026.10.10.1",
+      "versionKey": 20261010001,
       "released": "2026-10-10",
-      "summary": "Signed automatic upgrades: every pack pins the release key and verifies versions.json.sig; the token never goes in a URL.",
-      "sha256": "d35ece3c1fc323054cb675268d009903a45077c4bab790dbf876c428557da84c"
+      "summary": "Memory discipline fixes: memories only fill <SET ME> settings and never loosen a limit; Leto's Secret Journals rebuilt with a HALT kill switch and no loss sales ever.",
+      "sha256": "114c976cef5d29dffb5a65f4538819aee6aa91b4ed0e48726ce5131a6bbcb633"
     },
     "hwi-noree": {
       "name": "Hwi Noree",
       "title": "Ambassador of the Trading Desk",
-      "version": "2026.10.10",
-      "versionKey": 20261010000,
+      "version": "2026.10.10.1",
+      "versionKey": 20261010001,
       "released": "2026-10-10",
-      "summary": "Signed automatic upgrades: every pack pins the release key and verifies versions.json.sig; the token never goes in a URL.",
-      "sha256": "f3994d5f420175fdcf18299a1d44d8f4c6c2458de1be1fef0dd98509b48734da"
+      "summary": "Memory discipline fixes: memories only fill <SET ME> settings and never loosen a limit; Leto's Secret Journals rebuilt with a HALT kill switch and no loss sales ever.",
+      "sha256": "00674b4aeef4a51bf29619cad08c36ef5e352c35c0fa1d56468abe4eae0a1b0c"
     },
     "ixians": {
       "name": "Ixians",
       "title": "Toolmaker and Infrastructure",
-      "version": "2026.10.10",
-      "versionKey": 20261010000,
+      "version": "2026.10.10.1",
+      "versionKey": 20261010001,
       "released": "2026-10-10",
-      "summary": "Signed automatic upgrades: every pack pins the release key and verifies versions.json.sig; the token never goes in a URL.",
-      "sha256": "78f257c49a4509c354cc8b9993d2336565de0b9d147726bab65278c0eaf71bda"
+      "summary": "Memory discipline fixes: memories only fill <SET ME> settings and never loosen a limit; Leto's Secret Journals rebuilt with a HALT kill switch and no loss sales ever.",
+      "sha256": "9f58eb66a1e3849bfeb7825c2164116aad8d1cc412ec841fc773569d2ed4ecd0"
     },
     "leto-journals": {
       "name": "Leto's Secret Journals",
       "title": "System templates",
-      "version": "2026.10.09",
-      "versionKey": 20261009000,
-      "released": "2026-10-09",
-      "summary": "First Grok Bot template release: each seat is now an importable Grok Bot template.",
-      "sha256": "b72355485c0fb1402da09f6465dba3e9c737221304717f48fa1ca13289bf4dc2"
+      "version": "2026.10.10.1",
+      "versionKey": 20261010001,
+      "released": "2026-10-10",
+      "summary": "Memory discipline fixes: memories only fill <SET ME> settings and never loosen a limit; Leto's Secret Journals rebuilt with a HALT kill switch and no loss sales ever.",
+      "sha256": "873c265f77b4438ed8c2fdb317699bd36dd3031847bffa4b417c9467ca4bde48"
     },
     "dune-saga-collection": {
       "name": "The Dune Saga Collection",
       "title": "Every template, now and future: the 7 desk templates plus Leto's Secret Journals",
-      "version": "2026.10.10",
-      "versionKey": 20261010000,
+      "version": "2026.10.10.1",
+      "versionKey": 20261010001,
       "released": "2026-10-10",
-      "summary": "Signed automatic upgrades: every pack pins the release key and verifies versions.json.sig; the token never goes in a URL.",
-      "sha256": "a7dccb03c7efa7b4ffb8d9cf55e4843b6db45634f28ee32160a508ae51a95bea"
+      "summary": "Memory discipline fixes: memories only fill <SET ME> settings and never loosen a limit; Leto's Secret Journals rebuilt with a HALT kill switch and no loss sales ever.",
+      "sha256": "19862814f94d86ba019b4d44d87bc1c14701014e20ebe520167e751c06bdd279"
     }
   },
   "packs": {
     "leto-journals": {
       "name": "Leto's Secret Journals",
       "title": "System templates",
-      "version": "2026.10.09",
-      "versionKey": 20261009000,
-      "released": "2026-10-09",
-      "summary": "First Grok Bot template release: each seat is now an importable Grok Bot template.",
-      "sha256": "b72355485c0fb1402da09f6465dba3e9c737221304717f48fa1ca13289bf4dc2"
+      "version": "2026.10.10.1",
+      "versionKey": 20261010001,
+      "released": "2026-10-10",
+      "summary": "Memory discipline fixes: memories only fill <SET ME> settings and never loosen a limit; Leto's Secret Journals rebuilt with a HALT kill switch and no loss sales ever.",
+      "sha256": "873c265f77b4438ed8c2fdb317699bd36dd3031847bffa4b417c9467ca4bde48"
     },
     "dune-saga-collection": {
       "name": "The Dune Saga Collection",
       "title": "Every template, now and future: the 7 desk templates plus Leto's Secret Journals",
-      "version": "2026.10.10",
-      "versionKey": 20261010000,
+      "version": "2026.10.10.1",
+      "versionKey": 20261010001,
       "released": "2026-10-10",
-      "summary": "Signed automatic upgrades: every pack pins the release key and verifies versions.json.sig; the token never goes in a URL.",
-      "sha256": "a7dccb03c7efa7b4ffb8d9cf55e4843b6db45634f28ee32160a508ae51a95bea"
+      "summary": "Memory discipline fixes: memories only fill <SET ME> settings and never loosen a limit; Leto's Secret Journals rebuilt with a HALT kill switch and no loss sales ever.",
+      "sha256": "19862814f94d86ba019b4d44d87bc1c14701014e20ebe520167e751c06bdd279"
     }
   },
   "addons": {
