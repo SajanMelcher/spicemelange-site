@@ -27,6 +27,15 @@ const navPath = (h: string) => (h.startsWith('http') ? new URL(h).pathname : h);
   <meta property="og:url" content={canonical} />
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:site" content={SITE.xHandle} />
+  <script is:inline>
+    // Store pages only: remember utm_* / ?ref= (first touch, this tab) so checkout can save it with the order.
+    (function () { try {
+      if (!location.pathname.startsWith('/store')) return;
+      var q = new URLSearchParams(location.search), o = {}, n = 0;
+      ['utm_source','utm_medium','utm_campaign','utm_term','utm_content','ref'].forEach(function (k) { var v = q.get(k); if (v) { o[k] = v.slice(0, 64); n++; } });
+      if (n && !sessionStorage.getItem('sm-src')) sessionStorage.setItem('sm-src', JSON.stringify(o));
+    } catch (e) {} })();
+  </script>
 </head>
 <body class="min-h-dvh flex flex-col">
   <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-spice-500 focus:px-4 focus:py-2 focus:text-night-950">Skip to content</a>

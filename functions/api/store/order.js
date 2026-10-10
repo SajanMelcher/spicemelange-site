@@ -11,7 +11,8 @@ export async function onRequestPost(context) {
   const b = await readJson(context.request);
   if (!b) return json(400, { ok: false, reason: 'bad_request' });
   const selftestKey = new URL(context.request.url).searchParams.get('selftest') ?? undefined;
-  const r = await createOrder(cfg, { sku: String(b.sku ?? ''), email: b.email ? String(b.email).trim() : null, ipHash: await ipHash(context.request, cfg.secret), selftestKey });
+  const r = await createOrder(cfg, { sku: String(b.sku ?? ''), email: b.email ? String(b.email).trim() : null, ipHash: await ipHash(context.request, cfg.secret), selftestKey,
+    source: { ...(b.src && typeof b.src === 'object' ? b.src : {}), ...Object.fromEntries(['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'ref'].filter((k) => typeof b[k] === 'string').map((k) => [k, b[k]])) } });
   return json(r.ok ? 201 : r.status, r);
 }
 export async function onRequestGet(context) {

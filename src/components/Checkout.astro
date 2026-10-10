@@ -38,6 +38,11 @@
   </dialog>
 
 <script>
+  // Sales source (first touch per tab): utm_* and ?ref= from store pages, saved with the order. No cookies, no third parties.
+  const SRC_KEY = 'sm-src';
+  function readSource(): Record<string, string> | undefined {
+    try { return JSON.parse(sessionStorage.getItem(SRC_KEY) || 'null') ?? undefined; } catch { return undefined; }
+  }
   const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
   const dlg = $('checkout') as HTMLDialogElement;
   const msg = (t: string) => ($('co-msg').textContent = t);
@@ -82,7 +87,7 @@
   }));
   $('co-create').addEventListener('click', async () => {
     msg('Creating order…');
-    const r = await api('/api/store/order', { sku, email: ($('co-email') as HTMLInputElement).value.trim() || undefined });
+    const r = await api('/api/store/order', { sku, email: ($('co-email') as HTMLInputElement).value.trim() || undefined, src: readSource() });
     if (!r.ok) return say(r);
     msg(''); showOrder(r.order);
   });

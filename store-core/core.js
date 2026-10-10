@@ -219,7 +219,21 @@ async function holdAmount(cfg, amount, orderId, nowMs, holdUntilMs) {
   return changes(r) === 1;
 }
 
-export async function createOrder(cfg, { sku, email, ipHash, selftestKey, nowMs = Date.now() }) {
+const SRC_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
+/** Sales-source fields from an order request: utm_* (<= 64 chars of [A-Za-z0-9 ._~+-]) and ref (a-z0-9-, 2..32). Anything else is dropped. */
+export function cleanSource(src) {
+  const out = {};
+  if (!src || typeof src !== 'object') return out;
+  for (const k of SRC_KEYS) {
+    const v = typeof src[k] === 'string' ? src[k].trim().slice(0, 64) : '';
+    if (v && /^[A-Za-z0-9 ._~+-]+$/.test(v)) out[k] = v;
+  }
+  const r = typeof src.ref === 'string' ? src.ref.trim().toLowerCase() : '';
+  if (/^[a-z0-9-]{2,32}$/.test(r)) out.ref = r;
+  return out;
+}
+
+export async function createOrder(cfg, { sku, email, ipHash, selftestKey, source, nowMs = Date.now() }) {
   const p = bySku(sku);
   if (!p || p.comingSoon || p.retired || p.addon) return { ok: false, status: 400, reason: 'unknown_product' }; // retired: download-only; addon: delivered with its parent
   // Hidden SKUs behave exactly like unknown ones unless the secret flag matches.
@@ -253,10 +267,25 @@ export async function createOrder(cfg, { sku, email, ipHash, selftestKey, nowMs 
     if (await holdAmount(cfg, a, id, nowMs, holdUntil)) amount = a;
   }
   if (amount === null) return { ok: false, status: 503, reason: 'busy_try_again' };
-  await cfg.db.prepare(
+  const th = await sha256Hex(token);
+  const src = cleanSource(source);
+  const base9 = [id, p.sku, cfg.net, amount, th, nowMs, expiresMs, email || null, cfg.payTo];
+  const plain = () => cfg.db.prepare(
     `INSERT INTO orders (id, sku, net, amount_atomic, token_hash, created_ms, expires_ms, status, email, attempts, pay_to)
      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'open', ?8, 0, ?9)`,
-  ).bind(id, p.sku, cfg.net, amount, await sha256Hex(token), nowMs, expiresMs, email || null, cfg.payTo).run();
+  ).bind(...base9).run();
+  if (Object.keys(src).length) {
+    try {
+      await cfg.db.prepare(
+        `INSERT INTO orders (id, sku, net, amount_atomic, token_hash, created_ms, expires_ms, status, email, attempts, pay_to,
+           utm_source, utm_medium, utm_campaign, utm_term, utm_content, ref)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'open', ?8, 0, ?9, ?10, ?11, ?12, ?13, ?14, ?15)`,
+      ).bind(...base9, ...SRC_KEYS.map((k) => src[k] ?? null), src.ref ?? null).run();
+    } catch (e) {
+      if (!/no (such )?column|has no column/i.test(String(e?.message ?? e))) throw e;
+      await plain(); // migration 0006 not applied yet: keep selling, drop the source
+    }
+  } else await plain();
   return {
     ok: true,
     order: {
