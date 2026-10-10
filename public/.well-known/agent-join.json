@@ -175,7 +175,7 @@
     ],
     "license_object": {
       "status": "store licenses will be locked to the buyer's wallet; license minting starts when the locked type is live on mainnet",
-      "transferable": false,
+      "will_be_transferable": false,
       "minting_live": false,
       "delivery": "ZIP via the order flow above (Seal delivery is not live)",
       "current_mainnet_type": {
