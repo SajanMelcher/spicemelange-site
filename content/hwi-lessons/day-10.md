@@ -25,7 +25,7 @@ Say a round trip earns a small spread. Subtract the buy fee, the sell fee, and t
 - **Don't churn.** Use your `keepTolerancePct` so the bot doesn't cancel and re-place orders for tiny moves. Fewer transactions, less gas.
 
 ## Keep a gas cushion
-When you go live, your bot needs a little SUI in its wallet for gas. If gas runs low, orders can't be placed or cancelled. That's another good reason the bot halts on repeated errors instead of retrying forever.
+When you go live, your bot's key needs a little SUI in its account for gas. If gas runs low, orders can't be placed or cancelled. That's another good reason the bot halts on repeated errors instead of retrying forever.
 
 ## Today's practice task for your bot
 > Run the HALT check. For our paper round trips so far, show me the gross spread, buy fee, sell fee and net result for each, using our paper fee setting. Then estimate how many order transactions per day we'd send live (places, re-centers, cancels), so I can think about gas. Read-only; change nothing.

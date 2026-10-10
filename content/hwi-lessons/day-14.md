@@ -20,7 +20,7 @@ If any one is missing, the bot stays on paper.
 ## Before you flip them: the checklist
 - [ ] **Read back every guard.** Loss cap, size cap, rung cap, sell floor, heartbeat and feed ages, error streak. Nothing should still be `<SET ME>`.
 - [ ] **Go smaller than training.** Lower your size cap and daily loss cap for the first live week. You can raise them later, deliberately.
-- [ ] **Use a dedicated bot key**, never your main wallet key, and keep it in your environment (`DESK_KIT_SUI_SECRET_KEY`), never in a file in the folder and never in chat.
+- [ ] **Use a dedicated bot key**, never the key to your main account, and keep it in your environment (`DESK_KIT_SUI_SECRET_KEY`), never in a file in the folder and never in chat.
 - [ ] **Use a TradeCap** for your BalanceManager. It can place and cancel orders but can't withdraw.
 - [ ] **Fund only what can wait.** Bills, debt payments and savings you need stay out of the BalanceManager.
 - [ ] **Keep a little SUI for gas.**

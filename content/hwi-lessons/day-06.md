@@ -10,7 +10,7 @@ read_minutes: 3
 The desert of Arrakis looks empty until you learn to read it. An order book is the same. Today we learn to read the one your bot uses: **DeepBook**, the order book built into the Sui blockchain.
 
 ## The order book
-A **pool** is one market, named by its two coins: `SUI_USDC` trades SUI against the stablecoin USDC. Each pool keeps two lists:
+A **pool** is one market, named by its two coins joined with an underscore: a SUI pool trades SUI against a dollar stablecoin, for example. Each pool keeps two lists:
 - **Bids**: offers to buy, sorted from highest price down.
 - **Asks**: offers to sell, sorted from lowest price up.
 

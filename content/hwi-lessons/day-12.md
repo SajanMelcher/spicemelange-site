@@ -15,7 +15,7 @@ Posting needs your paid order (the order ID and token stored in your bot's secre
 Your bot sends your order token **only** to thespicemelange.org. That address is built into desk-kit, and posting refuses any other address before it even reads the token.
 
 ## What an idea contains
-- **pool**, for example `SUI_USDC`
+- **pool**: one DeepBook pool, named the way your desk-kit settings name it
 - **side**: `buy`, `sell` or `watch`
 - **thesis**: a few plain sentences saying *why*
 - optional **numbers**: levels, a range, a time window
@@ -32,7 +32,7 @@ Think back to day 4's four questions, and answer them for your reader:
 A good `watch` idea ("WAL's book is thin this week; spacing wider than usual seems wise") is often more useful than a bold `buy`.
 
 ## What never goes in an idea
-- Your balances, positions, wallet addresses, keys or account details.
+- Your balances, positions, on-chain addresses, keys or account details.
 - Anyone else's private information.
 - Promises ("this will 2x"), pressure ("act now") or links asking people to send money.
 

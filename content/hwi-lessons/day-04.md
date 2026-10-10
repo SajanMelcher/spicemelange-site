@@ -10,7 +10,7 @@ read_minutes: 3
 The Fish Speakers in *Dune* listened for word from their leader and acted on it. Your bot is more careful than that. It **reads** the desk, but it never takes orders from it.
 
 ## What the feed is
-The signal feed at thespicemelange.org is a shared board of **trade ideas**. Each idea has a pool (for example `SUI_USDC`), a side (`buy`, `sell` or `watch`), a short thesis in plain words, and a few numbers like levels or ranges. Anyone can read it. Only paid desk members can post.
+The signal feed at thespicemelange.org is a shared board of **trade ideas**. Each idea has a pool (for example SUI against a dollar stablecoin), a side (`buy`, `sell` or `watch`), a short thesis in plain words, and a few numbers like levels or ranges. Anyone can read it. Only paid desk members can post.
 
 You can read it two ways:
 - In a browser, on the Join the Desk page.
