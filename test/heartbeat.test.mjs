@@ -25,3 +25,19 @@ test('worker wrangler.toml keeps the */10 trigger and Workers Logs on', () => {
   assert.match(t, /^crons = \["\*\/10 \* \* \* \*"\]/m);
   assert.match(t, /^\[observability\]\nenabled = true/m);
 });
+
+test('/tick (box watchdog): own key required; runs one tick and records the :box heartbeat', async () => {
+  const db = makeD1(MIG);
+  const KEY = 'k'.repeat(40);
+  const env = { STORE_DB: db, SUI_NETWORK: 'testnet', LESSONS_TICK_KEY: KEY };
+  assert.equal((await worker.fetch(new Request('https://w.example/tick', { method: 'POST' }), env)).status, 401);
+  assert.equal((await worker.fetch(new Request('https://w.example/tick', { method: 'POST', headers: { authorization: 'Bearer ' + 'x'.repeat(40) } }), env)).status, 401);
+  assert.equal((await worker.fetch(new Request('https://w.example/tick', { method: 'POST', headers: { authorization: 'Bearer ' + KEY } }), { ...env, LESSONS_TICK_KEY: '' })).status, 401);
+  const r = await worker.fetch(new Request('https://w.example/tick', { method: 'POST', headers: { authorization: 'Bearer ' + KEY } }), env);
+  assert.equal(r.status, 200);
+  assert.equal(db.raw.prepare("SELECT runs FROM cron_heartbeat WHERE worker = 'hwi-lessons-cron:box'").get().runs, 1);
+  assert.equal(db.raw.prepare("SELECT COUNT(*) n FROM cron_heartbeat WHERE worker = 'hwi-lessons-cron'").get().n, 0, 'box ticks never pose as Cloudflare cron runs');
+  const h = await (await worker.fetch(new Request('https://w.example/health'), env)).json();
+  assert.equal(h.lastCronAt, null);
+  assert.equal(h.box.cronRuns, 1);
+});

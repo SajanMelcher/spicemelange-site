@@ -30,15 +30,18 @@ function safeEqual(a, b) {
   let x = 0; for (let i = 0; i < a.length; i++) x |= a.charCodeAt(i) ^ b.charCodeAt(i); return x === 0;
 }
 const summary = (r) => ({ ...r, details: (r.details ?? []).map(({ sub, day, kind, result, http }) => ({ sub, day, kind, result, http })) });
+async function tick(env, ctx, event, source) {
+    // Heartbeat first (awaited, never throws): proves the trigger fired even if the work below fails.
+  await heartbeat(source === 'cloudflare' ? env : { ...env, HEARTBEAT_NAME: `${env.HEARTBEAT_NAME ?? HB_NAME}:${source}` }, event).catch((e) => console.log('heartbeat error', String(e?.message ?? e)));
+  // GL2/GL3: retention purge every run (IP hashes ~1 h, unconfirmed signups 7 d, finished subs 30 d, suggestions 90 d)
+  if (env.STORE_DB) ctx.waitUntil(purge(env.STORE_DB, event.scheduledTime, { salt: env.SUPPRESSION_SALT }).then((n) => console.log('retention purge', JSON.stringify(n))).catch((e) => console.log('purge error', String(e?.message ?? e))));
+  ctx.waitUntil(scheduledRun(env, { nowMs: event.scheduledTime }).then((r) => console.log(JSON.stringify({ at: new Date(event.scheduledTime).toISOString(), confirmations: r.confirmations.details ? summary(r.confirmations) : r.confirmations, lessons: r.lessons.details ? summary(r.lessons) : r.lessons }))));
+  // Free Golden Path course (R2): own flag COURSE_PRODUCTION_SENDING (OFF); same 9 AM PT hour and legal gate.
+  ctx.waitUntil(courseScheduled(env, { nowMs: event.scheduledTime }).then((r) => console.log(JSON.stringify({ course: { confirmations: r.confirmations.details ? summary(r.confirmations) : r.confirmations, lessons: r.lessons.details ? summary(r.lessons) : r.lessons } }))).catch((e) => console.log('course error', String(e?.message ?? e))));
+}
 export default {
   async scheduled(event, env, ctx) {
-    // Heartbeat first (awaited, never throws): proves the trigger fired even if the work below fails.
-    await heartbeat(env, event).catch((e) => console.log('heartbeat error', String(e?.message ?? e)));
-    // GL2/GL3: retention purge every run (IP hashes ~1 h, unconfirmed signups 7 d, finished subs 30 d, suggestions 90 d)
-    if (env.STORE_DB) ctx.waitUntil(purge(env.STORE_DB, event.scheduledTime, { salt: env.SUPPRESSION_SALT }).then((n) => console.log('retention purge', JSON.stringify(n))).catch((e) => console.log('purge error', String(e?.message ?? e))));
-    ctx.waitUntil(scheduledRun(env, { nowMs: event.scheduledTime }).then((r) => console.log(JSON.stringify({ at: new Date(event.scheduledTime).toISOString(), confirmations: r.confirmations.details ? summary(r.confirmations) : r.confirmations, lessons: r.lessons.details ? summary(r.lessons) : r.lessons }))));
-    // Free Golden Path course (R2): own flag COURSE_PRODUCTION_SENDING (OFF); same 9 AM PT hour and legal gate.
-    ctx.waitUntil(courseScheduled(env, { nowMs: event.scheduledTime }).then((r) => console.log(JSON.stringify({ course: { confirmations: r.confirmations.details ? summary(r.confirmations) : r.confirmations, lessons: r.lessons.details ? summary(r.lessons) : r.lessons } }))).catch((e) => console.log('course error', String(e?.message ?? e))));
+    await tick(env, ctx, event, 'cloudflare');
   },
   async fetch(request, env) {
     const u = new URL(request.url);
@@ -46,7 +49,20 @@ export default {
       const c = lessonsConfig(env);
       const gate = await legalGate(c);
       return j(200, { ok: true, net: c.net, productionSending: c.production, testRecipients: c.testRecipients.length, resendKey: Boolean(c.apiKey), footer: Boolean(c.footer), from: c.from, replyTo: c.replyTo,
-        lessonGate: gate.open ? 'open' : gate.reason, privacyStatus: gate.privacyStatus, termsResendLine: gate.termsLine , ...(await lastHeartbeat(env)) });
+        lessonGate: gate.open ? 'open' : gate.reason, privacyStatus: gate.privacyStatus, termsResendLine: gate.termsLine , ...(await lastHeartbeat(env)), box: await lastHeartbeat({ ...env, HEARTBEAT_NAME: `${env.HEARTBEAT_NAME ?? HB_NAME}:box` }) });
+    }
+    if (request.method === 'POST' && u.pathname === '/tick') {
+      // Box watchdog (Cloudflare's cron dispatcher showed no runs 2026-10-10): does exactly what one scheduled tick does, nothing more.
+      // Own key (LESSONS_TICK_KEY), so the box never holds the admin key. Lesson/confirmation sends are idempotent, so a tick
+      // racing a real cron run sends nothing twice.
+      const m = /^Bearer\s+(\S+)$/i.exec(request.headers.get('authorization') ?? '');
+      const k = String(env.LESSONS_TICK_KEY ?? '');
+      if (k.length < 32 || !m || !safeEqual(m[1], k)) return j(401, { ok: false, reason: 'tick_key_required' });
+      const waits = [];
+      const nowMs = Date.now();
+      await tick(env, { waitUntil: (p) => waits.push(p) }, { scheduledTime: nowMs, cron: 'box' }, 'box');
+      await Promise.allSettled(waits);
+      return j(200, { ok: true, at: new Date(nowMs).toISOString() });
     }
     if (request.method !== 'POST' || !['/run', '/run-confirmations', '/test-send', '/course/run', '/course/run-confirmations', '/course/delete', '/course/sync-contact'].includes(u.pathname)) return j(404, { ok: false });
     const m = /^Bearer\s+(\S+)$/i.exec(request.headers.get('authorization') ?? '');
