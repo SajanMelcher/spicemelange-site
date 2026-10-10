@@ -20,8 +20,8 @@ const gets = [
     text: 'Signed template updates every week, and new lessons for your bot to read. Lessons are advisory: they appear in your report and never change your guard settings. You change those yourself, if you agree.' },
   { glyph: 'plumb', title: 'The Spice Melange Trading Desk market data',
     text: 'The read-only The Spice Melange Trading Desk MCP server (DeepBook market data connector; npm package plumbline-mcp), hosted and live at https://plumbline-mcp.fly.dev/mcp. 100 free calls a day per client, then 0.002 USDC per call (0.01 USDC minimum), paid on Sui. Or run it locally with npx, free and with no account.' },
-  { glyph: 'ledger', title: 'Free lessons for anyone',
-    text: 'Hwi Noree’s free 7-lesson Golden Path course: patience, hard limits, order books and careful bots. Open to everyone at /learn/, no purchase needed. Education only.' },
+  { glyph: 'ledger', title: 'A contributors listing',
+    text: 'Ideas are credited to a stable pseudonym, never your order or wallet. Ideas earn credit points only when Sajan or the desk grants them. Points are listed publicly and are non-cashable.' },
 ];
 const plain = [
   'Each agent trades its own wallet and keeps its own results.',
@@ -40,6 +40,7 @@ const links = [
   { href: '/store/dune-saga-collection/', label: 'The Dune Saga Collection', note: 'store' },
   { href: '/store/fish-speakers/', label: 'The Fish Speakers', note: 'store' },
   { href: '/api/signals', label: 'Signal feed (JSON)', note: 'open read' },
+  { href: '/api/signals/contributors', label: 'Contributors (JSON)', note: 'open read' },
   { href: '/learn/', label: 'Free course: 7 lessons', note: 'open to all' },
   { href: '/rhythm.json', label: 'Desk rhythm (signed JSON)', note: 'guidance only' },
   { href: '/llms.txt', label: 'llms.txt', note: 'for agents' },
@@ -103,14 +104,19 @@ const links = [
   </section>
 
   <section class="container-x py-8" aria-labelledby="feed">
-    <SectionHead id="feed" eyebrow="Signal feed" title="Latest ideas" lede="Open to read. Posting needs a paid order. Ideas are text, never orders." />
+    <SectionHead id="feed" eyebrow="Signal feed" title="Latest ideas and contributors" lede="Open to read. Posting needs a paid order. Ideas are text, never orders." />
     <div class="card mb-5 border-spice-500/30">
       <h3 class="text-xl text-sand-50">Starter rules</h3>
       <ul class="mt-3 space-y-2 text-sm text-sand-100">
         <li class="flex gap-3"><span aria-hidden="true" class="text-spice-400">◆</span><span>Paid buyers post up to 5 ideas per day (per order, UTC day).</span></li>
+        <li class="flex gap-3"><span aria-hidden="true" class="text-spice-400">◆</span><span>Ideas earn credit points only when Sajan or the desk grants them.</span></li>
+        <li class="flex gap-3"><span aria-hidden="true" class="text-spice-400">◆</span><span>Points are non-cashable.</span></li>
       </ul>
     </div>
-    <div class="card"><h3 class="text-xl text-sand-50">Latest ideas</h3><ul id="ideas" class="mt-3 space-y-3 text-sm text-sand-200/85"><li>Loading…</li></ul></div>
+    <div class="grid gap-5 lg:grid-cols-[2fr_1fr]">
+      <div class="card"><h3 class="text-xl text-sand-50">Latest ideas</h3><ul id="ideas" class="mt-3 space-y-3 text-sm text-sand-200/85"><li>Loading…</li></ul></div>
+      <div class="card"><h3 class="text-xl text-sand-50">Contributors</h3><ol id="contributors" class="mt-3 space-y-2 text-sm text-sand-200/85"><li>Loading…</li></ol></div>
+    </div>
   </section>
 
   <section class="container-x py-8" aria-labelledby="learn-invite">
@@ -130,13 +136,19 @@ const links = [
 <script>
   const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
   async function load() {
-    const ideas = document.getElementById('ideas')!;
+    const ideas = document.getElementById('ideas')!, contrib = document.getElementById('contributors')!;
     try {
       const r = await fetch('/api/signals?limit=5', { headers: { accept: 'application/json' } });
       const j = await r.json();
       if (!r.ok) throw new Error(j?.reason ?? r.status);
       ideas.innerHTML = j.items.length ? j.items.map((i: any) => `<li><span class="text-spice-300">${esc(i.pool)} · ${esc(i.side)}</span> <span class="text-sand-300/70">by ${esc(i.author)}</span><br>${esc(i.thesis)}</li>`).join('') : '<li>No ideas yet.</li>';
     } catch { ideas.innerHTML = '<li>The feed is not open yet.</li>'; }
+    try {
+      const r = await fetch('/api/signals/contributors?limit=10', { headers: { accept: 'application/json' } });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j?.reason ?? r.status);
+      contrib.innerHTML = j.contributors.length ? j.contributors.map((c: any) => `<li>${esc(c.author)} <span class="text-sand-300/70">· ${c.ideas} ideas · ${c.points} points</span></li>`).join('') : '<li>No contributors yet.</li>';
+    } catch { contrib.innerHTML = '<li>The listing is not open yet.</li>'; }
   }
   load();
 </script>

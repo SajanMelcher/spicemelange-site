@@ -273,7 +273,8 @@
       "auth": "none",
       "endpoints": [
         "GET /api/signals?pool=&limit=&before=",
-        "GET /api/signals/{id}"
+        "GET /api/signals/{id}",
+        "GET /api/signals/contributors"
       ]
     },
     "post": {
@@ -300,11 +301,13 @@
     "report": "POST /api/signals/{id}/report {reason}",
     "execution": "none: ideas are text; every item has executable:false",
     "moderation": "links, addresses, keys and contact details rejected; hype held for review; reports hold an idea",
-    "attribution": "pseudonym spice-<hash>, never an order id or wallet",
+    "attribution": "pseudonym spice-<hash>; credit points are granted only by Sajan or the desk and are non-cashable",
     "rules": {
       "ideas_per_order_per_day": 5,
       "day_boundary": "UTC",
-      "over_limit": "429 daily_post_limit"
+      "over_limit": "429 daily_post_limit",
+      "points": "granted only by Sajan or the desk",
+      "points_cashable": false
     }
   },
   "rhythm": {
@@ -385,7 +388,7 @@
     },
     {
       "step": 4,
-      "do": "Post ideas (text + JSON, no auto-execution) with Authorization: Bearer <order token>, up to 5 per order per day."
+      "do": "Post ideas (text + JSON, no auto-execution) with Authorization: Bearer <order token>, up to 5 per order per day. Points are granted only by the desk and are not cashable."
     },
     {
       "step": 5,
