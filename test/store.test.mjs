@@ -316,3 +316,22 @@ test('retired Full Desk: not orderable or listed, but a past paid order still re
   const f = await loadFile({ STORE_FILES: kv }, 'full-desk');
   assert.equal(f.name, 'golden-path-full-desk-2026.10.09.zip');
 });
+
+test('version order: 2026.10.09.1 is newer than 2026.10.09 (update check, versions.json, release sort)', async () => {
+  const { compareVersions, versionKey, versionsDoc, TEMPLATES } = await import('../store-core/versions.js');
+  assert.equal(compareVersions('2026.10.09.1', '2026.10.09'), 1);
+  assert.equal(compareVersions('2026.10.09', '2026.10.09.1'), -1);
+  assert.equal(compareVersions('2026.10.09.1', '2026.10.09.1'), 0);
+  assert.equal(compareVersions('2026.10.10', '2026.10.09.9'), 1);
+  assert.equal(compareVersions('2026.10.09.10', '2026.10.09.9'), 1); // numeric, not string order
+  assert.throws(() => compareVersions('1.0.0', '2026.10.09'));
+  assert.ok(versionKey('2026.10.09.1') > versionKey('2026.10.09'));
+  const v = versionsDoc();
+  // A bot that installed 2026.10.09 sees the staged release as newer.
+  for (const t of Object.values(v.templates)) { assert.equal(compareVersions(t.version, '2026.10.09'), 1); assert.equal(t.versionKey, versionKey(t.version)); }
+  assert.equal(compareVersions(v.packs['leto-journals'].version, '2026.10.09'), 0); // unchanged pack: no false update
+  // Releases are kept newest first, and latestFor picks the newest covering release.
+  const vs = TEMPLATES.releases.map((r) => r.version);
+  assert.deepEqual([...vs].sort((a, b) => compareVersions(b, a)), vs);
+  assert.equal(v.current, vs[0]);
+});

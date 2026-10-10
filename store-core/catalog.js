@@ -18,7 +18,7 @@ export const CATALOG = [
     highlights: ['Route → research gate → completion gate → action guard', 'Daily orders and Sunday review', 'Escalates with options, not walls of text'] }),
   t({ sku: 'moneo', name: 'Moneo', role: "Mentat Researcher", glyph: 'scroll',
     quote: 'The loyal minister and human computer.',
-    blurb: "Your research minister. Writes at most three evidence-backed findings a day, each with sources, an uncertainty note and what would prove it wrong, and runs fee-aware backtests before any strategy goes live. Proposes, never trades.",
+    blurb: "Your research minister. Writes a small, owner-set number of evidence-backed findings a day, each with sources, an uncertainty note and what would prove it wrong, and runs fee-aware backtests before any strategy goes live. Proposes, never trades.",
     highlights: ['Evidence records and a coverage ledger', 'Proposal format with fees and risks', 'Strategy Gate: backtest, stress test, paper trade'] }),
   t({ sku: 'fish-speakers', name: 'The Fish Speakers', role: "Execution Operator", glyph: 'blade',
     quote: 'The disciplined guard who acts only on command.',
