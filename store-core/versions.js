@@ -30,7 +30,9 @@ export function versionsDoc(site = 'https://thespicemelange.org') {
     versionRule: 'Versions are YYYY.MM.DD with an optional .N for a same-day re-release. Newer = larger versionKey (YYYYMMDD*1000+N); e.g. 2026.10.09.1 is newer than 2026.10.09.',
     howToUpdate: `Re-download the latest at ${site}/store/download/ with your order ID and token. Always serves the current version.`,
     changelog: `${site}/templates/changelog/`,
-    templates: Object.fromEntries(T.templates.map(entry)),
+    // Every update-checked product is listed under `templates` by slug (the packs' skills look there), seats first,
+    // then the Dune Saga Collection and Leto's Secret Journals. `packs` repeats the non-seat products for older readers.
+    templates: Object.fromEntries([...T.templates, ...T.packs].map(entry)),
     packs: Object.fromEntries(T.packs.map(entry)),
   };
 }

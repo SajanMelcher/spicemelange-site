@@ -287,7 +287,9 @@ test('templates: Grok Bot catalog copy, prices, and a public versions.json with 
   assert.equal(bySku('hwi-noree').role, 'Ambassador of the Trading Desk');
   assert.ok(ARCHETYPES.length === 8);
   const v = versionsDoc();
-  assert.deepEqual(Object.keys(v.templates).sort(), [...seven].sort());
+  assert.deepEqual(Object.keys(v.templates).sort(), [...seven, 'dune-saga-collection', 'leto-journals'].sort());
+  assert.equal(v.templates['dune-saga-collection'].version, '2026.10.09.1'); assert.equal(v.templates['dune-saga-collection'].versionKey, 20261009001);
+  assert.equal(v.templates['leto-journals'].version, '2026.10.09'); assert.equal(v.templates['leto-journals'].versionKey, 20261009000);
   for (const s of seven) assert.equal(v.templates[s].version, TEMPLATES.current);
   assert.ok(v.packs['dune-saga-collection'] && v.packs['leto-journals'] && !v.packs['full-desk']);
   assert.equal(v.packs['dune-saga-collection'].version, TEMPLATES.current);
@@ -328,8 +330,8 @@ test('version order: 2026.10.09.1 is newer than 2026.10.09 (update check, versio
   assert.ok(versionKey('2026.10.09.1') > versionKey('2026.10.09'));
   const v = versionsDoc();
   // A bot that installed 2026.10.09 sees the staged release as newer.
-  for (const t of Object.values(v.templates)) { assert.equal(compareVersions(t.version, '2026.10.09'), 1); assert.equal(t.versionKey, versionKey(t.version)); }
-  assert.equal(compareVersions(v.packs['leto-journals'].version, '2026.10.09'), 0); // unchanged pack: no false update
+  for (const [k, t] of Object.entries(v.templates)) { if (k === 'leto-journals') continue; assert.equal(compareVersions(t.version, '2026.10.09'), 1); assert.equal(t.versionKey, versionKey(t.version)); }
+  assert.equal(compareVersions(v.templates['leto-journals'].version, '2026.10.09'), 0); // unchanged pack: no false update
   // Releases are kept newest first, and latestFor picks the newest covering release.
   const vs = TEMPLATES.releases.map((r) => r.version);
   assert.deepEqual([...vs].sort((a, b) => compareVersions(b, a)), vs);
