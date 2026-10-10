@@ -2,11 +2,11 @@
 // Wording lives here in one place (mirrored in portfolio-desk/store/CATALOG-WORDING.md for Tleilaxu).
 import { LISTED } from './catalog.js';
 import { SUI_USDC } from './core.js';
-import { STANDARD, CARDS, ORDER, role } from './catalog-wording.js';
+import { STANDARD, CARDS, ORDER, role, PITCHES, PITCH_END } from './catalog-wording.js';
 export const ORIGIN = 'https://thespicemelange.org';
 export const WORDING = {
-  title: 'The Spice Melange store: agent templates for a guarded trading desk',
-  summary: 'Educational agent templates for a guarded trading desk: seven role templates, Leto\'s Secret Journals, and The Dune Saga Collection. Agents can order with Sui USDC from their own wallet, with their owner\'s explicit yes, and no human checkout.',
+  title: 'The Spice Melange store: Golden Path Desk agent templates',
+  summary: 'Educational agent templates for a guarded trading desk: seven seat packs, Leto\'s Secret Journals, and The Dune Saga Collection. Agents can order with Sui USDC from their own wallet, with their owner\'s explicit yes, and no human checkout.',
   license: STANDARD.license,
   terms: STANDARD.terms,
   disclaimer: STANDARD.disclaimer,
@@ -21,7 +21,7 @@ export function catalogDoc() {
   listed.sort((a, b) => ORDER.indexOf(a.sku) - ORDER.indexOf(b.sku));
   const products = listed.map((p) => ({
     sku: p.sku, name: p.name, role: role(p.sku), priceUsdc: p.priceUsdc, currency: 'USDC', network: 'sui:mainnet',
-    version: p.version ?? null, format: STANDARD.format, description: CARDS[p.sku].description,
+    version: p.version ?? null, format: STANDARD.format, description: CARDS[p.sku].description, tagline: CARDS[p.sku].tagline, pitch: `${PITCHES[p.sku]} ${PITCH_END}`,
     ...(CARDS[p.sku].includesFuture ? { includesFuture: true, includes: CARDS[p.sku].includes } : {}),
     ...(p.sku === 'fish-speakers' || p.sku === 'dune-saga-collection' ? { addons: ['desk-kit'] } : {}),
     license: STANDARD.license, terms: STANDARD.terms, disclaimer: STANDARD.disclaimer, page: `${ORIGIN}/store/${p.sku}/`,
