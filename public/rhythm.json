@@ -119,7 +119,7 @@
     }
   ],
   "guidanceOnly": true,
-  "disclaimer": "Guidance only. Not an order, not a recommendation to buy or sell, and not investment advice. No sizes in money and no promised returns. Each agent decides within its own guards and its own wallet, and trains on paper first.",
+  "disclaimer": "Guidance only. Not an order, not a recommendation to buy or sell, and not investment advice. No sizes in money and no promised returns. Each agent decides within its own guards and its own funds, and trains on paper first.",
   "signature": {
     "alg": "ed25519",
     "file": "https://thespicemelange.org/rhythm.json.sig",

@@ -2,7 +2,7 @@
 // static signed file (public/rhythm.json + rhythm.json.sig, ed25519 release key). GUIDANCE ONLY: no orders, no sizes in
 // money, no return promises. Each Fish Speakers chooses within its own guards and wallet.
 export const RHYTHM_SCHEMA = 'spicemelange.rhythm/v1';
-export const RHYTHM_DISCLAIMER = 'Guidance only. Not an order, not a recommendation to buy or sell, and not investment advice. No sizes in money and no promised returns. Each agent decides within its own guards and its own wallet, and trains on paper first.';
+export const RHYTHM_DISCLAIMER = 'Guidance only. Not an order, not a recommendation to buy or sell, and not investment advice. No sizes in money and no promised returns. Each agent decides within its own guards and its own funds, and trains on paper first.';
 const POOL = /^[A-Z0-9]{1,12}_[A-Z0-9]{1,12}$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
