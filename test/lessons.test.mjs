@@ -18,8 +18,12 @@ async function setup(envOver = {}) {
   await add('SM-AAAAAAAAAA', TOK); await add('SM-BBBBBBBBBB', TOK2, 'testnet', 'open'); await add('SM-CCCCCCCCCC', TOK, 'mainnet');
   const env = { STORE_DB: db, SUI_NETWORK: 'testnet', RESEND_API_KEY: 're_test', LESSONS_TEST_RECIPIENTS: 'delivered@resend.dev', LESSONS_BASE_URL: 'https://hwi-lessons.example.dev', LESSONS_FOOTER: FOOT, ...envOver };
   const sent = [];
-  const fetchImpl = async (url, init) => { sent.push({ url, headers: init.headers, body: JSON.parse(init.body) }); return new Response(JSON.stringify({ id: `re_${sent.length}` }), { status: 200 }); };
-  return { db, env, sent, fetchImpl, lcfg: lessonsConfig(env), add };
+  const legal = { privacy: 200, terms: '<h2>9. Privacy</h2><p>Lesson emails go out <em>through Resend</em>, our email provider.</p>' };
+  const fetchImpl = async (url, init) => {
+    if (String(url).endsWith('/privacy/')) return new Response('privacy', { status: legal.privacy });
+    if (String(url).endsWith('/terms/')) return new Response(legal.terms, { status: 200 });
+    sent.push({ url, headers: init.headers, body: JSON.parse(init.body) }); return new Response(JSON.stringify({ id: `re_${sent.length}` }), { status: 200 }); };
+  return { db, env, sent, fetchImpl, lcfg: lessonsConfig(env), add, legal };
 }
 const sub = (lcfg, o = {}) => subscribe(lcfg, { orderId: 'SM-AAAAAAAAAA', token: TOK, email: 'Delivered@Resend.dev', source: 'checkout', nowMs: T0, ...o });
 const row = (db) => db.raw.prepare('SELECT * FROM lesson_subs ORDER BY consent_ms').get();
@@ -231,6 +235,29 @@ test('mainnet with the flag OFF: only test-list addresses can sign up, get a con
   // flag ON: unpaid orders are no longer eligible, even for the old tester
   const on = { ...t.env, LESSONS_PRODUCTION_SENDING: '1' };
   assert.equal((await runLessons(on, { nowMs: T0 + 2 * DAY, fetchImpl: t.fetchImpl })).sent, 0);
+});
+test('legal gate: production lesson runs hold (and say why) until /privacy/ is 200 and /terms/ has the Resend line; confirmations still go', async () => {
+  const t = await setup({ SUI_NETWORK: 'mainnet', LESSONS_PRODUCTION_SENDING: '1' });
+  t.legal.privacy = 404; t.legal.terms = '<p>no third-party trackers</p>';
+  await sub(t.lcfg, { orderId: 'SM-CCCCCCCCCC' });
+  const s1 = await scheduledRun(t.env, { nowMs: T0, fetchImpl: t.fetchImpl });
+  assert.equal(s1.confirmations.sent, 1);
+  const r = row(t.db); await confirm(t.db, { subId: r.id, token: r.confirm_token, nowMs: T0 + 1 });
+  const h = await runLessons(t.env, { nowMs: T0 + 2, fetchImpl: t.fetchImpl });
+  assert.equal(h.held, true); assert.equal(h.reason, 'held: privacy/terms not live'); assert.equal(h.sent, 0);
+  t.legal.privacy = 200; // privacy alone is not enough
+  assert.equal((await runLessons(t.env, { nowMs: T0 + 3, fetchImpl: t.fetchImpl })).held, true);
+  t.legal.terms = '<p>Emails are sent <strong>through   Resend</strong>.</p>';
+  const ok = await runLessons(t.env, { nowMs: T0 + 4, fetchImpl: t.fetchImpl });
+  assert.equal(ok.held, undefined); assert.equal(ok.sent, 1);
+  // network failure fails closed
+  const down = async (u, i) => (/privacy|terms/.test(String(u)) ? Promise.reject(new Error('down')) : t.fetchImpl(u, i));
+  assert.equal((await runLessons(t.env, { nowMs: T0 + 2 * DAY, fetchImpl: down })).held, true);
+});
+test('legal gate does not apply to test mode', async () => {
+  const t = await setup(); t.legal.privacy = 404;
+  await optIn(t);
+  assert.equal((await runLessons(t.env, { nowMs: T0 + 5, fetchImpl: t.fetchImpl })).sent, 1);
 });
 test('confirm/unsubscribe pages: strict CSP with no scripts, form posts to self', () => {
   assert.match(PAGE_CSP, /default-src 'none'/); assert.match(PAGE_CSP, /form-action 'self'/); assert.doesNotMatch(PAGE_CSP, /script-src/);

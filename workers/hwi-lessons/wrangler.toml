@@ -17,7 +17,7 @@ crons = ["*/10 * * * *"]
 
 [vars]
 SUI_NETWORK = "mainnet"
-LESSONS_PRODUCTION_SENDING = "0" # stays "0" until double opt-in + unsubscribe + footer are verified on PRODUCTION (Hwi 7:26 AM PT)
+LESSONS_PRODUCTION_SENDING = "1" # ON 2026-10-10 (Sajan 7:16 AM PT; R0 verified on production; Hwi confirmed). Lesson runs still hold until /privacy/ + terms Resend line are live.
 LESSONS_FROM = '"Hwi Noree, The Spice Melange" <hwi@thespicemelange.org>'
 LESSONS_REPLY_TO = "reserve@thespicemelange.org"
 LESSONS_BASE_URL = "https://thespicemelange.org"

@@ -47,6 +47,9 @@ export function lessonsConfig(env = {}) {
     footer: String(env.LESSONS_FOOTER ?? '').trim(),
     baseUrl: String(env.LESSONS_BASE_URL ?? 'https://thespicemelange.org').replace(/\/+$/, ''),
     resendUrl: String(env.LESSONS_RESEND_URL ?? 'https://api.resend.com/emails'),
+    // Legal gate (Siona O2, Hwi): production lesson runs hold until /privacy/ is live and /terms/ carries the Resend
+    // opt-in line. The marker is agreed in portfolio-desk/store/FOR-TLEILAXU-S9-RESEND.md.
+    termsMarker: String(env.LESSONS_TERMS_MARKER ?? 'through Resend').toLowerCase(),
   };
 }
 
@@ -167,6 +170,18 @@ async function resendPost(lcfg, fetchImpl, payload, idemKey) {
   } catch (e) { return { ok: false, http: 0, error: String(e?.message ?? e).slice(0, 200) }; }
 }
 
+/** Legal gate: https://<site>/privacy/ answers 200 AND /terms/ text contains the Resend opt-in marker. Fails closed. */
+export async function legalGate(lcfg, fetchImpl = fetch) {
+  const get = async (path) => {
+    try { const r = await fetchImpl(`${lcfg.baseUrl}${path}`, { headers: { 'cache-control': 'no-cache' }, redirect: 'follow' }); return { status: r.status, text: r.ok ? await r.text() : '' }; }
+    catch (e) { return { status: 0, text: '' }; }
+  };
+  const [p, t] = await Promise.all([get('/privacy/'), get('/terms/')]);
+  const terms = t.text.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').toLowerCase();
+  const privacyLive = p.status === 200, termsLine = t.status === 200 && terms.includes(lcfg.termsMarker);
+  return { open: privacyLive && termsLine, privacyStatus: p.status, termsStatus: t.status, termsLine, reason: privacyLive && termsLine ? null : 'held: privacy/terms not live' };
+}
+
 /** Double opt-in step 2: send the confirmation email to pending requests whose order is paid (runs every 10 min). */
 export async function runConfirmations(env, { nowMs = Date.now(), fetchImpl = fetch, dryRun = false, limit = 100 } = {}) {
   const lcfg = lessonsConfig(env);
@@ -204,6 +219,10 @@ export async function runLessons(env, { nowMs = Date.now(), fetchImpl = fetch, d
   const mode = lcfg.production ? 'production' : 'test';
   const out = { mode, net: lcfg.net, sent: 0, skipped: 0, failed: 0, details: [] };
   const g = gate(lcfg, dryRun); if (g) return { ...out, ok: g === 'sending_off', reason: g };
+  if (lcfg.production) {
+    const lg = await legalGate(lcfg, fetchImpl);
+    if (!lg.open) return { ...out, ok: true, held: true, reason: lg.reason, gate: lg };
+  }
   const useForce = force && !lcfg.production && lcfg.net === 'testnet';
   const { results = [] } = await lcfg.db.prepare(`SELECT s.* FROM lesson_subs s JOIN orders o ON o.id = s.order_id
     WHERE s.net = ?1 AND s.status = 'active' AND s.confirmed_ms IS NOT NULL AND s.confirm_sent_ms IS NOT NULL AND s.confirmed_ms >= s.consent_ms

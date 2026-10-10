@@ -6,7 +6,7 @@
 //   POST /test-send?sub=<id>&day=N -> testnet only: send ONE lesson to that subscription if its address is on
 //                          LESSONS_TEST_RECIPIENTS; no D1 change, never counts as a real send
 // Production sending is OFF unless LESSONS_PRODUCTION_SENDING=1, and refuses without the LESSONS_FOOTER secret.
-import { runLessons, runConfirmations, scheduledRun, lessonsConfig, lessonEmail } from '../../store-core/lessons.js';
+import { runLessons, runConfirmations, scheduledRun, lessonsConfig, lessonEmail, legalGate } from '../../store-core/lessons.js';
 
 const j = (s, b) => new Response(JSON.stringify(b, null, 1), { status: s, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
 function safeEqual(a, b) {
@@ -22,7 +22,9 @@ export default {
     const u = new URL(request.url);
     if (u.pathname === '/health') {
       const c = lessonsConfig(env);
-      return j(200, { ok: true, net: c.net, productionSending: c.production, testRecipients: c.testRecipients.length, resendKey: Boolean(c.apiKey), footer: Boolean(c.footer), from: c.from, replyTo: c.replyTo });
+      const gate = await legalGate(c);
+      return j(200, { ok: true, net: c.net, productionSending: c.production, testRecipients: c.testRecipients.length, resendKey: Boolean(c.apiKey), footer: Boolean(c.footer), from: c.from, replyTo: c.replyTo,
+        lessonGate: gate.open ? 'open' : gate.reason, privacyStatus: gate.privacyStatus, termsResendLine: gate.termsLine });
     }
     if (request.method !== 'POST' || !['/run', '/run-confirmations', '/test-send'].includes(u.pathname)) return j(404, { ok: false });
     const m = /^Bearer\s+(\S+)$/i.exec(request.headers.get('authorization') ?? '');

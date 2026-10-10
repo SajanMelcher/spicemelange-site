@@ -12,7 +12,7 @@ export function page(status, title, paragraphs, form) {
 <p><a href="/" style="color:#a0742f">The Spice Melange</a></p></body></html>`, {
     status,
     headers: {
-      'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-robots-tag': 'noindex',
+      'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store, no-transform', // no-transform: keep the edge from injecting the analytics beacon (this CSP blocks it) 'x-robots-tag': 'noindex',
       'content-security-policy': PAGE_CSP, 'x-frame-options': 'DENY', 'x-content-type-options': 'nosniff',
       'referrer-policy': 'no-referrer', 'strict-transport-security': 'max-age=31536000; includeSubDomains',
     },
