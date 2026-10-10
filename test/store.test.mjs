@@ -295,7 +295,9 @@ test('templates: Grok Bot catalog copy, prices, and a public versions.json with 
   assert.ok(ARCHETYPES.length === 8);
   const v = versionsDoc();
   assert.deepEqual(Object.keys(v.templates).sort(), [...seven, 'dune-saga-collection', 'leto-journals'].sort());
-  assert.equal(v.templates['dune-saga-collection'].version, '2026.10.09.1'); assert.equal(v.templates['dune-saga-collection'].versionKey, 20261009001);
+  assert.equal(v.templates['dune-saga-collection'].version, TEMPLATES.current);
+  const [yy, mm, dd, nn = 0] = TEMPLATES.current.split('.').map(Number);
+  assert.equal(v.templates['dune-saga-collection'].versionKey, (yy * 10000 + mm * 100 + dd) * 1000 + nn);
   assert.equal(v.templates['leto-journals'].version, '2026.10.09'); assert.equal(v.templates['leto-journals'].versionKey, 20261009000);
   for (const s of seven) assert.equal(v.templates[s].version, TEMPLATES.current);
   assert.ok(v.packs['dune-saga-collection'] && v.packs['leto-journals'] && !v.packs['full-desk']);
@@ -349,8 +351,18 @@ test('versions.json: every update-checked entry carries a 64-hex sha256 of the s
   const { versionsDoc } = await import('../store-core/versions.js');
   const v = versionsDoc();
   for (const [k, t] of Object.entries(v.templates)) assert.match(t.sha256 ?? '', /^[0-9a-f]{64}$/, k);
-  assert.equal(v.templates['hwi-noree'].sha256, '79a9a0c3d958c8cbbe503f59c550509506960689a1b243bf97ba2c2bd39efef0');
-  assert.equal(v.templates['dune-saga-collection'].sha256, '5fb75c118841f8aa2ae403f43c55ac6943be6b99f4fc87b904f5945213074417');
+  const { TEMPLATES } = await import('../store-core/versions.js');
+  for (const x of [...TEMPLATES.templates, ...TEMPLATES.packs]) assert.equal(v.templates[x.sku].sha256, x.sha256, x.sku);
+  // When the staged release ZIPs are on this machine (products-private, gitignored), the published hashes must match them byte for byte.
+  const { existsSync } = await import('node:fs');
+  const dir = new URL(`../products-private/staged-${TEMPLATES.current}/`, import.meta.url);
+  if (existsSync(new URL('SHA256SUMS', dir))) {
+    const sums = Object.fromEntries(readFileSync(new URL('SHA256SUMS', dir), 'utf8').trim().split('\n').map((l) => l.split(/\s+/).reverse()));
+    for (const [k, t] of Object.entries(v.templates)) if (sums[`${k}-v${TEMPLATES.current}.zip`]) {
+      assert.equal(t.sha256, sums[`${k}-v${TEMPLATES.current}.zip`], k);
+      assert.equal(t.sha256, createHash('sha256').update(readFileSync(new URL(`${k}-v${TEMPLATES.current}.zip`, dir))).digest('hex'), k);
+    }
+  }
 });
 
 // ---------- auto-update support (10/9/2026) ----------
