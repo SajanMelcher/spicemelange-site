@@ -1,0 +1,46 @@
+# Hwi's practice lessons: daily sender Worker (Cron Trigger). Deploy from this folder:
+#   preview:     npx --yes -p node@22 -p wrangler -- wrangler deploy --env preview
+#   production:  npx --yes -p node@22 -p wrangler -- wrangler deploy        (only after Hwi's review; see HWI-REVIEW.md)
+# Secrets (wrangler secret put ... [--env preview]): RESEND_API_KEY, LESSONS_ADMIN_KEY (>= 32 chars).
+# THE production switch: LESSONS_PRODUCTION_SENDING = "1" in [vars] below AND in the Pages production vars (site wrangler.toml),
+# because the Pages var opens signup and the Worker var opens sending. Both read the same name; flip both in one commit.
+name = "hwi-lessons-cron"
+main = "index.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+[triggers]
+crons = ["0 16 * * *"] # 16:00 UTC daily = 9:00 AM PT (PDT) / 8:00 AM PT (PST)
+
+[vars]
+SUI_NETWORK = "mainnet"
+LESSONS_PRODUCTION_SENDING = "0" # Hwi reviews the lessons first. Set "1" to go live.
+LESSONS_FROM = "Hwi Noree <hwi@thespicemelange.org>"
+LESSONS_REPLY_TO = "reserve@thespicemelange.org"
+LESSONS_BASE_URL = "https://thespicemelange.org"
+
+[[d1_databases]]
+binding = "STORE_DB"
+database_name = "spicemelange-store-prod"
+database_id = "cfe878af-064f-4e0d-81d3-aa08b19e2ceb"
+
+[env.preview]
+name = "hwi-lessons-cron-preview"
+workers_dev = true
+
+[env.preview.triggers]
+crons = ["0 16 * * *"]
+
+[env.preview.vars]
+SUI_NETWORK = "testnet"
+LESSONS_PRODUCTION_SENDING = "0"
+# Test mode: only these addresses ever get mail from the preview sender (Resend's test sink; no real person).
+LESSONS_TEST_RECIPIENTS = "delivered@resend.dev"
+LESSONS_FROM = "Hwi Noree <hwi@thespicemelange.org>"
+LESSONS_REPLY_TO = "reserve@thespicemelange.org"
+LESSONS_BASE_URL = "https://hwi-lessons.spicemelange-site.pages.dev"
+
+[[env.preview.d1_databases]]
+binding = "STORE_DB"
+database_name = "spicemelange-store-preview"
+database_id = "c03d4c24-3cba-43a8-857d-5f8d3c5b7415"
