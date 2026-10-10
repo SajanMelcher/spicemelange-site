@@ -1,0 +1,24 @@
+---
+// Free-lessons invitation + share link (Sajan 4:02 PM PT 10/10, via Hwi: "Offer these lessons instead and a link for others
+// to access it"). Replaces the old idea-credit copy. The link is plain selectable text, so it works without JS; the Copy
+// button is progressive enhancement via the shared .copy-btn handler in Base.astro (no new scripts, CSP unchanged).
+import { LEARN_URL, LEARN_SHARE_URL } from '../data/site';
+interface Props { id?: string; as?: 'h2' | 'h3'; class?: string }
+const { id = 'learn-invite', as: H = 'h2', class: cls = '' } = Astro.props;
+---
+<div class={`card learn-invite border-spice-500/30 ${cls}`}>
+  <p class="eyebrow">Free course · 7 lessons</p>
+  <H id={id} class="mt-2 text-3xl text-sand-50">Walk the Golden Path with Hwi Noree</H>
+  <p class="mt-3 max-w-2xl text-sand-200/90">Seven short lessons on patience, hard limits, reading an order book and keeping a bot on a short leash. Free to read here, or by email. Education only, never advice.</p>
+  <div class="mt-5 flex flex-wrap gap-3">
+    <a class="btn-primary" href="/learn/">Begin the lessons</a>
+  </div>
+  <div class="mt-6 border-t border-sand-200/10 pt-5">
+    <p class="text-sm text-sand-100">Share the water: pass the lessons to a friend on the sand.</p>
+    <div class="mt-2 flex flex-wrap items-center gap-3">
+      <code class="learn-share select-all break-all rounded-md border border-sand-200/15 bg-night-950/90 px-3 py-2 text-sm text-ibad-300" aria-label="Share link">{LEARN_SHARE_URL}</code>
+      <button type="button" class="copy-btn min-h-9 rounded-md border border-sand-200/20 px-3 py-1.5 text-xs text-sand-200 hover:border-ibad-400 hover:text-ibad-300" data-code={LEARN_SHARE_URL} data-label="Copy link" aria-label="Copy the share link" hidden>Copy link</button>
+    </div>
+    <p class="mt-2 text-xs text-sand-300/70">Free for anyone, no purchase needed: <a class="text-ibad-300" href={LEARN_URL}>{LEARN_URL.replace('https://', '')}</a></p>
+  </div>
+</div>

@@ -6,6 +6,7 @@ import Worm from '../components/Worm.astro';
 import Eye from '../components/Eye.astro';
 import SectionHead from '../components/SectionHead.astro';
 import Disclaimer from '../components/Disclaimer.astro';
+import LearnInvite from '../components/LearnInvite.astro';
 import { SITE, mailto } from '../data/site';
 
 const pillars = [
@@ -36,6 +37,7 @@ const ways = [
         </p>
         <div class="mt-8 flex flex-wrap gap-3">
           <a class="btn-primary" href={mailto(SITE.joinSubject)}>Join the Golden Path</a>
+          <a class="btn-ghost" href="/learn/">Free course: 7 lessons</a>
           <a class="btn-ghost" href="/plumbline/">Explore the market data</a>
         </div>
         <p class="mt-4 text-xs text-sand-300/70">Education only. No returns promised. Not financial advice.</p>
@@ -45,6 +47,11 @@ const ways = [
       </div>
     </div>
     <Dunes />
+  </section>
+
+  <!-- FREE COURSE -->
+  <section class="container-x pt-16" aria-labelledby="learn-invite">
+    <LearnInvite id="learn-invite" />
   </section>
 
   <!-- WHAT THE DESK IS -->

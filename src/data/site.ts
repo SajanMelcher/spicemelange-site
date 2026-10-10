@@ -15,8 +15,13 @@ export const SITE = {
 export const mailto = (subject: string, body = '') =>
   `mailto:${SITE.email}?subject=${encodeURIComponent(subject)}${body ? `&body=${encodeURIComponent(body)}` : ''}`;
 
+// The free course (Sajan 4:02 PM PT 10/10): linked from nav, footer and home; the share link carries utm_source=share.
+export const LEARN_URL = 'https://thespicemelange.org/learn/';
+export const LEARN_SHARE_URL = `${LEARN_URL}?utm_source=share`;
+
 export const NAV = [
   { href: '/', label: 'Home' },
+  { href: '/learn/', label: 'Free course' },
   { href: '/join/', label: 'Join' },
   { href: '/plumbline/', label: 'Market data' },
   { href: '/dashboard/', label: 'Live DeepBook' },

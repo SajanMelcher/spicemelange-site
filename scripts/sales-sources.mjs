@@ -11,7 +11,7 @@ const out = args.includes('--out') ? args[args.indexOf('--out') + 1] : '/home/bo
 const db = prod ? 'spicemelange-store-prod' : 'spicemelange-store-preview';
 // Known values we print as-is. Add here (code review) to make a new source visible; anything else is "unlisted".
 export const KNOWN = {
-  utm_source: ['x', 'x.com', 'twitter', 'mcp.so', 'pulsemcp', 'glama', 'smithery', 'mcp-registry', 'github', 'npm', 'google', 'newsletter', 'email', 'telegram', 'discord', 'reddit', 'llms.txt', 'agent-join', 'catalog', 'connector'],
+  utm_source: ['x', 'x.com', 'twitter', 'mcp.so', 'pulsemcp', 'glama', 'smithery', 'mcp-registry', 'github', 'npm', 'google', 'newsletter', 'email', 'telegram', 'discord', 'reddit', 'llms.txt', 'agent-join', 'catalog', 'connector', 'share'],
   utm_medium: ['social', 'post', 'thread', 'dm', 'email', 'listing', 'directory', 'referral', 'agent', 'mcp', 'organic'],
   utm_campaign: ['launch', 'join-the-desk', 'collection', 'oct-2026', 'weekly-update'],
 };

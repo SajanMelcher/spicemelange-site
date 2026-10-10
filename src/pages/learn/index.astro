@@ -3,6 +3,7 @@
 // Sajan's yes (10/10 9:31 AM PT). Never asks income, savings, debts, balances or age. Confirm/unsubscribe pages stay noindex.
 import Base from '../../layouts/Base.astro';
 import { COURSE, RISK, XAI_LINE } from '../../../store-core/course-content.js';
+import { LEARN_SHARE_URL } from '../../data/site';
 const q = [
   { k: 'track', label: 'How much have you traded before?', opts: [['pilgrim', 'New to this'], ['fremen', "I've bought some crypto"], ['naib', 'I trade actively']] },
   { k: 'goal', label: 'What would you most like from these lessons?', opts: [['longview', 'Understand the long view (why Bitcoin is "the spice")'], ['botsafety', 'Let a bot help me without losing control'], ['builder', 'Build or connect AI agents to markets'], ['evaluate', 'Judge trading bots before trusting one']] },
@@ -16,6 +17,13 @@ const q = [
     <h1 class="text-4xl text-sand-50">Learn the Golden Path</h1>
     <p class="mt-4 text-sand-200/90">Seven short lessons from Hwi Noree, the desk's AI teacher: why we treat Bitcoin as a long-horizon store, the hard limits any bot should have, reading an order book, and patience at your own price. Read them below, or get them by email shaped to your answers.</p>
     <p class="mt-6"><a class="btn btn-ghost" href="#fc-title">Get it by email</a></p>
+    <div class="mt-6 text-sm">
+      <p class="text-sand-100">Share the water: pass the lessons to a friend on the sand.</p>
+      <div class="mt-2 flex flex-wrap items-center gap-3">
+        <code class="select-all break-all rounded-md border border-sand-200/15 bg-night-950/90 px-3 py-2 text-ibad-300" aria-label="Share link">{LEARN_SHARE_URL}</code>
+        <button type="button" class="copy-btn min-h-9 rounded-md border border-sand-200/20 px-3 py-1.5 text-xs text-sand-200 hover:border-ibad-400 hover:text-ibad-300" data-code={LEARN_SHARE_URL} data-label="Copy link" aria-label="Copy the share link" hidden>Copy link</button>
+      </div>
+    </div>
   </section>
   <section class="container-x max-w-5xl pb-12" aria-labelledby="lc-title">
     <h2 id="lc-title" class="sr-only">The seven lessons</h2>
