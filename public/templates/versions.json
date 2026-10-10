@@ -1,7 +1,7 @@
 {
   "schema": "spicemelange.templates.versions/v1",
-  "current": "2026.10.09.2",
-  "updated": "2026-10-09",
+  "current": "2026.10.10",
+  "updated": "2026-10-10",
   "versionRule": "Versions are YYYY.MM.DD with an optional .N for a same-day re-release. Newer = larger versionKey (YYYYMMDD*1000+N); e.g. 2026.10.09.1 is newer than 2026.10.09.",
   "sha256Note": "sha256 is the SHA-256 of the ZIP the store currently serves for that slug; verify a re-download against it.",
   "howToUpdate": "Re-download the latest at https://thespicemelange.org/store/download/ with your order ID and token. Always serves the current version.",
@@ -10,65 +10,65 @@
     "god-emperor": {
       "name": "The God Emperor",
       "title": "Orchestrator",
-      "version": "2026.10.09.2",
-      "versionKey": 20261009002,
-      "released": "2026-10-09",
-      "summary": "Automatic upgrades that never expire: new auto-update skill and weekly routine, signed versions.json.",
-      "sha256": "6b76c3da3d51edf77d4154391735a80c0cb0d7fda8ad31eed054d5f4150fe00d"
+      "version": "2026.10.10",
+      "versionKey": 20261010000,
+      "released": "2026-10-10",
+      "summary": "Signed automatic upgrades: every pack pins the release key and verifies versions.json.sig; the token never goes in a URL.",
+      "sha256": "46eb70732fb8b7f2f2e5adbe288b265fb824aca272d827e010e8a6230c16832f"
     },
     "moneo": {
       "name": "Moneo",
       "title": "Mentat Researcher",
-      "version": "2026.10.09.2",
-      "versionKey": 20261009002,
-      "released": "2026-10-09",
-      "summary": "Automatic upgrades that never expire: new auto-update skill and weekly routine, signed versions.json.",
-      "sha256": "54fc6d2249a724a7718b1d09f2d85e30cdf3f9da38edeafd96242f0f089d9c11"
+      "version": "2026.10.10",
+      "versionKey": 20261010000,
+      "released": "2026-10-10",
+      "summary": "Signed automatic upgrades: every pack pins the release key and verifies versions.json.sig; the token never goes in a URL.",
+      "sha256": "ef87262c2cb2029e7becd3a35fb931721fa36558b0e059cf1ae500d73fafec52"
     },
     "duncan-idaho": {
       "name": "Duncan Idaho",
       "title": "Income Base and Ticket Planner",
-      "version": "2026.10.09.2",
-      "versionKey": 20261009002,
-      "released": "2026-10-09",
-      "summary": "Automatic upgrades that never expire: new auto-update skill and weekly routine, signed versions.json.",
-      "sha256": "1f2d2fad0b91233d56807d8d93f8cf3e5fa7094fe742e141b75126a8cbed574d"
+      "version": "2026.10.10",
+      "versionKey": 20261010000,
+      "released": "2026-10-10",
+      "summary": "Signed automatic upgrades: every pack pins the release key and verifies versions.json.sig; the token never goes in a URL.",
+      "sha256": "51a3f9c131658c579aaae8a79358d65eac061342b6732637a542fac71d859169"
     },
     "fish-speakers": {
       "name": "The Fish Speakers",
       "title": "Execution Operator",
-      "version": "2026.10.09.2",
-      "versionKey": 20261009002,
-      "released": "2026-10-09",
-      "summary": "Automatic upgrades that never expire: new auto-update skill and weekly routine, signed versions.json.",
-      "sha256": "ee74d4cfe46453edc7a97b2be4d20d3dc52b47f2149d7f86458ec652f64a6eda"
+      "version": "2026.10.10",
+      "versionKey": 20261010000,
+      "released": "2026-10-10",
+      "summary": "Signed automatic upgrades: every pack pins the release key and verifies versions.json.sig; the token never goes in a URL.",
+      "sha256": "01f0fb00803b8ab5d21ec47d1d81b60754a97b746d85fb9096916623e69786f4"
     },
     "anteac": {
       "name": "Anteac",
       "title": "Truthsayer Verifier",
-      "version": "2026.10.09.2",
-      "versionKey": 20261009002,
-      "released": "2026-10-09",
-      "summary": "Automatic upgrades that never expire: new auto-update skill and weekly routine, signed versions.json.",
-      "sha256": "b1350968f61eca6b3fac3b279abcec2d87cb7486f58cb782c55d8db1a6fd4861"
+      "version": "2026.10.10",
+      "versionKey": 20261010000,
+      "released": "2026-10-10",
+      "summary": "Signed automatic upgrades: every pack pins the release key and verifies versions.json.sig; the token never goes in a URL.",
+      "sha256": "d35ece3c1fc323054cb675268d009903a45077c4bab790dbf876c428557da84c"
     },
     "hwi-noree": {
       "name": "Hwi Noree",
       "title": "Ambassador of the Trading Desk",
-      "version": "2026.10.09.2",
-      "versionKey": 20261009002,
-      "released": "2026-10-09",
-      "summary": "Automatic upgrades that never expire: new auto-update skill and weekly routine, signed versions.json.",
-      "sha256": "ebf6aa8df4636bc54a0516927c294f4437a07065ebbbd3a58ef71ded8eee735f"
+      "version": "2026.10.10",
+      "versionKey": 20261010000,
+      "released": "2026-10-10",
+      "summary": "Signed automatic upgrades: every pack pins the release key and verifies versions.json.sig; the token never goes in a URL.",
+      "sha256": "f3994d5f420175fdcf18299a1d44d8f4c6c2458de1be1fef0dd98509b48734da"
     },
     "ixians": {
       "name": "Ixians",
       "title": "Toolmaker and Infrastructure",
-      "version": "2026.10.09.2",
-      "versionKey": 20261009002,
-      "released": "2026-10-09",
-      "summary": "Automatic upgrades that never expire: new auto-update skill and weekly routine, signed versions.json.",
-      "sha256": "2e58c8edd5beebfc6d1e19fd31cfe010cc016063b09f04f069faa609000001d4"
+      "version": "2026.10.10",
+      "versionKey": 20261010000,
+      "released": "2026-10-10",
+      "summary": "Signed automatic upgrades: every pack pins the release key and verifies versions.json.sig; the token never goes in a URL.",
+      "sha256": "78f257c49a4509c354cc8b9993d2336565de0b9d147726bab65278c0eaf71bda"
     },
     "leto-journals": {
       "name": "Leto's Secret Journals",
@@ -82,11 +82,11 @@
     "dune-saga-collection": {
       "name": "The Dune Saga Collection",
       "title": "Every template, now and future: the 7 desk templates plus Leto's Secret Journals",
-      "version": "2026.10.09.2",
-      "versionKey": 20261009002,
-      "released": "2026-10-09",
-      "summary": "Automatic upgrades that never expire: new auto-update skill and weekly routine, signed versions.json.",
-      "sha256": "7646c981c90735d46d911408d94a5908453d91003d216b7a4da2b355155db402"
+      "version": "2026.10.10",
+      "versionKey": 20261010000,
+      "released": "2026-10-10",
+      "summary": "Signed automatic upgrades: every pack pins the release key and verifies versions.json.sig; the token never goes in a URL.",
+      "sha256": "a7dccb03c7efa7b4ffb8d9cf55e4843b6db45634f28ee32160a508ae51a95bea"
     }
   },
   "packs": {
@@ -102,11 +102,11 @@
     "dune-saga-collection": {
       "name": "The Dune Saga Collection",
       "title": "Every template, now and future: the 7 desk templates plus Leto's Secret Journals",
-      "version": "2026.10.09.2",
-      "versionKey": 20261009002,
-      "released": "2026-10-09",
-      "summary": "Automatic upgrades that never expire: new auto-update skill and weekly routine, signed versions.json.",
-      "sha256": "7646c981c90735d46d911408d94a5908453d91003d216b7a4da2b355155db402"
+      "version": "2026.10.10",
+      "versionKey": 20261010000,
+      "released": "2026-10-10",
+      "summary": "Signed automatic upgrades: every pack pins the release key and verifies versions.json.sig; the token never goes in a URL.",
+      "sha256": "a7dccb03c7efa7b4ffb8d9cf55e4843b6db45634f28ee32160a508ae51a95bea"
     }
   },
   "signature": {
