@@ -44,3 +44,18 @@ test('maybePurge is gated (once per window) and never throws', async () => {
   _resetPurgeGate();
   assert.equal(await maybePurge({ db: { prepare() { throw new Error('boom'); } } }, NOW + 3 * PURGE_EVERY_MS) !== undefined, true);
 });
+
+test('purge endpoint: disabled without key, 401 on bad key, 200 runs purge', async () => {
+  const { onRequestPost } = await import('../functions/api/store/purge.js');
+  const db = await seed();
+  const KV = { get: async () => null, put: async () => {} };
+  const env = (k) => ({ STORE_ENABLED: '1', SUI_NETWORK: 'testnet', STORE_PAYTO: '0x' + 'ab'.repeat(32), DOWNLOAD_HMAC_SECRET: 'x'.repeat(48), STORE_KV: KV, STORE_DB: db, ...(k ? { STORE_PURGE_KEY: k } : {}) });
+  const req = (auth) => new Request('https://x/api/store/purge', { method: 'POST', headers: auth ? { authorization: auth } : {} });
+  const K = 'k'.repeat(40);
+  assert.equal((await onRequestPost({ env: env(null), request: req(`Bearer ${K}`) })).status, 404);
+  assert.equal((await onRequestPost({ env: env(K), request: req('Bearer nope') })).status, 401);
+  assert.equal((await onRequestPost({ env: env(K), request: req() })).status, 401);
+  const r = await onRequestPost({ env: env(K), request: req(`Bearer ${K}`) });
+  assert.equal(r.status, 200);
+  const j = await r.json(); assert.equal(j.ok, true); assert.equal(typeof j.deleted.readHashes, 'number');
+});

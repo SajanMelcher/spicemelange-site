@@ -544,3 +544,12 @@ test('synthetic E2E paid rows never unlock status, download or upgrades on mainn
     assert.equal((await authorizeDownload(mcfg, { orderId: r.order.orderId, token: r.order.token, nowMs: T0 + 6000 })).ok, false);
   }
 });
+
+test('S2: versions.json store block is omitted while payTo is empty, validated when set', async () => {
+  const { storeBlock, versionsDoc } = await import('../store-core/versions.js');
+  assert.equal(storeBlock(), null, 'payTo stays empty until Sajan picks it');
+  assert.equal('store' in versionsDoc(), false);
+  const ok = storeBlock({ store: { payTo: '0x' + 'ab'.repeat(32), coinType: SUI_USDC.mainnet, network: 'sui:mainnet' } });
+  assert.equal(ok.payTo, '0x' + 'ab'.repeat(32));
+  assert.throws(() => storeBlock({ store: { payTo: '0xABC', coinType: SUI_USDC.mainnet, network: 'sui:mainnet' } }));
+});

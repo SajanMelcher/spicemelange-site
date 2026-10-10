@@ -174,19 +174,22 @@
       }
     ],
     "license_object": {
-      "status": "Mainnet live, not yet the delivery path",
-      "type": "spice_license::license::License",
-      "fields": [
-        "template_id",
-        "version",
-        "order_id",
-        "issued_ms",
-        "url"
-      ],
+      "status": "store licenses will be locked to the buyer's wallet; license minting starts when the locked type is live on mainnet",
       "transferable": false,
-      "seal_gating": "Files encrypted under id = utf8(template_id) || ':' || nonce can be decrypted only by an address that owns a License whose template_id matches (seal_policy::seal_approve).",
-      "package": "0x9a376d022cac31a7db36139a5695f979804913c0713fe28be06bc5d1ee1d41bb",
-      "note": "spice_license and Seal are live on Sui mainnet, but delivery today is still the plain ZIP behind the order flow above. Licenses are not minted for store orders yet."
+      "minting_live": false,
+      "delivery": "ZIP via the order flow above (Seal delivery is not live)",
+      "current_mainnet_type": {
+        "type": "spice_license::license::License",
+        "package": "0x9a376d022cac31a7db36139a5695f979804913c0713fe28be06bc5d1ee1d41bb",
+        "transferable": true,
+        "used_for_delivery": false,
+        "note": "Mainnet live, not yet the delivery path. Not minted for store orders; it will be replaced by the locked type."
+      },
+      "planned_type": {
+        "module": "desk_license",
+        "transferable": false,
+        "live_on_mainnet": false
+      }
     },
     "terms": "All sales final, except where the law requires otherwise.",
     "disclaimer": "Educational templates, not financial advice; no returns promised."

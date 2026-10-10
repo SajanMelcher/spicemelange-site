@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 // LICENSE.md (372a9241…fffb, approved 2026-10-10) + section 9 privacy (Sajan S3 decision 2:45 AM PT; fact-checked: store/PRIVACY-FACTCHECK.md)
-const APPROVED = '6d2ad7078131bf14edb08ae10914d565c4e50bfab1d140d68b531f3bfb2e977c'; // store/LICENSE.md as adopted by Tleilaxu (Run 6)
+const APPROVED = 'bbefd005423197ceacf6d321309941b54d872eb05c8453c6b0f7b9440ad94cea'; // store/LICENSE.md as adopted by Tleilaxu (Run 7)
 test('licence source matches the approved sha256', () => {
   const b = readFileSync(new URL('../src/content-static/LICENSE.md', import.meta.url));
   assert.equal(createHash('sha256').update(b).digest('hex'), APPROVED);

@@ -106,7 +106,7 @@ async function hmacKey(secret) {
 export async function hmac(secret, msg) {
   return b64url(new Uint8Array(await crypto.subtle.sign('HMAC', await hmacKey(secret), enc.encode(msg))));
 }
-function safeEqual(a, b) {
+export function safeEqual(a, b) {
   if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
   let x = 0;
   for (let i = 0; i < a.length; i++) x |= a.charCodeAt(i) ^ b.charCodeAt(i);
