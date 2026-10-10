@@ -18,7 +18,7 @@
         <p class="flex items-center gap-2"><code id="co-amount" class="font-serif text-3xl text-spice-300"></code> <span>USDC</span> <button type="button" class="btn-ghost !min-h-8 !px-3 !py-1 co-copy" data-target="co-amount">Copy</button></p>
         <p class="text-xs text-sand-300/80">To this Sui address:</p>
         <p class="flex items-start gap-2"><code id="co-payto" class="break-all text-xs text-ibad-300"></code> <button type="button" class="btn-ghost !min-h-8 shrink-0 !px-3 !py-1 co-copy" data-target="co-payto">Copy</button></p>
-        <p class="text-xs text-sand-300/80">Pay before <span id="co-exp"></span>. Any other amount will not match. Keep this tab open, or note your order ID and token below.</p>
+        <p class="text-xs text-sand-300/80">Pay before <span id="co-exp"></span>. Send from a Sui wallet in a single transfer; exchange withdrawals may batch or round, so use an exact-amount wallet transfer. Any other amount will not match. Keep this tab open, or note your order ID and token below.</p>
         <details class="text-xs text-sand-300/70"><summary class="cursor-pointer">Order token (private)</summary><code id="co-token" class="break-all"></code></details>
         <label class="mt-3 block text-sand-200/85" for="co-digest">Transaction digest</label>
         <input id="co-digest" class="mt-1 w-full rounded-lg border border-sand-200/20 bg-night-950 px-3 py-2 font-mono text-xs" placeholder="e.g. 9xQ…" autocomplete="off" spellcheck="false" />
@@ -31,7 +31,7 @@
         <p class="text-lg text-sand-50">Payment confirmed.</p>
         <p class="mt-1 text-xs text-sand-300/70">All sales final, except where the law requires otherwise.</p>
         <p class="mt-2"><a id="co-dl" class="btn-primary" href="#" rel="nofollow noopener">Download</a></p>
-        <p class="mt-2 text-xs text-sand-300/80">The link expires in 15 minutes. Come back to this page in the same browser to get a fresh link.</p>
+        <p class="mt-2 text-xs text-sand-300/80">The link expires in 15 minutes. <strong class="text-sand-100">Weekly updates included:</strong> save your order ID <code id="co-oid" class="text-spice-300"></code> and token, and bookmark your private <a id="co-redl" class="text-ibad-300" href="/store/download/" rel="nofollow">re-download link</a>. It always serves the latest version.</p>
       </div>
       <p id="co-msg" class="text-sm text-spice-300"></p>
     </div>
@@ -73,6 +73,7 @@
   function done(r: any) {
     $('co-step1').hidden = true; $('co-step2').hidden = true; $('co-done').hidden = false;
     ($('co-dl') as HTMLAnchorElement).href = r.downloadUrl; msg('');
+    if (order) { $('co-oid').textContent = order.orderId; ($('co-redl') as HTMLAnchorElement).href = `/store/download/#order=${encodeURIComponent(order.orderId)}&token=${encodeURIComponent(order.token)}`; }
   }
   document.querySelectorAll<HTMLButtonElement>('.buy-btn').forEach((b) => b.addEventListener('click', () => {
     sku = b.dataset.sku!; $('co-title').textContent = b.dataset.name!;

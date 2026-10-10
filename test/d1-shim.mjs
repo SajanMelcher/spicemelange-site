@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 const tick = () => new Promise((r) => setImmediate(r));
 export function makeD1(schemaPath) {
   const db = new DatabaseSync(':memory:');
-  db.exec(readFileSync(schemaPath, 'utf8'));
+  for (const sp of [].concat(schemaPath)) db.exec(readFileSync(sp, 'utf8')); // migrations in order
   const stmt = (sql, args = []) => ({
     sql, args,
     bind: (...a) => stmt(sql, a),

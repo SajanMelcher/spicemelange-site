@@ -1,0 +1,68 @@
+{
+  "schema": "spicemelange.templates/v1",
+  "note": "PUBLIC. Versions and changelog summaries only; never paid template content. Edited by scripts/release-templates.sh.",
+  "current": "2026.10.09",
+  "templates": [
+    {
+      "sku": "god-emperor",
+      "name": "The God Emperor",
+      "title": "Orchestrator"
+    },
+    {
+      "sku": "moneo",
+      "name": "Moneo",
+      "title": "Mentat Researcher"
+    },
+    {
+      "sku": "duncan-idaho",
+      "name": "Duncan Idaho",
+      "title": "Premarket Planner"
+    },
+    {
+      "sku": "fish-speakers",
+      "name": "The Fish Speakers",
+      "title": "Execution Operator"
+    },
+    {
+      "sku": "anteac",
+      "name": "Anteac",
+      "title": "Truthsayer Verifier"
+    },
+    {
+      "sku": "hwi-noree",
+      "name": "Hwi Noree",
+      "title": "Bookkeeper and Onboarding"
+    },
+    {
+      "sku": "ixians",
+      "name": "Ixians",
+      "title": "Toolmaker and Infrastructure"
+    }
+  ],
+  "packs": [
+    {
+      "sku": "leto-journals",
+      "name": "Leto's Secret Journals",
+      "title": "System templates"
+    },
+    {
+      "sku": "full-desk",
+      "name": "The Full Desk",
+      "title": "All seven templates plus Leto's Secret Journals"
+    }
+  ],
+  "releases": [
+    {
+      "version": "2026.10.09",
+      "date": "2026-10-09",
+      "skus": "all",
+      "summary": "First Grok Bot template release: each seat is now an importable Grok Bot template.",
+      "notes": [
+        "New layout: profile.json, instructions.md, memories.md, skills/getting-started/SKILL.md, routines.md, SETUP.md, VERSION and CHANGELOG.md.",
+        "Hard limits in every template: owner's yes on each exact money movement, draft-only messages, no new accounts or API keys without approval, limit-only orders, never sell below cost, a daily realized-loss cap, no leverage or borrowing, borrowed cash untouched, and a HALT-file kill switch.",
+        "Getting-started skill: setup questions one at a time, then the suggested routines, plus a weekly check of the public versions.json.",
+        "Date-based versions; re-download the latest at /store/download/ with your order ID and token."
+      ]
+    }
+  ]
+}

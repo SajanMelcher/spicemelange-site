@@ -12,7 +12,7 @@ class MemKV {
   async put(k, v) { this.m.set(k, String(v)); }
   keys(prefix) { return [...this.m.keys()].filter((k) => k.startsWith(prefix)); }
 }
-const env = (over = {}) => ({ STORE_ENABLED: '1', SUI_NETWORK: 'testnet', STORE_PAYTO: PAYTO, DOWNLOAD_HMAC_SECRET: 'x'.repeat(48), STORE_KV: new MemKV(), STORE_DB: makeD1(new URL('../migrations/0001_store.sql', import.meta.url)), ...over });
+const env = (over = {}) => ({ STORE_ENABLED: '1', SUI_NETWORK: 'testnet', STORE_PAYTO: PAYTO, DOWNLOAD_HMAC_SECRET: 'x'.repeat(48), STORE_KV: new MemKV(), STORE_DB: makeD1(['../migrations/0001_store.sql', '../migrations/0002_order_payee.sql'].map((m) => new URL(m, import.meta.url))), ...over });
 const D1 = '7'.repeat(43), D2 = '8'.repeat(43), D3 = '9'.repeat(43);
 
 /** Mock Sui GraphQL: txs = { digest: {status, timestampMs, changes:[[owner, coinType, amount]]} } */
@@ -249,4 +249,46 @@ test("catalog: Leto's Secret Journals listed at 50, bundle stays 250", async () 
   const cfg = loadConfig(env());
   const r = await createOrder(cfg, { sku: 'leto-journals', nowMs: T0 });
   assert.ok(BigInt(r.order.amountAtomic) > 50_000_000n && BigInt(r.order.amountAtomic) < 50_010_000n);
+});
+
+test('payee change: each order verifies against the payee recorded on it; new orders use the new payee', async () => {
+  const NEW = '0x' + 'ef'.repeat(32);
+  const db = makeD1(['../migrations/0001_store.sql', '../migrations/0002_order_payee.sql'].map((m) => new URL(m, import.meta.url)));
+  const kv = new MemKV();
+  const oldCfg = loadConfig(env({ STORE_DB: db, STORE_KV: kv }));
+  const a = (await createOrder(oldCfg, { sku: 'moneo', nowMs: T0 })).order;
+  assert.equal(a.payTo, PAYTO);
+  const newCfg = loadConfig(env({ STORE_DB: db, STORE_KV: kv, STORE_PAYTO: NEW }));
+  const b = (await createOrder(newCfg, { sku: 'moneo', nowMs: T0 })).order;
+  assert.equal(b.payTo, NEW);
+  assert.match(b.howToPay, /single transfer/);
+  // Old order, paid to the old payee, still verifies after the switch.
+  const va = await verifyOrder(newCfg, { orderId: a.orderId, token: a.token, digest: D1, nowMs: T0 + 120_000, fetchImpl: mockRpc({ [D1]: pay(a) }) });
+  assert.equal(va.ok, true, va.reason);
+  // New order paid to the OLD payee is refused; paid to the new payee it verifies (net incoming, exact amount).
+  const vb1 = await verifyOrder(newCfg, { orderId: b.orderId, token: b.token, digest: D2, nowMs: T0 + 120_000, fetchImpl: mockRpc({ [D2]: pay(b) }) });
+  assert.equal(vb1.reason, 'no_usdc_payment_to_store');
+  const toNew = { status: 'SUCCESS', timestampMs: T0 + 60_000, changes: [[NEW, SUI_USDC.testnet, b.amountAtomic], [OTHER, SUI_USDC.testnet, '-' + b.amountAtomic]] };
+  const vb2 = await verifyOrder(newCfg, { orderId: b.orderId, token: b.token, digest: D3, nowMs: T0 + 120_000, fetchImpl: mockRpc({ [D3]: toNew }) });
+  assert.equal(vb2.ok, true, vb2.reason);
+  // Legacy row with no recorded payee falls back to the configured payee.
+  db.raw.prepare('UPDATE orders SET pay_to = NULL WHERE id = ?').run(b.orderId);
+  assert.equal((await orderStatus(newCfg, { orderId: b.orderId, token: b.token, nowMs: T0 + 130_000 })).status, 'paid');
+});
+
+test('templates: Grok Bot catalog copy, prices, and a public versions.json with no paid content', async () => {
+  const { bySku, ARCHETYPES } = await import('../store-core/catalog.js');
+  const { versionsDoc, TEMPLATES } = await import('../store-core/versions.js');
+  const seven = ['god-emperor', 'moneo', 'duncan-idaho', 'fish-speakers', 'anteac', 'hwi-noree', 'ixians'];
+  for (const s of seven) { const p = bySku(s); assert.equal(p.kind, 'Grok Bot template'); assert.equal(p.priceUsdc, '50'); assert.match(p.version, /^\d{4}\.\d{2}\.\d{2}$/); }
+  assert.equal(bySku('full-desk').priceUsdc, '250');
+  assert.ok(bySku('full-desk').includes.some((i) => /Leto/.test(i)));
+  assert.ok(ARCHETYPES.length === 8);
+  const v = versionsDoc();
+  assert.deepEqual(Object.keys(v.templates).sort(), [...seven].sort());
+  for (const s of seven) assert.equal(v.templates[s].version, TEMPLATES.current);
+  assert.ok(v.packs['full-desk'] && v.packs['leto-journals']);
+  const txt = JSON.stringify(v);
+  assert.doesNotMatch(txt, /HARD LIMITS|instructions\.md content|0x[0-9a-f]{20}|smt_|file:/i);
+  assert.match(v.howToUpdate, /\/store\/download\//);
 });

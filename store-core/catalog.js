@@ -1,9 +1,12 @@
 // P30 store catalog: "The Spice Melange" Golden Path Desk archetype templates (Sajan, 10/9 6:12 AM PT).
-// Templates are $50 each (Sajan). The full-desk bundle price is a PLACEHOLDER for Sajan.
+// Grok Bot templates (Sajan, 10/9 8:38 PM PT): $50 USDC each, $250 for the full set (Leto's Journals included), weekly updates included.
+// Re-downloading with the order ID and token always serves the latest version in STORE_FILES.
 // Product files live in private storage (STORE_FILES KV), keyed by `file`. Never under public/.
 // No desk records, balances, wallet internals, family or reserve data. No return or yield claims.
-const COMMON = ['README with 15-minute setup', 'Persona / system prompt', 'Role charter', 'Guardrails as configurable defaults (no leverage, loss cap, human approval)', 'Example routines', 'Skills and connectors list', 'Hand-off map to the other archetypes'];
-const t = (o) => ({ priceUsdc: '50', placeholder: false, format: 'ZIP (Markdown)', includes: COMMON, file: `file:${o.sku}`, ...o });
+import { latestFor } from './versions.js';
+const COMMON = ['profile.json: name, title, short description', 'instructions.md: narrow role plus HARD LIMITS', 'memories.md: desk conventions', 'skills/getting-started: first-conversation setup, one question at a time', 'routines.md: suggested schedules', 'SETUP.md: import by hand into a new Grok Bot', 'VERSION and CHANGELOG.md', 'Weekly updates: re-download the latest any time'];
+export const KIND = 'Grok Bot template';
+const t = (o) => ({ priceUsdc: '50', placeholder: false, kind: KIND, format: 'Grok Bot template (ZIP, Markdown + JSON)', includes: COMMON, file: `file:${o.sku}`, version: latestFor(o.sku)?.version ?? null, ...o });
 
 export const CATALOG = [
   t({ sku: 'god-emperor', name: 'The God Emperor', role: 'Orchestrator', glyph: 'crown',
@@ -17,7 +20,7 @@ export const CATALOG = [
   t({ sku: 'fish-speakers', name: 'The Fish Speakers', role: 'Execution Operator', glyph: 'blade',
     quote: 'The disciplined guard who acts only on command.',
     blurb: 'Executes only previewed, approved actions inside hard limits: limit orders, a daily loss cap, no leverage by default, and silent checks when nothing changed.',
-    highlights: ['Exact previews before any order', 'Paired exits on fills', 'Kill switch at the loss cap'] }),
+    highlights: ['Exact previews before any order', 'Paired exits in the same preview', 'Never sells below cost; stops at the daily loss cap'] }),
   t({ sku: 'anteac', name: 'Anteac', role: 'Truthsayer Verifier', glyph: 'eye',
     quote: 'The truthsayer who tells fact from fiction.',
     blurb: 'An independent, read-only verifier. Checks every material claim against a primary source, refuses false "done"s, and reconciles the books each night.',
@@ -34,18 +37,18 @@ export const CATALOG = [
     quote: 'The inventive machine-makers.',
     blurb: 'Builds the connectors, dashboards and archives the desk runs on: read-only first, paper mode before live, tests for the boring failures, and secret scans before every push.',
     highlights: ['Branch, test, preview, release', 'Paper mode first', 'Secret hygiene'] }),
-  t({ sku: 'leto-journals', name: "Leto's Secret Journals", role: 'System templates for the Golden Path', glyph: 'book',
+  t({ sku: 'leto-journals', name: "Leto's Secret Journals", role: 'System templates for the Golden Path', glyph: 'book', kind: 'System templates', format: 'ZIP (Markdown)',
     quote: 'The God Emperor\'s journals, for those who come after.',
     blurb: 'The system around the seats: doctrine and playbook, decisions log, lessons with a "clearly better" promotion process, guardrails config, routine calendar, hand-off and approval protocols, shared memory, archive plan and onboarding.',
-    includes: ['Doctrine and playbook template', 'Decisions log', 'lessons.md + "clearly better" promotion process', 'Guardrails config with editable defaults', 'Routine calendar (guard checks, daily briefs, nightly archive, low-data mode)', 'Hand-off and approval protocols', 'Shared-memory layout', 'Backup and archive plan (the Walrus pattern)', 'New-agent onboarding checklist'],
+    includes: ['Weekly updates included', 'Doctrine and playbook template', 'Decisions log', 'lessons.md + "clearly better" promotion process', 'Guardrails config with editable defaults', 'Routine calendar (guard checks, daily briefs, nightly archive, low-data mode)', 'Hand-off and approval protocols', 'Shared-memory layout', 'Backup and archive plan (the Walrus pattern)', 'New-agent onboarding checklist'],
     highlights: ['Nine journals, one coherent system', 'Works with any or all of the seven archetypes', 'Start with doctrine, decisions, rails and memory'] }),
-  { sku: 'full-desk', name: 'The Full Desk', role: 'All seven archetypes', glyph: 'sigil', bundle: true,
+  { sku: 'full-desk', name: 'The Full Desk', role: 'All seven Grok Bot templates', glyph: 'sigil', bundle: true, kind: 'Grok Bot template set', version: latestFor('full-desk')?.version ?? null,
     priceUsdc: '250', placeholder: false, // Sajan 10/9 6:26 AM PT; still 250 with the Journals added 6:43 AM PT (8 × $50 = $400 list)
     quote: 'Seven seats, one Golden Path.',
-    blurb: "Every archetype plus Leto's Secret Journals and the overview: how the seven work together, the decision layer, a day on the desk, the shared folder layout and a Mermaid flow diagram.",
-    includes: ['All 7 archetype packs', "Leto's Secret Journals (system templates)", 'Bundle overview with Mermaid diagram', '"A day on the desk" walkthrough'],
-    highlights: ['Save versus buying seven', 'Start with three seats, grow to seven'],
-    format: 'ZIP (Markdown)', file: 'file:full-desk' },
+    blurb: "All seven Grok Bot templates plus Leto's Secret Journals and the overview: how the seven work together, the decision layer, a day on the desk, the shared desk folder and one HALT file that stops every bot. Weekly updates included.",
+    includes: ['All 7 Grok Bot templates', "Leto's Secret Journals (included)", 'Bundle overview with Mermaid diagram', '"A day on the desk" walkthrough', 'Weekly updates: re-download the latest any time'],
+    highlights: ['$250 for the full set (versus $400 bought one by one)', 'Start with three seats, grow to seven', 'One shared HALT file stops every bot'],
+    format: 'Grok Bot templates (ZIP, Markdown + JSON)', file: 'file:full-desk' },
   { sku: 'plumbline-pro', name: 'Plumbline Pro', role: 'Coming soon', glyph: 'plumb', comingSoon: true,
     priceUsdc: '—', placeholder: true, quote: '', blurb: 'A supporter tier for the free, read-only Plumbline MCP server. Coming soon.', includes: [], highlights: [], format: '', file: '' },
   // Hidden mainnet self-test (Sajan 10/9 6:26 AM PT). Never listed; ordering needs ?selftest=<STORE_SELFTEST_KEY>.
