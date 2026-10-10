@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { makeD1 } from './d1-shim.mjs';
 import { sha256Hex } from '../store-core/core.js';
-import { lessonsConfig, subscribe, unsubscribe, runLessons, lessonEmail, LESSON_DAYS, MIN_GAP_MS } from '../store-core/lessons.js';
+import { lessonsConfig, subscribe, unsubscribe, runLessons, lessonEmail, LESSON_DAYS, MIN_GAP_MS, LESSONS_FOOTER } from '../store-core/lessons.js';
 import { LESSONS } from '../store-core/lessons-content.js';
 
 const MIG = ['0001_store.sql', '0002_order_payee.sql', '0003_status_reset.sql', '0004_signals.sql', '0005_hwi_lessons.sql'].map((m) => new URL(`../migrations/${m}`, import.meta.url));
@@ -155,4 +155,19 @@ test('lessons-content.js is in sync with content/hwi-lessons', async () => {
   const { buildAll } = await import('../scripts/lessons-build.mjs');
   assert.deepEqual(buildAll(), LESSONS);
   readFileSync(new URL('../content/hwi-lessons/day-14.md', import.meta.url));
+});
+test('every lesson email carries the postal footer (HTML + text), reply-to reserve@, and keeps the one-click unsubscribe', () => {
+  const F = 'Sajan Melcher · 9017 Village Dr, Yosemite National Park, CA 95389 · reserve@thespicemelange.org';
+  assert.equal(LESSONS_FOOTER, F);
+  const lcfg = lessonsConfig({ LESSONS_BASE_URL: 'https://x.example' });
+  assert.equal(lcfg.replyTo, 'reserve@thespicemelange.org');
+  for (let d = 1; d <= LESSON_DAYS; d++) {
+    const e = lessonEmail(lcfg, { id: 'ls_aaaaaaaaaaaaaaaa', unsub_token: 'lu_' + 'b'.repeat(32), email: 'a@b.co' }, d);
+    assert.ok(e.html.includes(F), `html day ${d}`); assert.ok(e.text.includes(F), `text day ${d}`);
+    assert.equal(e.reply_to, 'reserve@thespicemelange.org');
+    assert.match(e.html, /Unsubscribe in one click/); assert.match(e.text, /Unsubscribe in one click: https:\/\/x\.example\/api\/lessons\/unsubscribe\?s=/);
+    assert.match(e.headers['List-Unsubscribe'], /^<https:\/\/x\.example\/api\/lessons\/unsubscribe\?s=ls_a+&t=lu_b+>, <mailto:reserve@thespicemelange\.org\?subject=unsubscribe%20lessons>$/);
+    assert.equal(e.headers['List-Unsubscribe-Post'], 'List-Unsubscribe=One-Click');
+    assert.doesNotMatch(e.html + e.text, /\{postal address\}/i);
+  }
 });

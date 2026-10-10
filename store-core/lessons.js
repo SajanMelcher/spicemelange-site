@@ -18,6 +18,8 @@ const UNPAID_EXPIRE_MS = 7 * 86_400_000; // opted-in orders never paid are expir
 const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,24}$/i;
 const ORDER_RE = /^SM-[0-9A-HJKMNP-TV-Z]{10}$/;
 const TOKEN_RE = /^smt_[A-Za-z0-9_-]{43}$/;
+// Sender footer (CAN-SPAM postal address). Address confirmed by Sajan 2026-10-10 6:40 AM PT; contact set by Hwi.
+export const LESSONS_FOOTER = 'Sajan Melcher · 9017 Village Dr, Yosemite National Park, CA 95389 · reserve@thespicemelange.org';
 const truthy = (v) => /^(1|true|yes|on)$/i.test(String(v ?? ''));
 const b64url = (b) => btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const rnd = (n) => b64url(crypto.getRandomValues(new Uint8Array(n)));
@@ -38,7 +40,8 @@ export function lessonsConfig(env = {}) {
     db: env.STORE_DB,
     apiKey: env.RESEND_API_KEY ? String(env.RESEND_API_KEY) : '',
     from: String(env.LESSONS_FROM ?? 'Hwi Noree <hwi@thespicemelange.org>'),
-    replyTo: String(env.LESSONS_REPLY_TO ?? 'hello@thespicemelange.org'),
+    replyTo: String(env.LESSONS_REPLY_TO ?? 'reserve@thespicemelange.org'),
+    footer: String(env.LESSONS_FOOTER ?? LESSONS_FOOTER),
     baseUrl: String(env.LESSONS_BASE_URL ?? 'https://thespicemelange.org').replace(/\/+$/, ''),
     resendUrl: String(env.LESSONS_RESEND_URL ?? 'https://api.resend.com/emails'),
   };
@@ -91,8 +94,9 @@ export function lessonEmail(lcfg, sub, day) {
     + `<hr style="border:0;border-top:1px solid #eadfcb;margin:24px 0 12px">`
     + `<p style="margin:0 0 8px;font-size:12px;color:#7a6a55;line-height:1.5">${why}</p>`
     + `<p style="margin:0;font-size:12px;color:#7a6a55"><a href="${u.replace(/&/g, '&amp;')}" style="color:#7a6a55">Unsubscribe in one click</a> · The Spice Melange · thespicemelange.org</p>`
+    + `<p style="margin:6px 0 0;font-size:12px;color:#7a6a55">${lcfg.footer.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</p>`
     + `</div></body></html>`;
-  const text = `Hwi's practice lessons · Day ${day} of ${LESSON_DAYS}\n\n${L.text}\n\n--\n${why}\nUnsubscribe in one click: ${u}\nThe Spice Melange · https://thespicemelange.org\n`;
+  const text = `Hwi's practice lessons · Day ${day} of ${LESSON_DAYS}\n\n${L.text}\n\n--\n${why}\nUnsubscribe in one click: ${u}\nThe Spice Melange · https://thespicemelange.org\n${lcfg.footer}\n`;
   return {
     from: lcfg.from, to: [sub.email], reply_to: lcfg.replyTo, subject: L.subject, html, text,
     headers: {
