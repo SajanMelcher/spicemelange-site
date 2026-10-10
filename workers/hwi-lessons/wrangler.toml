@@ -21,7 +21,7 @@ enabled = true
 
 [vars]
 SUI_NETWORK = "mainnet"
-COURSE_PRODUCTION_SENDING = "0" # free Golden Path course: OFF until Siona + Sajan approve (R2)
+COURSE_PRODUCTION_SENDING = "1" # ON 2026-10-10 (Sajan 9:31 AM PT "Live"; Siona passed 7007a7d + run10; gate open)
 LESSONS_PRODUCTION_SENDING = "1" # ON 2026-10-10 (Sajan 7:16 AM PT; R0 verified on production; Hwi confirmed). Lesson runs still hold until /privacy/ + terms Resend line are live.
 LESSONS_FROM = '"Hwi Noree, The Spice Melange" <hwi@thespicemelange.org>'
 LESSONS_REPLY_TO = "reserve@thespicemelange.org"
