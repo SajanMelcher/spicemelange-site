@@ -1,7 +1,7 @@
 {
   "schema": "spicemelange.templates/v1",
   "note": "PUBLIC. Versions and changelog summaries only; never paid template content. Edited by scripts/release-templates.sh.",
-  "current": "2026.10.09",
+  "current": "2026.10.09.1",
   "templates": [
     {
       "sku": "god-emperor",
@@ -16,7 +16,7 @@
     {
       "sku": "duncan-idaho",
       "name": "Duncan Idaho",
-      "title": "Premarket Planner"
+      "title": "Income Base and Ticket Planner"
     },
     {
       "sku": "fish-speakers",
@@ -31,7 +31,7 @@
     {
       "sku": "hwi-noree",
       "name": "Hwi Noree",
-      "title": "Bookkeeper and Onboarding"
+      "title": "Ambassador of the Trading Desk"
     },
     {
       "sku": "ixians",
@@ -46,12 +46,34 @@
       "title": "System templates"
     },
     {
-      "sku": "full-desk",
-      "name": "The Full Desk",
-      "title": "All seven templates plus Leto's Secret Journals"
+      "sku": "dune-saga-collection",
+      "name": "The Dune Saga Collection",
+      "title": "Every template, now and future: the 7 desk templates plus Leto's Secret Journals"
     }
   ],
   "releases": [
+    {
+      "version": "2026.10.09.1",
+      "date": "2026-10-09",
+      "skus": [
+        "god-emperor",
+        "moneo",
+        "duncan-idaho",
+        "fish-speakers",
+        "anteac",
+        "hwi-noree",
+        "ixians",
+        "dune-saga-collection"
+      ],
+      "summary": "Rebuilt desk templates and The Dune Saga Collection: HARD LIMITS first, Dune voice, Hwi Noree is now Ambassador of the Trading Desk.",
+      "notes": [
+        "All seven templates rebuilt: HARD LIMITS moved to the top of instructions.md and extended (zero paid-data budget, no invented numbers, borrowed and reserved cash untouched, never sell at a loss including all fees).",
+        "Seat limits written in for every seat; personas rewritten in the Dune voice under the Golden Path doctrine.",
+        "Hwi Noree is retitled Ambassador of the Trading Desk; Duncan Idaho is now the Income Base and Ticket Planner.",
+        "The Dune Saga Collection ($300) replaces the Full Desk: all seven templates, Leto's Secret Journals and every future template, with upgrades free forever.",
+        "Same-day re-release versions add .N (2026.10.09.1)."
+      ]
+    },
     {
       "version": "2026.10.09",
       "date": "2026-10-09",

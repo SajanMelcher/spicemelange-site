@@ -218,7 +218,7 @@ async function holdAmount(cfg, amount, orderId, nowMs, holdUntilMs) {
 
 export async function createOrder(cfg, { sku, email, ipHash, selftestKey, nowMs = Date.now() }) {
   const p = bySku(sku);
-  if (!p || p.comingSoon) return { ok: false, status: 400, reason: 'unknown_product' };
+  if (!p || p.comingSoon || p.retired) return { ok: false, status: 400, reason: 'unknown_product' }; // retired: download-only
   // Hidden SKUs behave exactly like unknown ones unless the secret flag matches.
   if (p.hidden && !(cfg.selftestKey && typeof selftestKey === 'string' && safeEqual(selftestKey, cfg.selftestKey))) {
     return { ok: false, status: 400, reason: 'unknown_product' };
