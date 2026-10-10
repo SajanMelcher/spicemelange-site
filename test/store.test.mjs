@@ -309,7 +309,7 @@ test('templates: Grok Bot catalog copy, prices, and a public versions.json with 
   assert.match(v.howToUpdate, /\/store\/download\//);
 });
 
-test('retired Full Desk: not orderable or listed, but a past paid order still re-downloads its original file', async () => {
+test('retired Full Desk: not orderable or listed; a past paid order is served the current Dune Saga Collection (T1 alias) with add-ons', async () => {
   const { bySku, LISTED, ARCHETYPES } = await import('../store-core/catalog.js');
   const { loadFile } = await import('../store-core/files.js');
   assert.equal(bySku('full-desk').retired, true);
@@ -321,9 +321,11 @@ test('retired Full Desk: not orderable or listed, but a past paid order still re
   const r = await createOrder(c2, { sku: 'moneo', nowMs: T0 });
   c2.db.raw.prepare("UPDATE orders SET sku = 'full-desk', status = 'paid', digest = 'x', paid_ms = ? WHERE id = ?").run(T0 + 1000, r.order.orderId);
   const st = await orderStatus(c2, { orderId: r.order.orderId, token: r.order.token, nowMs: T0 + 5000 });
-  assert.equal(st.status, 'paid'); assert.match(st.downloadUrl, /p=full-desk/);
+  assert.equal(st.status, 'paid'); assert.match(st.downloadUrl, /p=dune-saga-collection/); assert.equal(st.sku, 'dune-saga-collection'); assert.equal(st.upgradedFrom, 'full-desk');
+  assert.equal(st.addons?.[0]?.sku, 'desk-kit');
   const q = Object.fromEntries(new URL('https://x' + st.downloadUrl).searchParams);
   assert.equal((await checkLink(c2, { ...q, nowMs: T0 + 6000 })).ok, true);
+  assert.equal((await authorizeDownload(c2, { orderId: r.order.orderId, token: r.order.token, nowMs: T0 + 7000 })).sku, 'dune-saga-collection');
   const kv = { async getWithMetadata(k) { return k === 'file:full-desk' ? { value: new Uint8Array([80, 75]).buffer, metadata: { name: 'golden-path-full-desk-2026.10.09.zip', type: 'application/zip' } } : { value: null, metadata: null }; } };
   const f = await loadFile({ STORE_FILES: kv }, 'full-desk');
   assert.equal(f.name, 'golden-path-full-desk-2026.10.09.zip');

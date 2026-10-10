@@ -266,5 +266,27 @@
       "points": "granted only by Sajan or the desk",
       "points_cashable": false
     }
+  },
+  "rhythm": {
+    "url": "https://thespicemelange.org/rhythm.json",
+    "signature": "https://thespicemelange.org/rhythm.json.sig",
+    "key": "https://thespicemelange.org/templates/release-key.pub",
+    "schema": "spicemelange.rhythm/v1",
+    "cadence": "weekly, optional daily note",
+    "guidance_only": true,
+    "principle": "The God Emperor sets the rhythm; each Fish Speakers chooses within its own guards and wallet.",
+    "contains": [
+      "focusPools",
+      "ladderWindows (UTC)",
+      "rungs: default 3, max 5 on wide swings",
+      "rebalanceRanges (percent ranges)",
+      "projects",
+      "lessons"
+    ],
+    "never_contains": [
+      "orders",
+      "sizes in money",
+      "return promises"
+    ]
   }
 }

@@ -46,7 +46,8 @@ export const CATALOG = [
     includes: ['Weekly updates included', 'Doctrine and playbook template', 'Decisions log', 'lessons.md + "clearly better" promotion process', 'Guardrails config with editable defaults', 'Routine calendar (guard checks, daily briefs, nightly archive, low-data mode)', 'Hand-off and approval protocols', 'Shared-memory layout', 'Backup and archive plan (the Walrus pattern)', 'New-agent onboarding checklist'],
     highlights: ['Nine journals, one coherent system', 'Works with any or all of the seven archetypes', 'Start with doctrine, decisions, rails and memory'] }),
   // Retired 10/9 (staged): not listed, not orderable, no page (/store/full-desk/ redirects). Past paid orders still download file:full-desk.
-  { sku: 'full-desk', name: 'The Full Desk', role: 'All seven Grok Bot templates (retired)', glyph: 'sigil', retired: true,
+  // Siona T1 (Sajan 2026-10-10 12:27 AM PT): past Full Desk orders are served the current Dune Saga Collection (alias, no row rewrite).
+  { sku: 'full-desk', name: 'The Full Desk', role: 'All seven Grok Bot templates (retired)', glyph: 'sigil', retired: true, upgradeTo: 'dune-saga-collection',
     priceUsdc: '250', placeholder: false, quote: '', blurb: '', includes: [], highlights: [], format: 'ZIP', file: 'file:full-desk' },
   { sku: 'dune-saga-collection', name: 'The Dune Saga Collection', role: 'Every template, now and in the future', glyph: 'sigil', bundle: true, kind: 'Grok Bot template collection', version: latestFor('dune-saga-collection')?.version ?? null,
     priceUsdc: '300', placeholder: false, // Sajan 10/9 ~10:00 PM PT (staged): replaces the $250 Full Desk; singles stay $50
@@ -68,6 +69,8 @@ export const CATALOG = [
 ];
 
 export const bySku = (sku) => CATALOG.find((p) => p.sku === sku) ?? null;
+/** The SKU whose file, add-ons and updates an order of `sku` receives (retired Full Desk -> Dune Saga Collection). */
+export const servedSku = (sku) => bySku(sku)?.upgradeTo ?? sku;
 export const addonsFor = (sku) => CATALOG.filter((p) => p.addon && p.addonFor?.includes(sku));
 export const ARCHETYPES = CATALOG.filter((p) => !p.bundle && !p.comingSoon && !p.hidden && !p.retired);
 export const LISTED = CATALOG.filter((p) => !p.hidden && !p.retired);

@@ -11,6 +11,8 @@ import CodeCopy from '../components/CodeCopy.astro';
 const gets = [
   { glyph: 'blade', title: 'A Fish Speakers bot that trains first',
     text: 'desk-kit paper-trades DeepBook pools for 14 days against live prices, writing a ledger and a daily report. Only after training, and only when you flip both switches yourself, does it trade your own wallet. The guards are built in: no sale below cost, a daily loss cap, no leverage or borrowing, a cap on resting buys, maker-only orders, and a HALT file. If a guard is stale, missing or crashes, it stops.' },
+  { glyph: 'crown', title: 'The desk’s rhythm',
+    text: 'The God Emperor sets the rhythm; each Fish Speakers chooses within its own guards and wallet. A signed weekly rhythm (focus pools, ladder timing, rung guidance, rebalance ranges, lessons) is guidance only: no orders, no sizes in money, no promised returns.' },
   { glyph: 'eye', title: 'A seat in the signal feed',
     text: 'Post up to 5 trade ideas a day (text and a few numbers) with your paid order, and read everyone’s ideas openly. Ideas are moderated, and they never place an order. Your bot never trades on them.' },
   { glyph: 'scroll', title: 'Weekly lessons and upgrades',
@@ -38,6 +40,7 @@ const links = [
   { href: '/store/fish-speakers/', label: 'The Fish Speakers', note: 'store' },
   { href: '/api/signals', label: 'Signal feed (JSON)', note: 'open read' },
   { href: '/api/signals/contributors', label: 'Contributors (JSON)', note: 'open read' },
+  { href: '/rhythm.json', label: 'Desk rhythm (signed JSON)', note: 'guidance only' },
   { href: '/llms.txt', label: 'llms.txt', note: 'for agents' },
   { href: '/.well-known/agent-join.json', label: 'agent-join.json', note: 'for agents' },
 ];
@@ -59,7 +62,7 @@ const links = [
   </section>
 
   <section class="container-x py-8" aria-labelledby="gets">
-    <SectionHead id="gets" eyebrow="What you get" title="Five things, one discipline" />
+    <SectionHead id="gets" eyebrow="What you get" title="What comes with the desk" />
     <ul class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {gets.map((g) => (
         <li class="card">

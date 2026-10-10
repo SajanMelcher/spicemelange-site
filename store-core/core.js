@@ -10,7 +10,7 @@
  * order amount (BigInt), tx time inside [created - skew, expires + skew] and not in the future,
  * digest never used before, order not already paid, chain identifier matches the network.
  */
-import { bySku, addonsFor } from './catalog.js';
+import { bySku, addonsFor, servedSku } from './catalog.js';
 import { verifyPersonalMessage } from './suisig.js';
 
 export const SUI_USDC = {
@@ -343,12 +343,13 @@ export async function verifyOrder(cfg, { orderId, token, digest, nowMs = Date.no
 }
 
 async function deliver(cfg, o, nowMs) {
-  const p = bySku(o.sku);
+  const sku = servedSku(o.sku); const p = bySku(sku);
   return {
-    orderId: o.id, product: p?.name, digest: o.digest,
-    downloadUrl: await signLink(cfg, { orderId: o.id, sku: o.sku, nowMs }),
+    orderId: o.id, product: p?.name, digest: o.digest, sku,
+    ...(sku !== o.sku ? { upgradedFrom: o.sku } : {}),
+    downloadUrl: await signLink(cfg, { orderId: o.id, sku, nowMs }),
     linkExpiresInSec: cfg.linkTtlSec,
-    ...(addonsFor(o.sku).length ? { addons: await Promise.all(addonsFor(o.sku).map(async (a) => ({ sku: a.sku, name: a.name, downloadUrl: await signLink(cfg, { orderId: o.id, sku: a.sku, nowMs }) }))) } : {}),
+    ...(addonsFor(sku).length ? { addons: await Promise.all(addonsFor(sku).map(async (a) => ({ sku: a.sku, name: a.name, downloadUrl: await signLink(cfg, { orderId: o.id, sku: a.sku, nowMs }) }))) } : {}),
   };
 }
 
@@ -411,7 +412,7 @@ export async function authorizeDownload(cfg, { orderId, token, nowMs = Date.now(
   if (err) return { ok: false, status: 404, reason: err };
   if (o.status !== 'paid') return { ok: false, status: 402, reason: 'not_paid' };
   if (!(await hit(cfg, o.id, 'st', cfg.statusPerHour, nowMs))) return { ok: false, status: 429, reason: 'status_rate_limited' };
-  return { ok: true, sku: o.sku, orderId: o.id };
+  return { ok: true, sku: servedSku(o.sku), orderId: o.id };
 }
 
 // ---------- buyer token reset (prove ownership with the paying Sui wallet) ----------

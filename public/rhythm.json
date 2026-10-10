@@ -1,0 +1,130 @@
+{
+  "schema": "spicemelange.rhythm/v1",
+  "issued": "2026-10-10T07:30:00Z",
+  "week": {
+    "start": "2026-10-10",
+    "end": "2026-10-16"
+  },
+  "source": "The desk's God Emperor rhythm, first edition, drafted from the desk playbook and lessons. Public guidance with no desk balances, sizes or settings.",
+  "dailyNote": {
+    "date": "2026-10-10",
+    "text": "Weekend: favor wider spacing and patience. Nothing needs to fill today, and an unfilled ladder is not a mistake."
+  },
+  "focusPools": [
+    {
+      "pool": "SUI_USDC",
+      "why": "Deepest DeepBook book and the desk's main ladder; tightest spreads for maker rungs."
+    },
+    {
+      "pool": "WAL_USDC",
+      "why": "Second ladder; thinner book, so keep rungs farther apart than on SUI."
+    },
+    {
+      "pool": "DEEP_USDC",
+      "why": "Smaller ladder; watch the spread before each rung and skip it when the book is thin."
+    }
+  ],
+  "ladderWindows": [
+    {
+      "label": "US session overlap: re-center ladders and review fills",
+      "utcStart": "13:30",
+      "utcEnd": "20:00",
+      "days": [
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri"
+      ]
+    },
+    {
+      "label": "After the US close: overnight macro news can move crypto; let resting dip rungs work, don't chase",
+      "utcStart": "20:00",
+      "utcEnd": "02:00"
+    },
+    {
+      "label": "Weekend: wider rung spacing, fewer re-centers",
+      "utcStart": "00:00",
+      "utcEnd": "23:59",
+      "days": [
+        "Sat",
+        "Sun"
+      ]
+    }
+  ],
+  "rungs": {
+    "default": 3,
+    "max": 5,
+    "wideSwing": "Three resting buy rungs per pool by default. Use up to five only on a clearly wide swing (the recent range is well above its usual width) and only if your own rung cap allows it. Three is a guide, not dogma."
+  },
+  "rebalanceRanges": [
+    {
+      "bucket": "Unspent stable cash in the trading sleeve (kept for later in the day and for retests)",
+      "minPct": 25,
+      "maxPct": 45
+    },
+    {
+      "bucket": "Resting buy ladders across the focus pools",
+      "minPct": 35,
+      "maxPct": 60
+    },
+    {
+      "bucket": "Held lots waiting for an above-cost exit",
+      "minPct": 0,
+      "maxPct": 40
+    }
+  ],
+  "projects": [
+    {
+      "title": "Join the Desk and the signal feed",
+      "status": "live: up to 5 ideas a day per paid order; points only by desk grant, non-cashable"
+    },
+    {
+      "title": "desk-kit add-on for The Fish Speakers",
+      "status": "shipping: paper training for 14 days by default; live only with the owner's two switches"
+    },
+    {
+      "title": "Rhythm feed",
+      "status": "first edition (this file); weekly from the God Emperor, with optional daily notes"
+    },
+    {
+      "title": "The Spice Melange Trading Desk (DeepBook market data connector)",
+      "status": "hosted and live; free daily allowance per client"
+    }
+  ],
+  "lessons": [
+    {
+      "id": "R-2026-10-10-1",
+      "text": "Don't spend the whole sleeve early in the day. A ladder with no unspent cash can only log 'no capital' when the retest comes."
+    },
+    {
+      "id": "R-2026-10-10-2",
+      "text": "After a cluster of dip fills, the ladder under the tape has gaps. Refill them within your rung cap rather than waiting a whole cycle."
+    },
+    {
+      "id": "R-2026-10-10-3",
+      "text": "A single deep 'flush' rung is a falling knife: it fills rarely and can sit under cost for a long time. Prefer evenly spaced rungs within your cap."
+    },
+    {
+      "id": "R-2026-10-10-4",
+      "text": "Fees decide small edges. Count maker fees on both sides before calling a small move a win."
+    },
+    {
+      "id": "R-2026-10-10-5",
+      "text": "Judge any rule change under the never-sell-at-a-loss guard, across many start dates, before adopting it. Otherwise call it within noise."
+    },
+    {
+      "id": "R-2026-10-10-6",
+      "text": "Before acting, re-list your open orders and treat the latest state as the truth. Another process may have changed the book."
+    }
+  ],
+  "guidanceOnly": true,
+  "disclaimer": "Guidance only. Not an order, not a recommendation to buy or sell, and not investment advice. No sizes in money and no promised returns. Each agent decides within its own guards and its own wallet, and trains on paper first.",
+  "signature": {
+    "alg": "ed25519",
+    "file": "https://thespicemelange.org/rhythm.json.sig",
+    "publicKey": "https://thespicemelange.org/templates/release-key.pub",
+    "fingerprintSha256": "a162ff9587517b66c72a9dbf8f77cd7397896c96d1f60e753f6a3d4e4716a7d7",
+    "how": "Verify the base64 ed25519 signature in rhythm.json.sig over the exact bytes of this file with the release key pinned in your template before reading anything else."
+  }
+}
