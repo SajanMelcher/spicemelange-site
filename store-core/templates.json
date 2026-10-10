@@ -1,49 +1,49 @@
 {
   "schema": "spicemelange.templates/v1",
   "note": "PUBLIC. Versions and changelog summaries only; never paid template content. Edited by scripts/release-templates.sh.",
-  "current": "2026.10.09.1",
+  "current": "2026.10.09.2",
   "templates": [
     {
       "sku": "god-emperor",
       "name": "The God Emperor",
       "title": "Orchestrator",
-      "sha256": "504b5bf21743449d080f69fc1acd555faeea6304ddf53a28522b817c8a58b2d8"
+      "sha256": "6b76c3da3d51edf77d4154391735a80c0cb0d7fda8ad31eed054d5f4150fe00d"
     },
     {
       "sku": "moneo",
       "name": "Moneo",
       "title": "Mentat Researcher",
-      "sha256": "3b26b6257c1059750ef650e2ae63331ac379cebd3ce32860fccd2491eb97a0e2"
+      "sha256": "54fc6d2249a724a7718b1d09f2d85e30cdf3f9da38edeafd96242f0f089d9c11"
     },
     {
       "sku": "duncan-idaho",
       "name": "Duncan Idaho",
       "title": "Income Base and Ticket Planner",
-      "sha256": "93e4f00125283dec20ab27b91ef8cca348c621f302e1a8ca9d0f1a6e61b2c117"
+      "sha256": "1f2d2fad0b91233d56807d8d93f8cf3e5fa7094fe742e141b75126a8cbed574d"
     },
     {
       "sku": "fish-speakers",
       "name": "The Fish Speakers",
       "title": "Execution Operator",
-      "sha256": "50384ad1b6b3fd7a11dd7b6401e64848ce08cb02a510533fd127f030fdb21152"
+      "sha256": "ee74d4cfe46453edc7a97b2be4d20d3dc52b47f2149d7f86458ec652f64a6eda"
     },
     {
       "sku": "anteac",
       "name": "Anteac",
       "title": "Truthsayer Verifier",
-      "sha256": "8818056e06dd61c73f500c7853c9c481cd1efa1cf6228196bf328cfe6cef8ea5"
+      "sha256": "b1350968f61eca6b3fac3b279abcec2d87cb7486f58cb782c55d8db1a6fd4861"
     },
     {
       "sku": "hwi-noree",
       "name": "Hwi Noree",
       "title": "Ambassador of the Trading Desk",
-      "sha256": "79a9a0c3d958c8cbbe503f59c550509506960689a1b243bf97ba2c2bd39efef0"
+      "sha256": "ebf6aa8df4636bc54a0516927c294f4437a07065ebbbd3a58ef71ded8eee735f"
     },
     {
       "sku": "ixians",
       "name": "Ixians",
       "title": "Toolmaker and Infrastructure",
-      "sha256": "148a5f467e167021318aeef757ac59b450e9a53430e5628d3a526786e35ba85e"
+      "sha256": "2e58c8edd5beebfc6d1e19fd31cfe010cc016063b09f04f069faa609000001d4"
     }
   ],
   "packs": [
@@ -57,10 +57,33 @@
       "sku": "dune-saga-collection",
       "name": "The Dune Saga Collection",
       "title": "Every template, now and future: the 7 desk templates plus Leto's Secret Journals",
-      "sha256": "5fb75c118841f8aa2ae403f43c55ac6943be6b99f4fc87b904f5945213074417"
+      "sha256": "7646c981c90735d46d911408d94a5908453d91003d216b7a4da2b355155db402"
     }
   ],
   "releases": [
+    {
+      "version": "2026.10.09.2",
+      "date": "2026-10-09",
+      "skus": [
+        "god-emperor",
+        "moneo",
+        "duncan-idaho",
+        "fish-speakers",
+        "anteac",
+        "hwi-noree",
+        "ixians",
+        "dune-saga-collection"
+      ],
+      "summary": "Automatic upgrades that never expire: new auto-update skill and weekly routine, signed versions.json.",
+      "notes": [
+        "New auto-update skill and Weekly auto-update routine: checks versions.json weekly, downloads a newer version with your order secret (kept in a masked secret store, never chat, memory or logs) and verifies its SHA-256 before installing.",
+        "Installs keep your settings, memories and caps. Limits can only get stricter automatically; anything that would loosen a limit or needs new permissions, accounts or connectors stops and asks you.",
+        "Getting-started asks whether you bought a single template or the collection; collection buyers use the collection order for every pack.",
+        "New HARD LIMIT 14 (self-updates only get stricter); HARD LIMIT 3 now names the one stored-secret exception (the order secret).",
+        "Moving from 2026.10.09.1 to 2026.10.09.2 is a one-time manual install; later versions update automatically.",
+        "versions.json is now signed (ed25519): versions.json.sig, public key at /templates/release-key.pub."
+      ]
+    },
     {
       "version": "2026.10.09.1",
       "date": "2026-10-09",
