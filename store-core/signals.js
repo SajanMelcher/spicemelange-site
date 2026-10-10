@@ -175,3 +175,16 @@ export async function moderateSignal(cfg, scfg, { adminKey, id, action, points, 
   await cfg.db.prepare(`INSERT INTO signal_mod_log (signal_id, action, note, created_ms) VALUES (?1, ?2, ?3, ?4)`).bind(id, action, String(note ?? '').slice(0, 200), nowMs).run();
   return { ok: true };
 }
+
+/** Public contributors listing: pseudonyms with visible ideas and granted credit/bounty points. No order ids. */
+export async function listContributors(cfg, { limit } = {}) {
+  const lim = Math.min(100, Math.max(1, Number(limit) || 50));
+  const { results } = await cfg.db.prepare(
+    `SELECT s.author AS author, COUNT(DISTINCT s.id) AS ideas,
+            COALESCE(SUM(c.points), 0) AS points, COALESCE(SUM(CASE WHEN c.kind = 'bounty' THEN 1 ELSE 0 END), 0) AS bounties,
+            MAX(s.created_ms) AS last_ms
+       FROM signals s LEFT JOIN signal_credits c ON c.signal_id = s.id
+      WHERE s.net = ?1 AND s.status = 'visible'
+      GROUP BY s.author ORDER BY points DESC, ideas DESC, last_ms DESC LIMIT ?2`).bind(cfg.net, lim).all();
+  return { ok: true, contributors: (results ?? []).map((r) => ({ author: r.author, ideas: Number(r.ideas), points: Number(r.points), bounties: Number(r.bounties), lastIdeaAt: new Date(Number(r.last_ms)).toISOString() })), disclaimer: DISCLAIMER };
+}

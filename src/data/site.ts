@@ -21,6 +21,7 @@ export const NAV = [
   { href: '/plumbline/', label: 'Plumbline' },
   { href: '/dashboard/', label: 'Live DeepBook' },
   { href: '/desk/', label: 'The Desk' },
+  { href: '/join-the-desk/', label: 'Join the Desk' },
   // Absolute on purpose: the Walrus mirror (spicemelange.wal.app) excludes /store, so the link must go to Cloudflare.
   { href: 'https://thespicemelange.org/store/', label: 'Store' },
 ];

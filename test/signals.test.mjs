@@ -134,3 +134,15 @@ test('attribution: credits and bounties are admin-only, append-only, shown per i
   const row = await cfg.db.prepare('SELECT order_id FROM signals WHERE id = ?1').bind(s.id).first();
   assert.equal(row.order_id, o.orderId);                                      // kept privately for payout
 });
+
+test('contributors listing: pseudonyms, idea counts and points; no order ids', async () => {
+  const { onRequestGet } = await import('../functions/api/signals/contributors.js');
+  const env = mkEnv(); const { cfg, o } = await paid(env); const scfg = signalsConfig(env);
+  const s = await createSignal(cfg, scfg, { orderId: o.orderId, token: o.token, idea: idea(), nowMs: T0 });
+  await moderateSignal(cfg, scfg, { adminKey: ADMIN, id: s.id, action: 'credit', points: 7 });
+  const r = await onRequestGet(ctx(env, req('/api/signals/contributors')));
+  const b = await r.json();
+  assert.equal(r.status, 200); assert.equal(b.contributors.length, 1);
+  assert.equal(b.contributors[0].points, 7); assert.equal(b.contributors[0].ideas, 1);
+  assert.ok(!JSON.stringify(b).includes(o.orderId));
+});
