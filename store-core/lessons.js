@@ -162,7 +162,7 @@ export function lessonEmail(lcfg, sub, day) {
   return {
     from: lcfg.from, to: [sub.email], reply_to: lcfg.replyTo, subject: L.subject, html, text,
     headers: {
-      'List-Unsubscribe': `<${u}>, <mailto:${lcfg.replyTo}?subject=unsubscribe%20lessons>`,
+      'List-Unsubscribe': `<${u}>`,
       'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
     },
     tags: [{ name: 'kind', value: 'hwi_lesson' }, { name: 'day', value: String(day).padStart(2, '0') }],

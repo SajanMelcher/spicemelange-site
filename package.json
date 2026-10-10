@@ -9,7 +9,7 @@
     "preview": "astro preview --host 127.0.0.1 --port 4321",
     "snapshot": "node scripts/deepbook-snapshot.mjs",
     "shots": "node scripts/screenshots.mjs",
-    "test:store": "npx --yes -p node@22 -- node --no-warnings --test test/store.test.mjs test/signals.test.mjs test/rhythm.test.mjs test/lessons.test.mjs test/course.test.mjs test/privacy-gl.test.mjs test/privacy-prod.test.mjs test/email-off.test.mjs",
+    "test:store": "npx --yes -p node@22 -- node --no-warnings --test test/*.test.mjs",
     "deploy": "bash scripts/deploy.sh production",
     "deploy:preview": "bash scripts/deploy.sh preview",
     "walrus:update": "bash scripts/walrus-update.sh",

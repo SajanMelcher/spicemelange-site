@@ -2,7 +2,7 @@
 // Free course = Golden Path intro and information only (Sajan 9:36 AM PT): no agent setup tasks; at most one gentle
 // Dune Saga Collection invitation. Agent configuration lives only in the buyers-only 14-day lessons.
 // The sender assembles: core + track + goal line + (standard: deeper)
-// + at most one Collection invitation (lessons 6 and 7 only) + reply line + risk line.
+// + at most one Collection invitation (lessons 6 and 7 only) + risk line (no reply line: Siona LL3).
 // Wording rules (Siona O3-O9, GL8-GL13): "trade beside the desk" ("It can't place trades or touch your funds", per client,
 // 0.01 USDC minimum); Seal is planned ("We plan to add Seal… would release"); Walrus = "current releases are also backed up";
 // walls are rules the bot is told to follow (check them yourself); "upgrades free forever" (matches LICENSE.md); no return claims.

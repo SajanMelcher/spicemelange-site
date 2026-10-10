@@ -121,3 +121,20 @@ test('purge: status=unsubscribed rows (fallback / pre-GL2) -> HMAC suppression w
   assert.deepEqual(sup, [{ email_hash: await emailHash(SALT, 'old@x.example'), list: 'lessons', unsub_ms: NOW - 500 }]);
   assert.equal((await purge(db, NOW + 1, { salt: SALT })).unsubscribedMinimized.lessons, 0); // idempotent
 });
+
+test('Siona LL3: no reply-stop / keyword instructions anywhere; inbound route dormant (404); one-click unsubscribe only', async () => {
+  const BAD = /reply(ing)? ["“']?stop|replying "stop"|simpler|too simple, too deep|keyword such as|receives replies|we save only a suggestion|change any answer later by replying/i;
+  const priv = read('../src/pages/privacy.astro');
+  assert.doesNotMatch(priv, BAD); assert.match(priv, /one-click unsubscribe/); assert.match(priv, /DELETION_CONTACT/);
+  const { courseConfig, courseEmail } = await import('../store-core/course.js');
+  const c = courseConfig({ LESSONS_FOOTER: 'F' });
+  for (let e = 1; e <= 7; e++) { const m = courseEmail(c, { id: 'cs_aaaaaaaaaaaaaaaa', unsub_token: 'cu_x', email: 'a@b.co', track: 'naib', goal: 'builder', time: 'standard', agent: 'yes' }, e);
+    for (const s of [m.text, m.html]) assert.doesNotMatch(s, BAD); assert.doesNotMatch(m.headers['List-Unsubscribe'], /mailto:/); }
+  const { LESSONS } = await import('../store-core/lessons-content.js');
+  for (const l of LESSONS) for (const s of [l.text, l.html, JSON.stringify(l.cta ?? {})]) assert.doesNotMatch(s, BAD, `day ${l.day}`);
+  assert.doesNotMatch(read('../src/pages/learn/index.astro'), BAD);
+  const inbound = await import('../functions/api/course/inbound.js');
+  const r = await inbound.onRequestPost({ env: { COURSE_INBOUND_SECRET: 'whsec_x' }, request: new Request('https://x/api/course/inbound', { method: 'POST', body: '{}' }) });
+  assert.equal(r.status, 404);
+  for (const t of ['../wrangler.toml', '../workers/hwi-lessons/wrangler.toml']) assert.doesNotMatch(read(t), /COURSE_INBOUND_ENABLED/);
+});

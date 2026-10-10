@@ -30,21 +30,21 @@ const updated = 'October 10, 2026';
       <li><strong>Referral source:</strong> if you arrive through a campaign or referral link, a short utm or ref tag is held in your browser tab (no cookies) and saved with your order or course signup so we can credit the referrer. On a course signup it is deleted with that signup.</li>
       <li><strong>Referral codes:</strong> each code is stored with the name or pseudonym of the person it credits, an optional note and the date it was created, and is kept until we remove it. Referrers get no access to order data; the sales report shows only counts and totals per code.</li>
       <li><strong>Lesson and course emails (opt-in only):</strong> if you tick the box and then confirm by email, we keep your email address, when and where you opted in, and which lessons were sent. For the free course we also keep your optional quiz answers: experience level, goal, time and whether you use an AI agent. Your quiz answers are stored only in our own database; they are not sent to our email provider. We never ask about income, savings, debts, balances or age.</li>
-      <li><strong>How long we keep subscribers:</strong> a signup you never confirm is deleted {S.unconfirmedDays} days after you made it. A finished lesson series or course is deleted {S.afterLastLessonDays} days after the last lesson. If you move from the free course to the 14-day lessons, the course record is deleted {S.handoffDays} days later. If you reply to a course email, the reply reaches us through Resend; we save only a suggestion from a keyword such as "slower", kept for up to {S.suggestionDays} days.</li>
+      <li><strong>How long we keep subscribers:</strong> a signup you never confirm is deleted {S.unconfirmedDays} days after you made it. A finished lesson series or course is deleted {S.afterLastLessonDays} days after the last lesson. If you move from the free course to the 14-day lessons, the course record is deleted {S.handoffDays} days later.</li>
       <li><strong>Signal posts:</strong> shown under a pseudonym. The link to your order is kept privately for rate limits and moderation.</li>
     </ul>
 
     <h2>Who helps us</h2>
     <ul>
       <li><strong>Cloudflare</strong> hosts the site and its database, and processes requests to serve it.</li>
-      <li><strong>Resend</strong> (Resend, Inc.) sends lesson and course emails and receives replies to them. It processes your address only to deliver them; your quiz answers are not sent to Resend.</li>
+      <li><strong>Resend</strong> (Resend, Inc.) sends lesson and course emails. It processes your address only to deliver them; your quiz answers are not sent to Resend.</li>
       <li><strong>Mysten Labs</strong> runs the public DeepBook indexer (deepbook-indexer.mainnet.mystenlabs.com). On the live market dashboard your browser fetches order-book data from it directly, so, like any website, it sees your IP address and browser type. We send it nothing about you. This is the only outside address your browser contacts on our pages; our fonts and scripts are served from our own site.</li>
       <li><strong>Sui</strong> is a public blockchain. Our server reads it through the public Sui GraphQL service (graphql.mainnet.sui.io) to check payments; your browser doesn't contact it. If you use a Sui wallet to reset your token, that wallet is your own software and talks to the network itself. Payments on Sui are public and can't be deleted by anyone.</li>
     </ul>
 
     <h2>Unsubscribing and deletion</h2>
     <ul>
-      <li>Every lesson or course email has a one-click unsubscribe, and replying "stop" to a course email works too. When you unsubscribe we delete your address, quiz answers, referral source and send history at once, and keep only a scrambled (hashed) copy of your address and the date, so we never email you again.</li>
+      <li>Every lesson or course email has a one-click unsubscribe. When you unsubscribe we delete your address, quiz answers, referral source and send history at once, and keep only a scrambled (hashed) copy of your address and the date, so we never email you again.</li>
       <li>To delete your email, quiz answers, referral source or signal posts, write to <a class="text-ibad-300" href={`mailto:${DELETION_CONTACT}`}>{DELETION_CONTACT}</a>. We do it by hand. There is no self-serve tool yet. On-chain payment records can't be deleted by anyone.</li>
     </ul>
 

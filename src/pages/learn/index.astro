@@ -32,7 +32,7 @@ const q = [
   <section class="container-x max-w-3xl pb-16">
     <form id="fc-form" class="card fc-card space-y-5 text-sm" aria-labelledby="fc-title" hidden>
       <h2 id="fc-title" class="text-2xl text-sand-50">Get the course by email</h2>
-      <p class="text-sand-200/85">Tell me a little about where you are on the sand, and I'll shape the lessons to fit. Every question is optional except your email. You can change any answer later by replying.</p>
+      <p class="text-sand-200/85">Tell me a little about where you are on the sand, and I'll shape the lessons to fit. Every question is optional except your email.</p>
       {q.map((x) => (
         <fieldset class="fc-q space-y-1.5"><legend class="font-semibold text-sand-100 mb-1">{x.label}</legend>
           {x.opts.map(([v, l]) => <label class="fc-opt"><input type="radio" name={x.k} value={v} class="mt-1" /> <span>{l}</span></label>)}

@@ -141,7 +141,7 @@ test('test mode (GL7): non-allowlisted addresses are refused at signup (nothing 
   const c = await runConfirmations(t.env, { nowMs: T0, fetchImpl: t.fetchImpl });
   assert.equal(c.sent, 0); assert.equal(c.skipped, 1); assert.equal(t.sent.length, 0);
 });
-test('lesson headers: sender, reply-to, List-Unsubscribe (https + mailto) and one-click POST; footer in html and text', async () => {
+test('lesson headers: sender, reply-to, List-Unsubscribe (https only, Siona LL3) and one-click POST; footer in html and text', async () => {
   const t = await setup();
   assert.equal((await optIn(t)).ok, true);
   await runLessons(t.env, { nowMs: T0 + 1000, fetchImpl: t.fetchImpl });
@@ -149,7 +149,7 @@ test('lesson headers: sender, reply-to, List-Unsubscribe (https + mailto) and on
   assert.deepEqual(m.body.to, ['delivered@resend.dev']);
   assert.equal(m.body.from, '"Hwi Noree, The Spice Melange" <hwi@thespicemelange.org>');
   assert.equal(m.body.reply_to, 'reserve@thespicemelange.org');
-  assert.match(m.body.headers['List-Unsubscribe'], /^<https:\/\/hwi-lessons\.example\.dev\/api\/lessons\/unsubscribe\?s=ls_[\w-]{16}&t=lu_[\w-]{32}>, <mailto:reserve@thespicemelange\.org\?subject=unsubscribe%20lessons>$/);
+  assert.match(m.body.headers['List-Unsubscribe'], /^<https:\/\/hwi-lessons\.example\.dev\/api\/lessons\/unsubscribe\?s=ls_[\w-]{16}&t=lu_[\w-]{32}>$/);
   assert.equal(m.body.headers['List-Unsubscribe-Post'], 'List-Unsubscribe=One-Click');
   assert.ok(m.body.html.includes(FOOT) && m.body.text.includes(FOOT));
   assert.match(m.body.text, /confirmed by email/);

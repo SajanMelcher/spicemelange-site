@@ -201,8 +201,9 @@ export function courseEmail(ccfg, sub, emailNo) {
     text.push(`LESSON ${p.n} · ${p.title.toUpperCase()}`, '', ...p.paras.flatMap((x) => [x, '']));
   }
   if (b.invite) { html.push(`<p style="${P};background:#fbf6ee;padding:10px 14px;border-left:4px solid #c8862a">${md(b.invite.text)}</p>`); text.push(b.invite.text, ''); }
-  html.push(`<p style="${P}">${escHtml(REPLY)}</p><p style="${P};font-size:13px;color:#7a6a55"><em>${escHtml(RISK)}</em></p>`);
-  text.push(REPLY, '', RISK);
+  // Siona LL3: no reply/keyword instructions (inbound is not wired); one-click unsubscribe only.
+  html.push(`<p style="${P};font-size:13px;color:#7a6a55"><em>${escHtml(RISK)}</em></p>`);
+  text.push(RISK);
   const why = "You're getting this because you signed up for Hwi's free Golden Path course on thespicemelange.org and confirmed by email. Seven lessons, then it stops on its own.";
   html.push(`<hr style="border:0;border-top:1px solid #eadfcb;margin:24px 0 12px"><p style="margin:0 0 8px;font-size:12px;color:#7a6a55">${escHtml(why)}</p>`,
     `<p style="margin:0 0 8px;font-size:12px;color:#7a6a55"><a href="${escHtml(u)}" style="color:#7a6a55">Unsubscribe in one click</a> · <a href="${escHtml(ccfg.baseUrl)}/privacy/" style="color:#7a6a55">Privacy</a></p>`,
@@ -210,7 +211,7 @@ export function courseEmail(ccfg, sub, emailNo) {
   text.push('', '--', why, `Unsubscribe in one click: ${u}`, `Privacy: ${ccfg.baseUrl}/privacy/`, ccfg.footer);
   return {
     from: ccfg.from, to: [sub.email], reply_to: ccfg.replyTo, subject: b.subject, html: html.join(''), text: text.filter((x) => x !== undefined).join('\n'),
-    headers: { 'List-Unsubscribe': `<${u}>, <mailto:${ccfg.replyTo}?subject=unsubscribe%20course>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
+    headers: { 'List-Unsubscribe': `<${u}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
     // T4: no quiz-derived tag (track/goal/time/agent) ever goes to Resend; /privacy/ says quiz answers stay in our D1.
     tags: [{ name: 'kind', value: 'golden_path_course' }, { name: 'email', value: String(emailNo) }],
     _meta: { lessons: b.lessons, invite: b.invite?.door ?? null },

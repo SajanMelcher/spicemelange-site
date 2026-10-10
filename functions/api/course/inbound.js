@@ -4,7 +4,11 @@
 import { json } from '../../../store-core/http.js';
 import { courseInbound, verifyWebhook } from '../../../store-core/course.js';
 
+// Siona LL3 (2026-10-10): DORMANT. Returns 404 unless COURSE_INBOUND_ENABLED = "1" (set nowhere), so the prod build
+// has no live inbound route. The code below stays for a later, separately approved launch.
+export const INBOUND_ENABLED = (env) => String(env?.COURSE_INBOUND_ENABLED ?? '') === '1';
 export async function onRequestPost(context) {
+  if (!INBOUND_ENABLED(context.env)) return json(404, { ok: false, reason: 'not_found' });
   const raw = await context.request.text();
   if (raw.length > 200_000) return json(413, { ok: false });
   if (!(await verifyWebhook(String(context.env.COURSE_INBOUND_SECRET ?? ''), context.request.headers, raw))) return json(401, { ok: false, reason: 'bad_signature' });
