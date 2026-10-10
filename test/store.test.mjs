@@ -285,7 +285,7 @@ test('payee change: each order verifies against the payee recorded on it; new or
 
 test('templates: Grok Bot catalog copy, prices, and a public versions.json with no paid content', async () => {
   const { bySku, ARCHETYPES } = await import('../store-core/catalog.js');
-  const { versionsDoc, TEMPLATES } = await import('../store-core/versions.js');
+  const { versionsDoc, TEMPLATES, compareVersions, versionKey } = await import('../store-core/versions.js');
   const seven = ['god-emperor', 'moneo', 'duncan-idaho', 'fish-speakers', 'anteac', 'hwi-noree', 'ixians'];
   for (const s of seven) { const p = bySku(s); assert.equal(p.kind, 'Grok Bot template'); assert.equal(p.priceUsdc, '50'); assert.match(p.version, /^\d{4}\.\d{2}\.\d{2}(\.\d+)?$/); }
   const saga = bySku('dune-saga-collection');
