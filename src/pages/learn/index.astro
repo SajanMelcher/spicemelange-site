@@ -1,6 +1,6 @@
 ---
-// /learn/ (Ixians R1 + R6): Hwi's free 7-lesson Golden Path course, shaped by a short quiz. DRAFT (preview only, noindex)
-// until Siona's leak scan and Sajan's yes. Never asks income, savings, debts, balances or age.
+// /learn/ (Ixians R1 + R6): Hwi's free 7-lesson Golden Path course, shaped by a short quiz. Public + indexable since
+// Sajan's yes (10/10 9:31 AM PT). Never asks income, savings, debts, balances or age. Confirm/unsubscribe pages stay noindex.
 import Base from '../../layouts/Base.astro';
 import { COURSE, RISK, XAI_LINE } from '../../../store-core/course-content.js';
 const q = [
@@ -10,29 +10,39 @@ const q = [
   { k: 'agent', label: 'Do you use an AI agent (Grok Bot, Claude or another MCP client) today?', opts: [['yes', 'Yes'], ['no', 'Not yet']] },
 ];
 ---
-<Base title="Learn the Golden Path (free course)" noindex={true} description="Hwi's free 7-lesson Golden Path course: patience, hard limits, order books and careful bots. Education only, not financial advice.">
+<Base title="Learn the Golden Path (free course)" description="Hwi's free 7-lesson Golden Path course: patience, hard limits, order books and careful bots. Education only, not financial advice.">
   <section class="container-x max-w-3xl pt-16 pb-10">
     <p class="eyebrow mb-4">Free course · 7 lessons · by email or right here</p>
     <h1 class="text-4xl text-sand-50">Learn the Golden Path</h1>
     <p class="mt-4 text-sand-200/90">Seven short lessons from Hwi Noree, the desk's AI teacher: why we treat Bitcoin as a long-horizon store, the hard limits any bot should have, reading an order book, and patience at your own price. Read them below, or get them by email shaped to your answers.</p>
-    <ol class="mt-6 list-decimal space-y-1 pl-6 text-sand-200/90">
-      {COURSE.map((L) => <li><a class="text-ibad-300" href={`/learn/${L.n}/`}>{L.title}</a></li>)}
+    <p class="mt-6"><a class="btn btn-ghost" href="#fc-title">Get it by email</a></p>
+  </section>
+  <section class="container-x max-w-5xl pb-12" aria-labelledby="lc-title">
+    <h2 id="lc-title" class="sr-only">The seven lessons</h2>
+    <ol class="lc-grid">
+      {COURSE.map((L) => (
+        <li><a class="lc-card" href={`/learn/${L.n}/`}>
+          <span class="lc-num" aria-hidden="true">{L.n}</span>
+          <span class="lc-meta">Lesson {L.n} of 7</span>
+          <span class="lc-title">{L.title}</span>
+        </a></li>
+      ))}
     </ol>
   </section>
   <section class="container-x max-w-3xl pb-16">
-    <form id="fc-form" class="card space-y-5 text-sm" aria-labelledby="fc-title" hidden>
+    <form id="fc-form" class="card fc-card space-y-5 text-sm" aria-labelledby="fc-title" hidden>
       <h2 id="fc-title" class="text-2xl text-sand-50">Get the course by email</h2>
       <p class="text-sand-200/85">Tell me a little about where you are on the sand, and I'll shape the lessons to fit. Every question is optional except your email. You can change any answer later by replying.</p>
       {q.map((x) => (
-        <fieldset class="space-y-1"><legend class="font-semibold text-sand-100">{x.label}</legend>
-          {x.opts.map(([v, l]) => <label class="flex items-start gap-2 text-sand-200/90"><input type="radio" name={x.k} value={v} class="mt-1" /> <span>{l}</span></label>)}
+        <fieldset class="fc-q space-y-1.5"><legend class="font-semibold text-sand-100 mb-1">{x.label}</legend>
+          {x.opts.map(([v, l]) => <label class="fc-opt"><input type="radio" name={x.k} value={v} class="mt-1" /> <span>{l}</span></label>)}
           {x.k === 'agent' && <p class="text-xs text-sand-300/70">{XAI_LINE}</p>}
         </fieldset>
       ))}
-      <label class="block"><span class="font-semibold text-sand-100">Email</span><input id="fc-email" type="email" required maxlength="254" autocomplete="email" class="mt-1 w-full rounded-md border border-sand-200/20 bg-night-900 px-3 py-2" /></label>
+      <label class="block"><span class="font-semibold text-sand-100">Email</span><input id="fc-email" type="email" required maxlength="254" autocomplete="email" class="fc-input mt-1 w-full rounded-md border border-sand-200/25 bg-night-950 px-3 py-2 text-sand-50" /></label>
       <label class="flex items-start gap-2 text-sand-200/90"><input id="fc-consent" type="checkbox" class="mt-1" /> <span>Send me Hwi's free 7-lesson Golden Path course. One-click unsubscribe in every email.</span></label>
       <p class="text-xs text-sand-300/75">We email you a confirmation link first; nothing else is sent until you click it. We never ask about income, savings, debts, balances or age. <a class="text-ibad-300" href="/privacy/">Privacy</a> · <a class="text-ibad-300" href="/terms/">Terms</a></p>
-      <button type="submit" class="btn-primary">Send me the course</button>
+      <button type="submit" class="btn btn-primary">Send me the course</button>
       <p id="fc-msg" class="text-spice-300" role="status"></p>
     </form>
     <div class="mt-10 space-y-2 text-xs text-sand-300/75">
@@ -59,3 +69,22 @@ const q = [
   });
 </script>
 </Base>
+<style is:global>
+  .lc-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); list-style: none; padding: 0; margin: 0; }
+  .lc-card { position: relative; display: flex; flex-direction: column; gap: .35rem; height: 100%; padding: 1.25rem 1.25rem 1.35rem;
+    border-radius: 1rem; border: 1px solid rgb(234 214 170 / .12); background: linear-gradient(160deg, rgb(11 15 36 / .85), rgb(7 9 20 / .9));
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / .04); transition: border-color .15s, transform .15s; overflow: hidden; }
+  .lc-card:hover { border-color: rgb(238 143 58 / .55); transform: translateY(-2px); }
+  .lc-card:focus-visible { outline: 2px solid #8fd3ff; outline-offset: 3px; }
+  .lc-num { font-family: var(--font-serif); font-size: 3.25rem; line-height: 1; color: #f6b26b; opacity: .9; }
+  .lc-meta { font-size: .7rem; letter-spacing: .2em; text-transform: uppercase; color: #d7b97f; }
+  .lc-title { font-family: var(--font-serif); font-size: 1.35rem; line-height: 1.25; color: #fbf3e2; }
+  .fc-card { padding: 1.75rem; }
+  .fc-q { border-top: 1px solid rgb(234 214 170 / .1); padding-top: 1rem; }
+  .fc-opt { display: flex; align-items: flex-start; gap: .6rem; padding: .45rem .6rem; border-radius: .5rem; color: rgb(238 224 196 / .92); cursor: pointer; }
+  .fc-opt:hover { background: rgb(255 255 255 / .03); }
+  .fc-opt input { margin-top: .3rem; accent-color: #d96d1c; }
+  .fc-opt:has(input:checked) { background: rgb(217 109 28 / .12); outline: 1px solid rgb(238 143 58 / .4); }
+  .fc-card input:focus-visible, .fc-card button:focus-visible { outline: 2px solid #8fd3ff; outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .lc-card { transition: none; } .lc-card:hover { transform: none; } }
+</style>

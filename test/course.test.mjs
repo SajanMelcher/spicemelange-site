@@ -77,17 +77,17 @@ test('double opt-in: nothing before confirm; one confirmation; then lessons; con
   assert.equal(m.headers['List-Unsubscribe-Post'], 'List-Unsubscribe=One-Click'); assert.match(m.headers['List-Unsubscribe'], /\/api\/course\/unsubscribe\?s=cs_/);
   assert.ok(m.text.includes(FOOT) && m.html.includes(FOOT)); assert.match(m.text, /AI assistant/); assert.match(m.text, /not financial advice/);
 });
-test('three tracks get visibly different lesson 2s; one invitation at most; none in lesson 1', () => {
+test('three tracks get visibly different lesson 2s; invitations are Collection-only (lessons 6-7)', () => {
   const c = courseConfig({ LESSONS_FOOTER: FOOT });
   const mk = (track, goal, agent) => courseEmail(c, { id: 'cs_aaaaaaaaaaaaaaaa', unsub_token: 'cu_x', email: 'a@b.co', track, goal, time: 'standard', agent }, 2);
   const [p, f, n] = [mk('pilgrim', 'botsafety', 'no'), mk('fremen', 'longview', 'yes'), mk('naib', 'builder', 'yes')];
   assert.notEqual(p.text, f.text); assert.notEqual(f.text, n.text);
   assert.match(p.text, /decide your limits in daylight/); assert.match(f.text, /limit order waits at your price/); assert.match(n.text, /fail-closed guards/);
-  assert.equal(p._meta.invite, null); assert.equal(n._meta.invite, 'connector');
+  assert.equal(p._meta.invite, null); assert.equal(n._meta.invite, null);
   for (const tr of ['pilgrim', 'fremen', 'naib']) for (const g of ['longview', 'botsafety', 'builder', 'evaluate'])
     assert.equal(courseBlocks({ track: tr, goal: g, time: 'standard', agent: 'yes' }, 1).invite, null);
   for (let e = 1; e <= 4; e++) { const b = courseBlocks({ track: 'naib', goal: 'builder', time: 'weekly', agent: 'yes' }, e); assert.ok(!b.invite || typeof b.invite.door === 'string'); }
-  assert.equal(courseBlocks({ track: 'naib', goal: 'builder', time: 'weekly', agent: 'yes' }, 4).invite.door, 'both');
+  assert.equal(courseBlocks({ track: 'naib', goal: 'builder', time: 'weekly', agent: 'yes' }, 4).invite.door, 'collection');
 });
 test('cadence: every other day for brief/standard (7 emails), weekly pairs (4 emails); 9 AM PT only; then done', async () => {
   const t = setup();
@@ -227,4 +227,17 @@ test('course text: no return promises, no private data, risk line in every lesso
   const all = JSON.stringify(COURSE);
   assert.doesNotMatch(all, /guarantee|\bAPY\b|\d+% (a|per) (year|month)|Sajan|0x[0-9a-f]{8}|never cost extra|sealed with Seal|archived on Walrus|moving templates to Seal|can't place orders|only you can remove|one lesson a day/i);
   assert.equal(schedule('weekly').length, 4); assert.equal(schedule('brief').length, 7);
+});
+
+test('free course is information only (Sajan 9:36 AM PT): no setup task in any email or page source; invites only to the Collection', async () => {
+  const { COURSE } = await import('../store-core/course-content.js');
+  const c = courseConfig({ LESSONS_FOOTER: FOOT });
+  for (const time of ['brief', 'standard', 'weekly']) for (const agent of ['yes', 'no']) for (const goal of ['longview', 'botsafety', 'builder', 'evaluate'])
+    for (let e = 1; e <= (time === 'weekly' ? 4 : 7); e++) {
+      const m = courseEmail(c, { id: 'cs_aaaaaaaaaaaaaaaa', unsub_token: 'cu_x', email: 'a@b.co', track: 'naib', goal, time, agent }, e);
+      for (const s of [m.text, m.html]) assert.doesNotMatch(s, /Apply this on the desk|Ask your agent|point your own agent|hosted connector/i);
+    }
+  for (const L of COURSE) { assert.equal(L.task, undefined, `lesson ${L.n} task`); if (L.invite) { assert.equal(L.invite.door, 'collection'); assert.match(L.invite.text, /Dune Saga Collection/); } }
+  const page = readFileSync(new URL('../src/pages/learn/[n].astro', import.meta.url), 'utf8');
+  assert.doesNotMatch(page, /Apply this on the desk|L\.task/);
 });

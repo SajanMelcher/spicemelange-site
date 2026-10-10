@@ -1,5 +1,5 @@
 ---
-// /learn/1/ ... /learn/7/ (R1): the free lessons on the web, every track's section shown. DRAFT, noindex.
+// /learn/1/ ... /learn/7/ (R1): the free lessons on the web, every track's section shown. Public + indexable (Sajan 9:31 AM PT).
 import Base from '../../layouts/Base.astro';
 import { COURSE, RISK, XAI_LINE } from '../../../store-core/course-content.js';
 export function getStaticPaths() { return COURSE.map((L) => ({ params: { n: String(L.n) }, props: { L } })); }
@@ -7,24 +7,45 @@ const { L } = Astro.props;
 const code = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/`([^`]+)`/g, '<code>$1</code>');
 const TR = [['pilgrim', 'New to this'], ['fremen', "If you've bought some crypto"], ['naib', 'If you trade actively']];
 ---
-<Base title={`Lesson ${L.n}: ${L.title}`} noindex={true} description={`Hwi's free Golden Path course, lesson ${L.n} of 7: ${L.title}. Education only.`}>
-  <article class="container-x max-w-3xl pt-16 pb-16 terms">
-    <p class="eyebrow mb-4"><a class="text-ibad-300" href="/learn/">Free course</a> · lesson {L.n} of 7</p>
+<Base title={`Lesson ${L.n}: ${L.title}`} description={`Hwi's free Golden Path course, lesson ${L.n} of 7: ${L.title}. Education only.`}>
+  <article class="container-x max-w-3xl pt-14 pb-16 lesson">
+    <nav aria-label="Course progress" class="mb-8">
+      <p class="eyebrow mb-3"><a class="text-ibad-300" href="/learn/">Free course</a> · lesson {L.n} of 7</p>
+      <ol class="lp-bar">
+        {COURSE.map((x) => <li class={x.n < L.n ? 'done' : x.n === L.n ? 'now' : ''}><a href={`/learn/${x.n}/`} aria-current={x.n === L.n ? 'page' : undefined} title={`Lesson ${x.n}: ${x.title}`}><span class="sr-only">Lesson {x.n}: {x.title}</span></a></li>)}
+      </ol>
+    </nav>
     <h1>{L.title}</h1>
-    {L.intro && <p set:html={code(L.intro)} />}
+    {L.intro && <p class="lead" set:html={code(L.intro)} />}
     <p set:html={code(L.core)} />
-    {TR.map(([k, label]) => (<><h2>{label}</h2><p set:html={code(L.track[k])} /></>))}
+    <div class="tracks">
+      {TR.map(([k, label]) => (<section class="track"><h2>{label}</h2><p set:html={code(L.track[k])} /></section>))}
+    </div>
     <h2>A worked example</h2><p set:html={code(L.deeper)} />
-    <h2>Apply this on the desk</h2>
-    <p><strong>With an agent:</strong> <span set:html={code(L.task.yes)} /></p>
-    <p><strong>Without one:</strong> <span set:html={code(L.task.no)} /></p>
-    <p class="mt-8 text-sm opacity-80"><em>{RISK}</em></p>
-    <p class="mt-2 text-xs opacity-70">{XAI_LINE}</p>
-    <p class="mt-6">{L.n < 7 ? <a class="text-ibad-300" href={`/learn/${L.n + 1}/`}>Next: lesson {L.n + 1}</a> : <a class="text-ibad-300" href="/learn/">Back to the course</a>} · <a class="text-ibad-300" href="/learn/#fc-title">Get it by email</a></p>
+    {L.invite && <p class="invite">{L.invite.text}</p>}
+    <p class="mt-8 text-sm text-sand-200/85"><em>{RISK}</em></p>
+    <p class="mt-2 text-xs text-sand-300/80">{XAI_LINE}</p>
+    <nav class="lp-nav" aria-label="Lessons">
+      {L.n > 1 ? <a class="btn btn-ghost" href={`/learn/${L.n - 1}/`}>← Lesson {L.n - 1}</a> : <a class="btn btn-ghost" href="/learn/">← Course</a>}
+      <a class="text-ibad-300 text-sm" href="/learn/#fc-title">Get it by email</a>
+      {L.n < 7 ? <a class="btn btn-primary" href={`/learn/${L.n + 1}/`}>Next: lesson {L.n + 1} →</a> : <a class="btn btn-primary" href="/learn/">Back to the course</a>}
+    </nav>
   </article>
 </Base>
 <style is:global>
-  .terms h1 { font-size: 2.25rem; line-height: 1.2; margin-bottom: .75rem; }
-  .terms h2 { font-size: 1.4rem; margin-top: 1.75rem; margin-bottom: .4rem; }
-  .terms p { margin-top: .5rem; line-height: 1.7; opacity: .92; }
+  .lesson h1 { font-family: var(--font-serif); font-size: clamp(2rem, 5vw, 2.75rem); line-height: 1.15; color: #fbf3e2; margin-bottom: 1rem; }
+  .lesson h2 { font-family: var(--font-serif); font-size: 1.5rem; color: #f6b26b; margin-top: 2rem; margin-bottom: .4rem; }
+  .lesson p { margin-top: .6rem; line-height: 1.75; color: rgb(238 224 196 / .93); font-size: 1.05rem; }
+  .lesson .lead { font-size: 1.15rem; color: #fbf3e2; }
+  .lesson code { background: rgb(255 255 255 / .06); padding: .05rem .35rem; border-radius: .3rem; font-size: .9em; }
+  .lp-bar { display: grid; grid-template-columns: repeat(7, 1fr); gap: .35rem; list-style: none; padding: 0; margin: 0; }
+  .lp-bar a { display: block; height: .45rem; border-radius: 999px; background: rgb(234 214 170 / .15); }
+  .lp-bar li.done a { background: rgb(217 109 28 / .6); }
+  .lp-bar li.now a { background: #ee8f3a; }
+  .lp-bar a:focus-visible { outline: 2px solid #8fd3ff; outline-offset: 3px; }
+  .tracks { display: grid; gap: .9rem; margin-top: 1.5rem; }
+  .track { border-left: 3px solid rgb(238 143 58 / .55); padding: .2rem 0 .2rem 1rem; }
+  .track h2 { font-size: 1.15rem; margin-top: 0; color: #d7b97f; font-family: var(--font-sans); font-weight: 600; letter-spacing: .02em; }
+  .lesson .invite { margin-top: 2rem; padding: 1rem 1.25rem; border-left: 3px solid #ee8f3a; border-radius: .5rem; background: rgb(11 15 36 / .7); }
+  .lp-nav { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid rgb(234 214 170 / .12); }
 </style>

@@ -182,8 +182,7 @@ export function courseBlocks(sub, emailNo) {
     sec.push(L.core, L.track[sub.track]);
     if (sub.goal) sec.push(L.goal[sub.goal]);
     if (sub.time === 'standard' || (sub.time === 'weekly' && L.deeper)) sec.push(L.deeper);
-    const task = sub.agent === 'yes' ? L.task.yes : L.task.no;
-    parts.push({ n, title: L.title, paras: sec, task });
+    parts.push({ n, title: L.title, paras: sec }); // no setup task: the free course is information only (Sajan 9:36 AM PT)
     if (L.invite && L.invite.when(sub)) invite = { n, door: L.invite.door, text: L.invite.text }; // later lesson wins: one per email
   }
   const subject = lessons.length === 1 ? COURSE[lessons[0] - 1].subject : `Lessons ${lessons.join(' and ')} of 7: ${lessons.map((n) => COURSE[n - 1].title).join(' / ')}`;
@@ -198,9 +197,8 @@ export function courseEmail(ccfg, sub, emailNo) {
     `<p style="margin:0 0 18px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#a0742f">Hwi's Golden Path course · ${escHtml(b.lessons.length === 1 ? `Lesson ${b.lessons[0]} of 7` : `Lessons ${b.lessons.join(' and ')} of 7`)}</p>`];
   const text = [];
   for (const p of b.parts) {
-    html.push(`<h1 style="font-family:Georgia,serif;font-size:22px;color:#5a3a12;margin:0 0 10px">Lesson ${p.n} · ${escHtml(p.title)}</h1>`, ...p.paras.map((x) => `<p style="${P}">${md(x)}</p>`),
-      `<h2 style="font-family:Georgia,serif;font-size:18px;color:#5a3a12;margin:18px 0 8px">Apply this on the desk</h2><p style="${P}">${md(p.task)}</p>`);
-    text.push(`LESSON ${p.n} · ${p.title.toUpperCase()}`, '', ...p.paras.flatMap((x) => [x, '']), 'Apply this on the desk', p.task, '');
+    html.push(`<h1 style="font-family:Georgia,serif;font-size:22px;color:#5a3a12;margin:0 0 10px">Lesson ${p.n} · ${escHtml(p.title)}</h1>`, ...p.paras.map((x) => `<p style="${P}">${md(x)}</p>`));
+    text.push(`LESSON ${p.n} · ${p.title.toUpperCase()}`, '', ...p.paras.flatMap((x) => [x, '']));
   }
   if (b.invite) { html.push(`<p style="${P};background:#fbf6ee;padding:10px 14px;border-left:4px solid #c8862a">${md(b.invite.text)}</p>`); text.push(b.invite.text, ''); }
   html.push(`<p style="${P}">${escHtml(REPLY)}</p><p style="${P};font-size:13px;color:#7a6a55"><em>${escHtml(RISK)}</em></p>`);

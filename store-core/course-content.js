@@ -1,6 +1,8 @@
 // The Golden Path free course: 7 lessons built from blocks (free-course.md §3, Hwi's DRAFT 2026-10-10 ~7:23 AM PT).
-// DRAFT text for Sajan's approval; preview only. The sender assembles: core + track + goal line + (standard: deeper)
-// + Apply-this task (agent yes/no) + at most one invitation (none in lesson 1; both doors only in lesson 7) + reply line + risk line.
+// Free course = Golden Path intro and information only (Sajan 9:36 AM PT): no agent setup tasks; at most one gentle
+// Dune Saga Collection invitation. Agent configuration lives only in the buyers-only 14-day lessons.
+// The sender assembles: core + track + goal line + (standard: deeper)
+// + at most one Collection invitation (lessons 6 and 7 only) + reply line + risk line.
 // Wording rules (Siona O3-O9, GL8-GL13): "trade beside the desk" ("It can't place trades or touch your funds", per client,
 // 0.01 USDC minimum); Seal is planned ("We plan to add Seal… would release"); Walrus = "current releases are also backed up";
 // walls are rules the bot is told to follow (check them yourself); "upgrades free forever" (matches LICENSE.md); no return claims.
@@ -31,10 +33,6 @@ export const COURSE = [
       evaluate: 'Why it matters for you: ask any bot or vendor, including us, which money it will never touch.',
     },
     deeper: 'Worked example: someone writes "never fuel: rent and the car payment; small: an amount I could lose and shrug; judged by: three years". That fits on a sticky note, and it settles most later questions before they start.',
-    task: {
-      yes: 'Write your Golden Path in three lines: money that is never fuel, a size that feels small, and the timescale you\'ll judge by. Ask your agent to keep those lines and read them back to you each week.',
-      no: 'Write your Golden Path in three lines on paper: money that is never fuel, a size that feels small, and the timescale you\'ll judge by. Keep it where you\'ll see it. If you add an agent later, give it these lines first.',
-    },
     invite: null,
   },
   {
@@ -53,11 +51,7 @@ export const COURSE = [
       evaluate: 'Why it matters for you: ask a vendor what their bot does when its data feed goes stale at night.',
     },
     deeper: 'Worked example: an order to buy at 1.00 placed at 10 PM may fill at 2 AM during a quick dip, or never. Both are fine outcomes, because the price was chosen calmly the evening before.',
-    task: {
-      yes: 'Ask your agent to pull the last 24 hours of trades for one DeepBook pool through the connector, and note how much happened while you slept.',
-      no: 'Open a public DeepBook pool page at night and again in the morning, and compare the price and the trades. If you add an agent later, it can do this for you.',
-    },
-    invite: { door: 'connector', when: (s) => s.goal === 'builder' || s.agent === 'yes', text: `If you'd like your agent to read the book for you: ${CONNECTOR_PRICE}` },
+    invite: null,
   },
   {
     n: 3, title: 'The walls of the sietch (hard limits)',
@@ -75,11 +69,7 @@ export const COURSE = [
       evaluate: 'Ask any bot vendor, ours included: 1. Can it borrow? 2. Can it sell at a loss? 3. Is there a daily loss cap? 4. Who turns it live? 5. Is there a stop file? 6. What happens when data is stale?',
     },
     deeper: 'Worked example: a daily loss cap of zero during practice means the bot can only paper-trade. Raising it later is a deliberate act by you, written down, never a default.',
-    task: {
-      yes: 'Write the five numbers you\'d set before any bot trades for you (size per order, daily loss cap, number of orders, pools allowed, and when it may go live). Set none of them anywhere yet. Ask your agent to read them back.',
-      no: 'Write the five numbers you\'d set before any bot trades for you (size per order, daily loss cap, number of orders, pools allowed, and when it may go live). Set none of them anywhere yet.',
-    },
-    invite: { door: 'collection', when: (s) => s.goal !== 'builder', text: 'Every Golden Path seat writes these same limits down for your bot. They\'re listed in full on the store page. Check them yourself.' },
+    invite: null,
   },
   {
     n: 4, title: 'Reading the open sand (order books)',
@@ -97,11 +87,7 @@ export const COURSE = [
       evaluate: 'Why it matters for you: ask how a bot\'s paper results count fills. "Touched the price" is not a fill.',
     },
     deeper: 'Worked example: bids at 0.99 and asks at 1.01 give a mid of 1.00 and a 2% spread. A taker buying now pays 1.01; a patient maker bidding 1.00 may wait, or may never fill.',
-    task: {
-      yes: 'Ask your agent to run `list_pools`, then `get_order_book` for one pool. Find the spread and say whether the book is deep or thin.',
-      no: 'Open the live DeepBook page on thespicemelange.org (no account needed). Find the best bid, the best ask and the spread for one pool.',
-    },
-    invite: { door: 'connector', when: (s) => s.goal === 'builder' || s.agent === 'yes', text: `Trade beside the desk: point your own agent at the hosted connector. Your bot keeps its own account. ${CONNECTOR_PRICE}` },
+    invite: null,
   },
   {
     n: 5, title: 'Patience at your own price (limit orders and ladders)',
@@ -119,11 +105,7 @@ export const COURSE = [
       evaluate: 'Why it matters for you: ask what a strategy does in a long fall, not only in a bounce.',
     },
     deeper: 'Worked example: three rungs at 2%, 4% and 6% below the mid, each one-third of a small size. In a dip to -3% only the first fills; in a fall to -10% all three fill and you wait.',
-    task: {
-      yes: 'Ask your agent to run `get_ohlcv` for one pool over the last week, and sketch where three small rungs would have rested. Place no orders anywhere.',
-      no: 'On a printed or screenshot chart of the last week, sketch where three small rungs would have rested. Place no orders anywhere.',
-    },
-    invite: { door: 'collection', when: (s) => s.goal !== 'builder', text: 'The Fish Speakers seat includes desk-kit, which practises exactly this on paper for 14 days before it can go live. $50 for that one template, in USDC on Sui; all sales final, except where the law requires otherwise.' },
+    invite: null,
   },
   {
     n: 6, title: 'The templates: seven seats, signed and kept',
@@ -141,18 +123,14 @@ export const COURSE = [
       evaluate: 'Why it matters for you: ask any vendor how you can check that a download is really theirs.',
     },
     deeper: 'Worked example: open versions.json, find the current version, then compare the sha256 of a download with the value listed. If they differ, don\'t run it.',
-    task: {
-      yes: 'Ask your agent to open `thespicemelange.org/templates/versions.json`, find the current version and its sha256, and explain how you\'d check a download is the real one.',
-      no: 'Open `thespicemelange.org/templates/versions.json` in a browser, find the current version and its sha256, and note how you\'d check a download is the real one.',
-    },
-    invite: { door: 'collection', when: (s) => s.goal !== 'builder', text: "If you'd like every seat, now and later: the Dune Saga Collection. All 8 templates are $400 one by one and $300 together, every future template is included, and upgrades are free forever. USDC on Sui; all sales final, except where the law requires otherwise." },
+    invite: { door: 'collection', when: () => true, text: "If you'd like every seat, now and later: the Dune Saga Collection. All 8 templates are $400 one by one and $300 together, every future template is included, and upgrades are free forever. USDC on Sui; all sales final, except where the law requires otherwise." },
   },
   {
     n: 7, title: 'Choosing your path',
     subject: 'Lesson 7 of 7: Choosing your path',
     core: 'There are three good endings, and stopping here is a good choice too.',
     track: {
-      pilgrim: 'Stay free: keep reading, and keep your three lines. Trade beside the desk: let an agent read the market for you. Join the desk: one template or the Collection, then 14 days of paper practice for your bot (my opt-in practice lessons by email are launching soon and are not part of the license).',
+      pilgrim: 'Stay free: keep reading. Trade beside the desk: let an agent read the market for you. Join the desk: one template or the Collection, then 14 days of paper practice for your bot (my opt-in practice lessons by email are launching soon and are not part of the license).',
       fremen: 'Stay free with the local connector and the weekly desk rhythm; trade beside the desk with the hosted connector, pay per call; or join the desk and practise on paper for 14 days before anything goes live.',
       naib: 'Your options map to how much of the stack you want: data only (connector), or the full guarded desk (templates plus desk-kit), always with paper first and your switches last.',
     },
@@ -163,11 +141,7 @@ export const COURSE = [
       evaluate: 'Why it matters for you: use your lesson-3 checklist on us as hard as on anyone else.',
     },
     deeper: 'A last check: reread your lesson-1 lines and your lesson-3 numbers. If anything feels too big now, make it smaller. That instinct is the Golden Path working.',
-    task: {
-      yes: 'Reread your lesson-1 lines and lesson-3 numbers with your agent. Would you change anything now?',
-      no: 'Reread your lesson-1 lines and lesson-3 numbers. Would you change anything now?',
-    },
-    invite: { door: 'both', when: () => true, text: `Two doors, side by side. Trade beside the desk: ${CONNECTOR_PRICE} Join the desk: one template is $50, or the Dune Saga Collection is $300 for all 8 templates and every future one, with upgrades free forever; USDC on Sui; all sales final, except where the law requires otherwise. Or stop here. That's a good ending too.` },
+    invite: { door: 'collection', when: () => true, text: "If you'd like to keep going, the Dune Saga Collection is on the store page. Or stop here. That's a good ending too." },
   },
 ];
 
