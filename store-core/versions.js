@@ -35,5 +35,7 @@ export function versionsDoc(site = 'https://thespicemelange.org') {
     // then the Dune Saga Collection and Leto's Secret Journals. `packs` repeats the non-seat products for older readers.
     templates: Object.fromEntries([...T.templates, ...T.packs].map(entry)),
     packs: Object.fromEntries(T.packs.map(entry)),
+    // Add-on files delivered with a parent order (status `addons[]`); verify each download against this sha256.
+    ...(T.addons?.length ? { addons: Object.fromEntries(T.addons.map((a) => [a.sku, { name: a.name, version: a.version, versionKey: versionKey(a.version), for: a.for, sha256: a.sha256 }])) } : {}),
   };
 }

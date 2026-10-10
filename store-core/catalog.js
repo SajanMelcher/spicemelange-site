@@ -55,8 +55,12 @@ export const CATALOG = [
     includes: ['All 7 Grok Bot desk templates', "Leto's Secret Journals", 'Every future template, at no extra cost', 'Upgrades free forever: re-download the latest any time', 'Collection overview and README'],
     highlights: ['$300 for every template, now and in the future', 'Upgrades free forever', 'Start with three seats, grow to seven and beyond'],
     format: 'Grok Bot templates (ZIP, Markdown + JSON)', file: 'file:dune-saga-collection' },
-  { sku: 'plumbline-pro', name: 'Plumbline Pro', role: 'Coming soon', glyph: 'plumb', comingSoon: true,
-    priceUsdc: '—', placeholder: true, quote: '', blurb: 'A supporter tier for the free, read-only Plumbline MCP server. Coming soon.', includes: [], highlights: [], format: '', file: '' },
+  { sku: 'plumbline-pro', name: 'The Spice Melange Trading Desk Pro', role: 'Coming soon', glyph: 'plumb', comingSoon: true,
+    priceUsdc: '—', placeholder: true, quote: '', blurb: 'A supporter tier for The Spice Melange Trading Desk, the read-only DeepBook market data connector. Coming soon.', includes: [], highlights: [], format: '', file: '' },
+  // Add-on file (Sajan 2026-10-10 12:13 AM PT): desk-kit code, delivered with Fish Speakers and Dune Saga Collection orders
+  // as a second signed link. Never listed, never orderable on its own (createOrder refuses addon SKUs).
+  { sku: 'desk-kit', name: 'desk-kit', role: 'Add-on: guarded DeepBook bot (training by default)', glyph: 'blade', hidden: true, addon: true,
+    addonFor: ['fish-speakers', 'dune-saga-collection'], priceUsdc: '0', placeholder: false, quote: '', blurb: '', includes: [], highlights: [], format: 'ZIP (TypeScript)', file: 'file:desk-kit' },
   // Hidden mainnet self-test (Sajan 10/9 6:26 AM PT). Never listed; ordering needs ?selftest=<STORE_SELFTEST_KEY>.
   { sku: 'selftest', name: 'Store self-test', role: 'internal', glyph: 'sigil', hidden: true,
     priceUsdc: '0.05', placeholder: false, ttlSec: 10800, quote: '', blurb: '', includes: [], highlights: [], format: 'TXT', file: '',
@@ -64,5 +68,6 @@ export const CATALOG = [
 ];
 
 export const bySku = (sku) => CATALOG.find((p) => p.sku === sku) ?? null;
+export const addonsFor = (sku) => CATALOG.filter((p) => p.addon && p.addonFor?.includes(sku));
 export const ARCHETYPES = CATALOG.filter((p) => !p.bundle && !p.comingSoon && !p.hidden && !p.retired);
 export const LISTED = CATALOG.filter((p) => !p.hidden && !p.retired);

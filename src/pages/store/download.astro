@@ -17,6 +17,8 @@ import { SITE } from '../../data/site';
       <button type="submit" class="btn-primary">Get my download</button>
       <p id="dl-msg" class="text-spice-300" aria-live="polite"></p>
       <p><a id="dl-link" class="btn-primary" href="#" rel="nofollow noopener" hidden>Download the latest</a></p>
+      <p><a id="dl-addon" class="btn-ghost" href="#" rel="nofollow noopener" hidden>Download desk-kit (add-on)</a></p>
+      <p id="dl-addon-note" class="text-xs text-sand-300/70" hidden>desk-kit is the guarded DeepBook bot for The Fish Speakers. It trains on paper for 14 days by default and goes live only when you set both switches. Check its SHA-256 against <a class="text-ibad-300" href="/templates/versions.json">versions.json</a> (addons → desk-kit) before you run it.</p>
       <p class="text-xs text-sand-300/70">The link is valid for 30 minutes. Keep your token private: anyone with it can download your order.</p>
     </form>
     <form id="rs-form" class="card mt-8 max-w-xl space-y-4 text-sm" aria-labelledby="rs-title">
@@ -45,6 +47,8 @@ import { SITE } from '../../data/site';
     if (!r.ok) return msg(r.reason === 'unknown_order' || r.reason === 'bad_order_or_token' ? 'Order ID and token do not match an order.' : `Not available: ${r.reason ?? 'error'}`);
     if (r.status !== 'paid' || !r.downloadUrl) return msg('This order is not paid yet. Finish checkout on the store page.');
     const a = $('dl-link') as unknown as HTMLAnchorElement; a.href = r.downloadUrl; a.hidden = false;
+    const ad = Array.isArray(r.addons) ? r.addons.find((x: any) => x && x.sku === 'desk-kit' && typeof x.downloadUrl === 'string' && x.downloadUrl.startsWith('/api/store/download')) : null;
+    if (ad) { const b = $('dl-addon') as unknown as HTMLAnchorElement; b.href = ad.downloadUrl; b.hidden = false; ($('dl-addon-note') as HTMLElement).hidden = false; }
     msg(`Ready: ${r.product ?? 'your template'}, latest version.`);
   }
   $('dl-form').addEventListener('submit', (e) => { e.preventDefault(); go($('dl-order').value.trim(), $('dl-token').value.trim()); });

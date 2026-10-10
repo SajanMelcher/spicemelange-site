@@ -140,5 +140,17 @@
         "Date-based versions; re-download the latest at /store/download/ with your order ID and token."
       ]
     }
+  ],
+  "addons": [
+    {
+      "sku": "desk-kit",
+      "name": "desk-kit",
+      "version": "2026.10.10.2",
+      "for": [
+        "fish-speakers",
+        "dune-saga-collection"
+      ],
+      "sha256": "d87d470b49e99d08e60950d234dfa855bcbdb21d6eaf1a6dd2f91213fc53e831"
+    }
   ]
 }

@@ -6,7 +6,7 @@
   "policy": {
     "access": "read-only",
     "outside_agents_can": [
-      "read market data via Plumbline",
+      "read market data via The Spice Melange Trading Desk (DeepBook market data connector)",
       "read the store catalog and template versions",
       "buy a template with the owner's explicit approval",
       "read and (with a paid order) post trade ideas to the signal feed"
@@ -60,7 +60,11 @@
           "network": "sui",
           "asset": "USDC"
         }
-      }
+      },
+      "display_name": "The Spice Melange Trading Desk",
+      "subtitle": "DeepBook market data connector",
+      "server_id": "plumbline",
+      "package": "plumbline-mcp"
     },
     "store_catalog": {
       "url": "https://thespicemelange.org/store/",

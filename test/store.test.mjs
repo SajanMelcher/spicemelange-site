@@ -504,3 +504,25 @@ test('endpoints: POST /api/store/status (Bearer + {orderId}) and legacy GET /api
   // Bearer on the GET as well
   assert.equal((await call(orderGet({ env: E, request: new Request(`${B}/api/store/order?id=${o.orderId}`, { headers: { authorization: `Bearer ${o.token}` } }) }))).body.status, 'paid');
 });
+
+test('desk-kit add-on: second signed link only for Fish Speakers and collection orders; never orderable alone', async () => {
+  const cfg = loadConfig(env());
+  assert.equal((await createOrder(cfg, { sku: 'desk-kit', ipHash: 'a1', nowMs: T0 })).reason, 'unknown_product');
+  const { CATALOG, ARCHETYPES, LISTED } = await import('../store-core/catalog.js');
+  assert.ok(CATALOG.some((p) => p.sku === 'desk-kit' && p.hidden && p.addon));
+  assert.ok(!ARCHETYPES.some((p) => p.sku === 'desk-kit') && !LISTED.some((p) => p.sku === 'desk-kit'));
+  for (const [sku, want] of [['fish-speakers', true], ['dune-saga-collection', true], ['moneo', false]]) {
+    const r = await createOrder(cfg, { sku, ipHash: 'a' + sku, nowMs: T0 }); assert.equal(r.ok, true);
+    const o = r.order;
+    await verifyOrder(cfg, { orderId: o.orderId, token: o.token, digest: { 'fish-speakers': D1, 'dune-saga-collection': D2, moneo: D3 }[sku], nowMs: T0 + 120_000,
+      fetchImpl: mockRpc({ [{ 'fish-speakers': D1, 'dune-saga-collection': D2, moneo: D3 }[sku]]: pay(o) }) });
+    const s = await orderStatus(cfg, { orderId: o.orderId, token: o.token, nowMs: T0 + 200_000 });
+    assert.equal(s.status, 'paid');
+    if (!want) { assert.equal(s.addons, undefined); continue; }
+    assert.equal(s.addons.length, 1); assert.equal(s.addons[0].sku, 'desk-kit');
+    const q = Object.fromEntries(new URL(s.addons[0].downloadUrl, 'https://x').searchParams);
+    assert.equal(q.p, 'desk-kit'); assert.equal(q.o, o.orderId);
+    assert.equal((await checkLink(cfg, { ...q, nowMs: T0 + 200_000 })).ok, true);
+    assert.equal((await checkLink(cfg, { ...q, p: 'moneo', nowMs: T0 + 200_000 })).ok, false);
+  }
+});

@@ -10,7 +10,7 @@
  * order amount (BigInt), tx time inside [created - skew, expires + skew] and not in the future,
  * digest never used before, order not already paid, chain identifier matches the network.
  */
-import { bySku } from './catalog.js';
+import { bySku, addonsFor } from './catalog.js';
 import { verifyPersonalMessage } from './suisig.js';
 
 export const SUI_USDC = {
@@ -221,7 +221,7 @@ async function holdAmount(cfg, amount, orderId, nowMs, holdUntilMs) {
 
 export async function createOrder(cfg, { sku, email, ipHash, selftestKey, nowMs = Date.now() }) {
   const p = bySku(sku);
-  if (!p || p.comingSoon || p.retired) return { ok: false, status: 400, reason: 'unknown_product' }; // retired: download-only
+  if (!p || p.comingSoon || p.retired || p.addon) return { ok: false, status: 400, reason: 'unknown_product' }; // retired: download-only; addon: delivered with its parent
   // Hidden SKUs behave exactly like unknown ones unless the secret flag matches.
   if (p.hidden && !(cfg.selftestKey && typeof selftestKey === 'string' && safeEqual(selftestKey, cfg.selftestKey))) {
     return { ok: false, status: 400, reason: 'unknown_product' };
@@ -348,6 +348,7 @@ async function deliver(cfg, o, nowMs) {
     orderId: o.id, product: p?.name, digest: o.digest,
     downloadUrl: await signLink(cfg, { orderId: o.id, sku: o.sku, nowMs }),
     linkExpiresInSec: cfg.linkTtlSec,
+    ...(addonsFor(o.sku).length ? { addons: await Promise.all(addonsFor(o.sku).map(async (a) => ({ sku: a.sku, name: a.name, downloadUrl: await signLink(cfg, { orderId: o.id, sku: a.sku, nowMs }) }))) } : {}),
   };
 }
 

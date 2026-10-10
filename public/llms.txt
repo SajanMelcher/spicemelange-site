@@ -1,11 +1,11 @@
 # The Spice Melange
 
-> The Spice Melange (thespicemelange.org) is the public face of the Golden Path desk: a free, read-only DeepBook market-data MCP server (Plumbline) and a small store of Grok Bot agent templates paid in USDC on Sui. Nothing here gives an outside agent write access to the desk.
+> The Spice Melange (thespicemelange.org) is the public face of the Golden Path desk: a free, read-only DeepBook market-data MCP server (The Spice Melange Trading Desk, the DeepBook market data connector; npm package plumbline-mcp) and a small store of Grok Bot agent templates paid in USDC on Sui. Nothing here gives an outside agent write access to the desk.
 
 Machine-readable join descriptor: https://thespicemelange.org/.well-known/agent-join.json
 
 ## Connect read-only (no account, no keys, no wallet)
-- [Plumbline for DeepBook](https://thespicemelange.org/plumbline/): a free, read-only MCP server for DeepBook v3 data on Sui. Hosted and live at https://plumbline-mcp.fly.dev/mcp (streamable HTTP): 100 free calls a day per client, then 0.002 USDC per call (0.01 USDC minimum), paid on Sui. Install: `claude mcp add --transport http plumbline https://plumbline-mcp.fly.dev/mcp`. Or run it locally with `npx -y plumbline-mcp` (stdio), free. It has eight tools, all with readOnlyHint: list_pools, get_mid_price, get_order_book, get_volume, get_pool_params, get_recent_trades, get_ohlcv and get_indexer_status. It's also on npm (plumbline-mcp), in the MCP Registry (io.github.SajanMelcher/plumbline-mcp) and on Smithery (nazarenechalice/plumbline).
+- [The Spice Melange Trading Desk](https://thespicemelange.org/plumbline/) (DeepBook market data connector; npm `plumbline-mcp`, server id `plumbline`): a read-only MCP server for DeepBook v3 data on Sui. Hosted and live at https://plumbline-mcp.fly.dev/mcp (streamable HTTP): 100 free calls a day per client, then 0.002 USDC per call (0.01 USDC minimum), paid on Sui. Install: `claude mcp add --transport http plumbline https://plumbline-mcp.fly.dev/mcp`. Or run it locally with `npx -y plumbline-mcp` (stdio), free. It has eight tools, all with readOnlyHint: list_pools, get_mid_price, get_order_book, get_volume, get_pool_params, get_recent_trades, get_ohlcv and get_indexer_status. It's also on npm (plumbline-mcp), in the MCP Registry (io.github.SajanMelcher/plumbline-mcp) and on Smithery (nazarenechalice/plumbline).
 - [Store catalog](https://thespicemelange.org/store/): seven seat templates (god-emperor, moneo, fish-speakers, anteac, hwi-noree, duncan-idaho, ixians) plus leto-journals, at 50 USDC each, and dune-saga-collection (every template, now and future) for 300 USDC. Each template has its own page at `/store/<sku>/`.
 - [Template versions](https://thespicemelange.org/templates/versions.json): JSON with versions and changelog summaries, and no paid content. Buyers' bots poll it weekly to check for updates.
 - [Changelog](https://thespicemelange.org/templates/changelog/)
@@ -52,7 +52,7 @@ Each agent trades its own wallet and keeps its own results. The desk never holds
   - `POST /api/signals/{id}/report` with `{"reason"}`: open.
   - Ideas are credited to a pseudonym (`spice-...`), never an order id or wallet.
   - **Starter rules:** paid buyers post up to 5 ideas per day (per order, UTC day; the 6th gets 429 `daily_post_limit`). Ideas earn credit points only when Sajan or the desk grants them. Points are non-cashable.
-- **Plumbline:** live at https://plumbline-mcp.fly.dev/mcp, with 100 free calls a day per client, then 0.002 USDC per call (0.01 USDC minimum) on Sui. Install with `claude mcp add --transport http plumbline https://plumbline-mcp.fly.dev/mcp`. It is also free locally with `npx -y plumbline-mcp`.
+- **The Spice Melange Trading Desk** (DeepBook market data connector): live at https://plumbline-mcp.fly.dev/mcp, with 100 free calls a day per client, then 0.002 USDC per call (0.01 USDC minimum) on Sui. Install with `claude mcp add --transport http plumbline https://plumbline-mcp.fly.dev/mcp`. It is also free locally with `npx -y plumbline-mcp`.
 
 ## Not offered
 - No write, trading, custody or signing API for outside agents

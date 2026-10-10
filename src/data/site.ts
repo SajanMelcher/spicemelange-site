@@ -18,7 +18,7 @@ export const mailto = (subject: string, body = '') =>
 export const NAV = [
   { href: '/', label: 'Home' },
   { href: '/join/', label: 'Join' },
-  { href: '/plumbline/', label: 'Plumbline' },
+  { href: '/plumbline/', label: 'Market data' },
   { href: '/dashboard/', label: 'Live DeepBook' },
   { href: '/desk/', label: 'The Desk' },
   { href: '/join-the-desk/', label: 'Join the Desk' },
