@@ -46,21 +46,22 @@ test('config: signup open on testnet, closed on mainnet unless the one flag is o
   assert.equal(lessonsConfig({ SUI_NETWORK: 'testnet' }).signupOpen, true);
   assert.equal(lessonsConfig({ SUI_NETWORK: 'mainnet' }).signupOpen, false);
   assert.equal(lessonsConfig({ SUI_NETWORK: 'mainnet', LESSONS_PRODUCTION_SENDING: '1' }).signupOpen, true);
-  assert.deepEqual(lessonsConfig({ SUI_NETWORK: 'mainnet', LESSONS_TEST_RECIPIENTS: 'a@b.co' }).testRecipients, []);
+  assert.deepEqual(lessonsConfig({ SUI_NETWORK: 'mainnet', LESSONS_TEST_RECIPIENTS: 'a@b.co' }).testRecipients, ['a@b.co']);
+  assert.deepEqual(lessonsConfig({ SUI_NETWORK: 'mainnet', LESSONS_PRODUCTION_SENDING: '1', LESSONS_TEST_RECIPIENTS: 'a@b.co' }).testRecipients, []);
   const c = lessonsConfig({});
   assert.equal(c.from, '"Hwi Noree, The Spice Melange" <hwi@thespicemelange.org>');
   assert.equal(c.replyTo, 'reserve@thespicemelange.org');
 });
-test('worker toml: production flag on, sender name, reply-to reserve@, cron every 10 min; site toml flag on in production only', () => {
+test('worker toml: site and worker flags match, sender name, reply-to reserve@, cron every 10 min', () => {
   const w = readFileSync(new URL('../workers/hwi-lessons/wrangler.toml', import.meta.url), 'utf8');
   const prod = w.split('[env.preview]')[0], prev = w.split('[env.preview]')[1];
-  assert.match(prod, /LESSONS_PRODUCTION_SENDING = "1"/); assert.match(prev, /LESSONS_PRODUCTION_SENDING = "0"/);
+  const flag = /^LESSONS_PRODUCTION_SENDING = "(\d)"/m.exec(prod)[1]; assert.match(prev, /LESSONS_PRODUCTION_SENDING = "0"/);
+  const site = readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf8');
+  assert.equal(/^LESSONS_PRODUCTION_SENDING = "(\d)"/m.exec(site.split('[env.preview')[0])[1], flag, 'site and worker flags must match');
   assert.match(prod, /LESSONS_FROM = '"Hwi Noree, The Spice Melange" <hwi@thespicemelange\.org>'/);
   assert.match(prod, /LESSONS_REPLY_TO = "reserve@thespicemelange\.org"/);
   assert.match(prod, /crons = \["\*\/10 \* \* \* \*"\]/);
   assert.doesNotMatch(prod, /LESSONS_TEST_RECIPIENTS/);
-  const site = readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf8');
-  assert.match(site.split('[env.preview')[0], /LESSONS_PRODUCTION_SENDING = "1"/);
 });
 test('subscribe: needs the order token, a valid email and source; one row per order; starts PENDING; email never echoed', async () => {
   const { db, lcfg } = await setup();
@@ -78,9 +79,10 @@ test('schema: an active/done row without confirmed_ms is impossible', async () =
   assert.throws(() => db.raw.prepare(`INSERT INTO lesson_subs (id, net, order_id, email, consent_ms, consent_source, status, confirm_token, unsub_token) VALUES ('ls_x','testnet','SM-AAAAAAAAAA','a@b.co',0,'checkout','active','lc_x','lu_x')`).run(), /CHECK/);
 });
 test('double opt-in: no lesson before confirm; one confirmation email only after payment; confirm GET-safe, then lessons', async () => {
-  const t = await setup();
-  await subscribe(t.lcfg, { orderId: 'SM-BBBBBBBBBB', token: TOK2, email: 'delivered@resend.dev', source: 'checkout', nowMs: T0 }); // unpaid
-  await sub(t.lcfg);
+  const t = await setup({ SUI_NETWORK: 'mainnet', LESSONS_PRODUCTION_SENDING: '1' });
+  await t.add('SM-FFFFFFFFFF', TOK2, 'mainnet', 'open');
+  await subscribe(t.lcfg, { orderId: 'SM-FFFFFFFFFF', token: TOK2, email: 'delivered@resend.dev', source: 'checkout', nowMs: T0 }); // unpaid
+  await sub(t.lcfg, { orderId: 'SM-CCCCCCCCCC' });
   // lessons run before confirmation: nothing
   assert.equal((await runLessons(t.env, { nowMs: T0, fetchImpl: t.fetchImpl })).sent, 0);
   // confirmations: only the paid order gets one
@@ -96,7 +98,7 @@ test('double opt-in: no lesson before confirm; one confirmation email only after
   assert.equal(t.sent.length, 1);
   // still no lesson: not confirmed
   assert.equal((await runLessons(t.env, { nowMs: T0 + 700e3, fetchImpl: t.fetchImpl })).sent, 0);
-  const r = t.db.raw.prepare("SELECT id, confirm_token FROM lesson_subs WHERE order_id='SM-AAAAAAAAAA'").get();
+  const r = t.db.raw.prepare("SELECT id, confirm_token FROM lesson_subs WHERE order_id='SM-CCCCCCCCCC'").get();
   assert.equal((await confirm(t.db, { subId: r.id, token: 'lc_' + 'x'.repeat(32) })).ok, false);
   assert.deepEqual(await confirm(t.db, { subId: r.id, token: r.confirm_token, nowMs: T0 + 800e3 }), { ok: true, status: 'active' });
   const l = await runLessons(t.env, { nowMs: T0 + 900e3, fetchImpl: t.fetchImpl });
@@ -119,7 +121,7 @@ test('production refuses to send without the postal footer', async () => {
 });
 test('sender: off on mainnet without the flag, nothing fetched', async () => {
   const { env, sent, fetchImpl } = await setup();
-  const r = await runLessons({ ...env, SUI_NETWORK: 'mainnet', LESSONS_TEST_RECIPIENTS: 'delivered@resend.dev' }, { nowMs: T0, fetchImpl });
+  const r = await runLessons({ ...env, SUI_NETWORK: 'mainnet', LESSONS_TEST_RECIPIENTS: '' }, { nowMs: T0, fetchImpl });
   assert.equal(r.reason, 'sending_off'); assert.equal(sent.length, 0);
 });
 test('test mode: only test recipients get confirmations or lessons', async () => {
@@ -213,6 +215,22 @@ test('confirmations capped at 3 per order; pending requests expire after 7 days'
   const u = await setup();
   await subscribe(u.lcfg, { orderId: 'SM-BBBBBBBBBB', token: TOK2, email: 'delivered@resend.dev', source: 'checkout', nowMs: T0 });
   assert.equal((await runConfirmations(u.env, { nowMs: T0 + 8 * DAY, fetchImpl: u.fetchImpl })).expired, 1);
+});
+test('mainnet with the flag OFF: only test-list addresses can sign up, get a confirmation and lessons (unpaid test order OK); nobody else', async () => {
+  const t = await setup({ SUI_NETWORK: 'mainnet', LESSONS_TEST_RECIPIENTS: 'tester@example.com' });
+  await t.add('SM-EEEEEEEEEE', TOK2, 'mainnet', 'open');
+  const lc = lessonsConfig(t.env);
+  assert.equal(lc.signupOpen, false);
+  assert.equal((await subscribe(lc, { orderId: 'SM-CCCCCCCCCC', token: TOK, email: 'buyer@example.com', source: 'checkout', nowMs: T0 })).reason, 'lessons_not_open');
+  assert.equal((await subscribe(lc, { orderId: 'SM-EEEEEEEEEE', token: TOK2, email: 'Tester@example.com', source: 'order_page', nowMs: T0 })).status, 'pending');
+  assert.equal((await runConfirmations(t.env, { nowMs: T0, fetchImpl: t.fetchImpl })).sent, 1);
+  const r = t.db.raw.prepare("SELECT id, confirm_token FROM lesson_subs WHERE order_id='SM-EEEEEEEEEE'").get();
+  await confirm(t.db, { subId: r.id, token: r.confirm_token, nowMs: T0 + 1 });
+  assert.equal((await runLessons(t.env, { nowMs: T0 + 2, fetchImpl: t.fetchImpl })).sent, 1);
+  assert.deepEqual(t.sent.map((m) => m.body.to[0]), ['tester@example.com', 'tester@example.com']);
+  // flag ON: unpaid orders are no longer eligible, even for the old tester
+  const on = { ...t.env, LESSONS_PRODUCTION_SENDING: '1' };
+  assert.equal((await runLessons(on, { nowMs: T0 + 2 * DAY, fetchImpl: t.fetchImpl })).sent, 0);
 });
 test('confirm/unsubscribe pages: strict CSP with no scripts, form posts to self', () => {
   assert.match(PAGE_CSP, /default-src 'none'/); assert.match(PAGE_CSP, /form-action 'self'/); assert.doesNotMatch(PAGE_CSP, /script-src/);

@@ -11,7 +11,7 @@ const run = (context) => {
 export async function onRequestGet(context) {
   const r = await run(context);
   return r.ok
-    ? page(200, "You're unsubscribed", ["You won't get any more of Hwi's practice lessons. Your templates still include every lesson in their education/ folder, and your bot can show you one a day."])
+    ? page(200, "You're unsubscribed", ["You won't get any more of Hwi's practice lessons."])
     : page(400, 'That link is not valid', ['It may be incomplete. Copy the whole link from the email, or email reserve@thespicemelange.org and we will remove you by hand.']);
 }
 export async function onRequestPost(context) {

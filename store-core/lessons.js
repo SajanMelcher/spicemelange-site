@@ -33,9 +33,9 @@ function safeEqual(a, b) {
 export function lessonsConfig(env = {}) {
   const net = String(env.SUI_NETWORK ?? 'testnet').trim() === 'mainnet' ? 'mainnet' : 'testnet';
   const production = truthy(env.LESSONS_PRODUCTION_SENDING);
-  const testRecipients = net === 'testnet'
-    ? String(env.LESSONS_TEST_RECIPIENTS ?? '').split(',').map((s) => s.trim().toLowerCase()).filter((s) => EMAIL_RE.test(s))
-    : []; // a test list is ignored on mainnet
+  // Test list: while the production flag is OFF, only these addresses can sign up (mainnet: no public signup box) and
+  // only they get mail; their test orders need not be paid (mainnet can't mark synthetic orders paid). Ignored once ON.
+  const testRecipients = production ? [] : String(env.LESSONS_TEST_RECIPIENTS ?? '').split(',').map((s) => s.trim().toLowerCase()).filter((s) => EMAIL_RE.test(s));
   return {
     net, production, testRecipients,
     signupOpen: production || net === 'testnet',
@@ -52,9 +52,9 @@ export function lessonsConfig(env = {}) {
 
 /** Step 1 of the double opt-in: record the request (pending). Never sends anything itself. */
 export async function subscribe(lcfg, { orderId, token, email, source, nowMs = Date.now() }) {
-  if (!lcfg.signupOpen) return { ok: false, status: 503, reason: 'lessons_not_open' };
-  if (!lcfg.db) return { ok: false, status: 503, reason: 'db_not_bound' };
   const e = String(email ?? '').trim().toLowerCase();
+  if (!lcfg.signupOpen && !lcfg.testRecipients.includes(e)) return { ok: false, status: 503, reason: 'lessons_not_open' };
+  if (!lcfg.db) return { ok: false, status: 503, reason: 'db_not_bound' };
   if (!EMAIL_RE.test(e)) return { ok: false, status: 400, reason: 'bad_email' };
   if (source !== 'checkout' && source !== 'order_page') return { ok: false, status: 400, reason: 'bad_source' };
   if (!ORDER_RE.test(orderId ?? '') || !TOKEN_RE.test(token ?? '')) return { ok: false, status: 401, reason: 'bad_order_or_token' };
@@ -176,8 +176,8 @@ export async function runConfirmations(env, { nowMs = Date.now(), fetchImpl = fe
   const ex = await lcfg.db.prepare(`UPDATE lesson_subs SET status = 'expired' WHERE net = ?1 AND status = 'pending' AND consent_ms < ?2`).bind(lcfg.net, nowMs - UNPAID_EXPIRE_MS).run();
   out.expired = Number(ex?.meta?.changes ?? 0);
   const { results = [] } = await lcfg.db.prepare(`SELECT s.* FROM lesson_subs s JOIN orders o ON o.id = s.order_id
-    WHERE s.net = ?1 AND s.status = 'pending' AND s.confirm_sent_ms IS NULL AND s.confirm_sends < ?2 AND o.status = 'paid'
-    ORDER BY s.consent_ms LIMIT ?3`).bind(lcfg.net, MAX_CONFIRM_SENDS, limit).all();
+    WHERE s.net = ?1 AND s.status = 'pending' AND s.confirm_sent_ms IS NULL AND s.confirm_sends < ?2 AND (o.status = 'paid' OR ?4 = 1)
+    ORDER BY s.consent_ms LIMIT ?3`).bind(lcfg.net, MAX_CONFIRM_SENDS, limit, lcfg.production ? 0 : 1).all();
   for (const sub of results) {
     const tag = { sub: sub.id, kind: 'confirm' };
     if (!allowed(lcfg, sub.email)) { out.skipped++; out.details.push({ ...tag, result: 'skipped_not_test_recipient' }); continue; }
@@ -207,8 +207,8 @@ export async function runLessons(env, { nowMs = Date.now(), fetchImpl = fetch, d
   const useForce = force && !lcfg.production && lcfg.net === 'testnet';
   const { results = [] } = await lcfg.db.prepare(`SELECT s.* FROM lesson_subs s JOIN orders o ON o.id = s.order_id
     WHERE s.net = ?1 AND s.status = 'active' AND s.confirmed_ms IS NOT NULL AND s.confirm_sent_ms IS NOT NULL AND s.confirmed_ms >= s.consent_ms
-      AND o.status = 'paid' AND s.next_day <= ?2 AND (s.last_sent_ms IS NULL OR s.last_sent_ms <= ?3)
-    ORDER BY s.confirmed_ms LIMIT ?4`).bind(lcfg.net, LESSON_DAYS, useForce ? nowMs : nowMs - MIN_GAP_MS, limit).all();
+      AND (o.status = 'paid' OR ?5 = 1) AND s.next_day <= ?2 AND (s.last_sent_ms IS NULL OR s.last_sent_ms <= ?3)
+    ORDER BY s.confirmed_ms LIMIT ?4`).bind(lcfg.net, LESSON_DAYS, useForce ? nowMs : nowMs - MIN_GAP_MS, limit, lcfg.production ? 0 : 1).all();
   for (const sub of results) {
     const day = Number(sub.next_day);
     const tag = { sub: sub.id, day };

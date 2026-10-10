@@ -14,9 +14,10 @@ STORE_ALLOW_MAINNET = "1"
 # Signal feed LIVE (Sajan 2026-10-10 12:08 AM PT, starter rules: 5 ideas/order/day, points only by grant, non-cashable).
 # SIGNALS_ADMIN_KEY is a production Pages secret (separate from preview); a copy is kept outside the repo.
 SIGNALS_ENABLED = "1"
-# Hwi's 14-day practice lessons: production signup ON (Sajan 2026-10-10 7:16 AM PT; double opt-in only). Same flag as
-# workers/hwi-lessons/wrangler.toml [vars] (signup here, sending there). Set both to "0" to stop.
-LESSONS_PRODUCTION_SENDING = "1"
+# Hwi's 14-day practice lessons (Sajan's yes 2026-10-10 7:16 AM PT; double opt-in only). Same flag as
+# workers/hwi-lessons/wrangler.toml [vars] (signup here, sending there). "0" until verified end to end on production;
+# meanwhile only addresses in the LESSONS_TEST_RECIPIENTS secret can sign up (no public box).
+LESSONS_PRODUCTION_SENDING = "0"
 
 [[kv_namespaces]]
 binding = "STORE_KV"
