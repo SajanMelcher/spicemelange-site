@@ -2,6 +2,10 @@
 // Public changelog for the Grok Bot templates. Summaries only; no paid template content.
 import Base from '../../../layouts/Base.astro';
 import { TEMPLATES, latestFor } from '../../../../store-core/versions.js';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+const PUBKEY = readFileSync(`${process.cwd()}/public/templates/release-key.pub`, 'utf8').trim();
+const FPR = createHash('sha256').update(Buffer.from(PUBKEY, 'base64')).digest('hex');
 const all = [...TEMPLATES.templates, ...TEMPLATES.packs];
 const names = Object.fromEntries(all.map((t) => [t.sku, t.name]));
 const site = 'https://thespicemelange.org';
@@ -12,7 +16,7 @@ const site = 'https://thespicemelange.org';
     <h1 id="cl-title" class="text-5xl leading-tight text-sand-50">Template changelog</h1>
     <p class="mt-5 max-w-2xl text-lg leading-relaxed text-sand-200/90">
       Versions are dates (YYYY.MM.DD). Current: <strong class="text-spice-300">{TEMPLATES.current}</strong>.
-      Bought a template? <a class="text-ibad-300" href={`${site}/store/download/`}>Re-download the latest</a> with your order ID and token. Machine-readable: <a class="text-ibad-300" href="/templates/versions.json">versions.json</a>.
+      Bought a template? <a class="text-ibad-300" href={`${site}/store/download/`}>Re-download the latest</a> with your order ID and token. Machine-readable: <a class="text-ibad-300" href="/templates/versions.json">versions.json</a>. Signed: <a class="text-ibad-300" href="/templates/versions.json.sig">versions.json.sig</a> (ed25519 over the exact file bytes), public key <a class="text-ibad-300" href="/templates/release-key.pub">release-key.pub</a>, fingerprint <code class="break-all text-xs text-spice-300">sha256:{FPR}</code>.
     </p>
     <div class="mt-8 overflow-x-auto">
       <table class="w-full max-w-3xl text-left text-sm text-sand-200/85">

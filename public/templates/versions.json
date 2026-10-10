@@ -1,0 +1,119 @@
+{
+  "schema": "spicemelange.templates.versions/v1",
+  "current": "2026.10.09.1",
+  "updated": "2026-10-09",
+  "versionRule": "Versions are YYYY.MM.DD with an optional .N for a same-day re-release. Newer = larger versionKey (YYYYMMDD*1000+N); e.g. 2026.10.09.1 is newer than 2026.10.09.",
+  "sha256Note": "sha256 is the SHA-256 of the ZIP the store currently serves for that slug; verify a re-download against it.",
+  "howToUpdate": "Re-download the latest at https://thespicemelange.org/store/download/ with your order ID and token. Always serves the current version.",
+  "changelog": "https://thespicemelange.org/templates/changelog/",
+  "templates": {
+    "god-emperor": {
+      "name": "The God Emperor",
+      "title": "Orchestrator",
+      "version": "2026.10.09.1",
+      "versionKey": 20261009001,
+      "released": "2026-10-09",
+      "summary": "Rebuilt desk templates and The Dune Saga Collection: HARD LIMITS first, Dune voice, Hwi Noree is now Ambassador of the Trading Desk.",
+      "sha256": "504b5bf21743449d080f69fc1acd555faeea6304ddf53a28522b817c8a58b2d8"
+    },
+    "moneo": {
+      "name": "Moneo",
+      "title": "Mentat Researcher",
+      "version": "2026.10.09.1",
+      "versionKey": 20261009001,
+      "released": "2026-10-09",
+      "summary": "Rebuilt desk templates and The Dune Saga Collection: HARD LIMITS first, Dune voice, Hwi Noree is now Ambassador of the Trading Desk.",
+      "sha256": "3b26b6257c1059750ef650e2ae63331ac379cebd3ce32860fccd2491eb97a0e2"
+    },
+    "duncan-idaho": {
+      "name": "Duncan Idaho",
+      "title": "Income Base and Ticket Planner",
+      "version": "2026.10.09.1",
+      "versionKey": 20261009001,
+      "released": "2026-10-09",
+      "summary": "Rebuilt desk templates and The Dune Saga Collection: HARD LIMITS first, Dune voice, Hwi Noree is now Ambassador of the Trading Desk.",
+      "sha256": "93e4f00125283dec20ab27b91ef8cca348c621f302e1a8ca9d0f1a6e61b2c117"
+    },
+    "fish-speakers": {
+      "name": "The Fish Speakers",
+      "title": "Execution Operator",
+      "version": "2026.10.09.1",
+      "versionKey": 20261009001,
+      "released": "2026-10-09",
+      "summary": "Rebuilt desk templates and The Dune Saga Collection: HARD LIMITS first, Dune voice, Hwi Noree is now Ambassador of the Trading Desk.",
+      "sha256": "50384ad1b6b3fd7a11dd7b6401e64848ce08cb02a510533fd127f030fdb21152"
+    },
+    "anteac": {
+      "name": "Anteac",
+      "title": "Truthsayer Verifier",
+      "version": "2026.10.09.1",
+      "versionKey": 20261009001,
+      "released": "2026-10-09",
+      "summary": "Rebuilt desk templates and The Dune Saga Collection: HARD LIMITS first, Dune voice, Hwi Noree is now Ambassador of the Trading Desk.",
+      "sha256": "8818056e06dd61c73f500c7853c9c481cd1efa1cf6228196bf328cfe6cef8ea5"
+    },
+    "hwi-noree": {
+      "name": "Hwi Noree",
+      "title": "Ambassador of the Trading Desk",
+      "version": "2026.10.09.1",
+      "versionKey": 20261009001,
+      "released": "2026-10-09",
+      "summary": "Rebuilt desk templates and The Dune Saga Collection: HARD LIMITS first, Dune voice, Hwi Noree is now Ambassador of the Trading Desk.",
+      "sha256": "79a9a0c3d958c8cbbe503f59c550509506960689a1b243bf97ba2c2bd39efef0"
+    },
+    "ixians": {
+      "name": "Ixians",
+      "title": "Toolmaker and Infrastructure",
+      "version": "2026.10.09.1",
+      "versionKey": 20261009001,
+      "released": "2026-10-09",
+      "summary": "Rebuilt desk templates and The Dune Saga Collection: HARD LIMITS first, Dune voice, Hwi Noree is now Ambassador of the Trading Desk.",
+      "sha256": "148a5f467e167021318aeef757ac59b450e9a53430e5628d3a526786e35ba85e"
+    },
+    "leto-journals": {
+      "name": "Leto's Secret Journals",
+      "title": "System templates",
+      "version": "2026.10.09",
+      "versionKey": 20261009000,
+      "released": "2026-10-09",
+      "summary": "First Grok Bot template release: each seat is now an importable Grok Bot template.",
+      "sha256": "b72355485c0fb1402da09f6465dba3e9c737221304717f48fa1ca13289bf4dc2"
+    },
+    "dune-saga-collection": {
+      "name": "The Dune Saga Collection",
+      "title": "Every template, now and future: the 7 desk templates plus Leto's Secret Journals",
+      "version": "2026.10.09.1",
+      "versionKey": 20261009001,
+      "released": "2026-10-09",
+      "summary": "Rebuilt desk templates and The Dune Saga Collection: HARD LIMITS first, Dune voice, Hwi Noree is now Ambassador of the Trading Desk.",
+      "sha256": "5fb75c118841f8aa2ae403f43c55ac6943be6b99f4fc87b904f5945213074417"
+    }
+  },
+  "packs": {
+    "leto-journals": {
+      "name": "Leto's Secret Journals",
+      "title": "System templates",
+      "version": "2026.10.09",
+      "versionKey": 20261009000,
+      "released": "2026-10-09",
+      "summary": "First Grok Bot template release: each seat is now an importable Grok Bot template.",
+      "sha256": "b72355485c0fb1402da09f6465dba3e9c737221304717f48fa1ca13289bf4dc2"
+    },
+    "dune-saga-collection": {
+      "name": "The Dune Saga Collection",
+      "title": "Every template, now and future: the 7 desk templates plus Leto's Secret Journals",
+      "version": "2026.10.09.1",
+      "versionKey": 20261009001,
+      "released": "2026-10-09",
+      "summary": "Rebuilt desk templates and The Dune Saga Collection: HARD LIMITS first, Dune voice, Hwi Noree is now Ambassador of the Trading Desk.",
+      "sha256": "5fb75c118841f8aa2ae403f43c55ac6943be6b99f4fc87b904f5945213074417"
+    }
+  },
+  "signature": {
+    "alg": "ed25519",
+    "file": "https://thespicemelange.org/templates/versions.json.sig",
+    "publicKey": "https://thespicemelange.org/templates/release-key.pub",
+    "fingerprintSha256": "a162ff9587517b66c72a9dbf8f77cd7397896c96d1f60e753f6a3d4e4716a7d7",
+    "how": "Verify the base64 ed25519 signature in versions.json.sig over the exact bytes of this file with the pinned public key before trusting any version or sha256."
+  }
+}

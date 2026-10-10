@@ -10,7 +10,7 @@ export async function loadFile(env, sku) {
   const kv = env.STORE_FILES;
   if (kv) {
     const { value, metadata } = await kv.getWithMetadata(p.file, { type: 'arrayBuffer' });
-    if (value) return { body: value, name: metadata?.name ?? `${p.sku}.zip`, type: metadata?.type ?? 'application/octet-stream' };
+    if (value) return { body: value, name: metadata?.name ?? `${p.sku}.zip`, type: metadata?.type ?? 'application/octet-stream', sha256: /^[0-9a-f]{64}$/.test(metadata?.sha256 ?? '') ? metadata.sha256 : null };
   }
   return {
     body: `PLACEHOLDER FILE for "${p.name}" (${p.sku}).\nThe real product file has not been uploaded yet.\nEducational material only. Not financial, investment, tax or legal advice.\n`,

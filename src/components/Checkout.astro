@@ -31,7 +31,7 @@
         <p class="text-lg text-sand-50">Payment confirmed.</p>
         <p class="mt-1 text-xs text-sand-300/70">All sales final, except where the law requires otherwise.</p>
         <p class="mt-2"><a id="co-dl" class="btn-primary" href="#" rel="nofollow noopener">Download</a></p>
-        <p class="mt-2 text-xs text-sand-300/80">The link expires in 15 minutes. <strong class="text-sand-100">Weekly updates included:</strong> save your order ID <code id="co-oid" class="text-spice-300"></code> and token, and bookmark your private <a id="co-redl" class="text-ibad-300" href="/store/download/" rel="nofollow">re-download link</a>. It always serves the latest version.</p>
+        <p class="mt-2 text-xs text-sand-300/80">The link expires in 30 minutes. <strong class="text-sand-100">Weekly updates included:</strong> save your order ID <code id="co-oid" class="text-spice-300"></code> and token, and bookmark your private <a id="co-redl" class="text-ibad-300" href="/store/download/" rel="nofollow">re-download link</a>. It always serves the latest version.</p>
       </div>
       <p id="co-msg" class="text-sm text-spice-300"></p>
     </div>
@@ -110,7 +110,7 @@
   const saved = sessionStorage.getItem(KEY);
   if (saved) {
     const s = JSON.parse(saved);
-    fetch(`/api/store/order?id=${encodeURIComponent(s.orderId)}&token=${encodeURIComponent(s.token)}`).then((r) => r.json()).then((r) => {
+    fetch('/api/store/status', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${s.token}` }, body: JSON.stringify({ orderId: s.orderId }) }).then((r) => r.json()).then((r) => {
       if (!r.ok) return sessionStorage.removeItem(KEY);
       order = { ...s };
       if (r.status === 'paid') { dlg.showModal(); done(r); }

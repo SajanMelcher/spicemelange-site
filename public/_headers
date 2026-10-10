@@ -1,0 +1,7 @@
+/templates/versions.json
+  Cache-Control: public, max-age=300
+/templates/versions.json.sig
+  Cache-Control: public, max-age=300
+  Content-Type: text/plain; charset=utf-8
+/templates/release-key.pub
+  Content-Type: text/plain; charset=utf-8

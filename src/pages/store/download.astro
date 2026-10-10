@@ -1,5 +1,5 @@
 ---
-// Re-download: order ID + token -> the existing GET /api/store/order status call, which returns a fresh
+// Re-download: order ID + token -> POST /api/store/status (token in the Authorization header, never the URL), which returns a fresh
 // HMAC-signed link for paid orders (same checkLink signature checks). The link always serves the latest file in STORE_FILES.
 import Base from '../../layouts/Base.astro';
 import { SITE } from '../../data/site';
@@ -17,7 +17,18 @@ import { SITE } from '../../data/site';
       <button type="submit" class="btn-primary">Get my download</button>
       <p id="dl-msg" class="text-spice-300" aria-live="polite"></p>
       <p><a id="dl-link" class="btn-primary" href="#" rel="nofollow noopener" hidden>Download the latest</a></p>
-      <p class="text-xs text-sand-300/70">The link is valid for 15 minutes. Keep your token private: anyone with it can download your order. Lost it? Email <a class="text-ibad-300" href={`mailto:${SITE.email}`}>{SITE.email}</a> with your order ID and payment digest.</p>
+      <p class="text-xs text-sand-300/70">The link is valid for 30 minutes. Keep your token private: anyone with it can download your order.</p>
+    </form>
+    <form id="rs-form" class="card mt-8 max-w-xl space-y-4 text-sm" aria-labelledby="rs-title">
+      <h2 id="rs-title" class="text-2xl text-sand-50">Lost or leaked your token?</h2>
+      <p class="text-sand-200/90">Reset it with the Sui wallet that paid for the order. Your wallet signs a one-time message (no transaction, no funds move); you get a new token and the old one stops working.</p>
+      <div><label class="block text-sand-200/85" for="rs-order">Order ID</label>
+        <input id="rs-order" name="order" required class="mt-1 w-full rounded-lg border border-sand-200/20 bg-night-950 px-3 py-2 font-mono" placeholder="SM-XXXXXXXXXX" autocomplete="off" spellcheck="false" /></div>
+      <button type="submit" class="btn-primary">Connect wallet and reset token</button>
+      <p id="rs-msg" class="text-spice-300" aria-live="polite"></p>
+      <div id="rs-out" hidden><label class="block text-sand-200/85" for="rs-token">Your new token (save it now; it is shown once)</label>
+        <input id="rs-token" readonly class="mt-1 w-full rounded-lg border border-sand-200/20 bg-night-950 px-3 py-2 font-mono" /></div>
+      <p class="text-xs text-sand-300/70">Paid from an exchange, or your wallet can't sign messages (multisig, zkLogin)? Email <a class="text-ibad-300" href={`mailto:${SITE.email}`}>{SITE.email}</a> with your order ID and payment digest.</p>
     </form>
   </section>
 </Base>
@@ -30,7 +41,7 @@ import { SITE } from '../../data/site';
   if (location.search || location.hash) history.replaceState(null, '', location.pathname);
   async function go(order: string, token: string) {
     msg('Checking your order…'); ($('dl-link') as unknown as HTMLAnchorElement).hidden = true;
-    const r = await fetch(`/api/store/order?id=${encodeURIComponent(order)}&token=${encodeURIComponent(token)}`).then((x) => x.json()).catch(() => ({ ok: false, reason: 'network_error' }));
+    const r = await fetch('/api/store/status', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ orderId: order }) }).then((x) => x.json()).catch(() => ({ ok: false, reason: 'network_error' }));
     if (!r.ok) return msg(r.reason === 'unknown_order' || r.reason === 'bad_order_or_token' ? 'Order ID and token do not match an order.' : `Not available: ${r.reason ?? 'error'}`);
     if (r.status !== 'paid' || !r.downloadUrl) return msg('This order is not paid yet. Finish checkout on the store page.');
     const a = $('dl-link') as unknown as HTMLAnchorElement; a.href = r.downloadUrl; a.hidden = false;
@@ -40,4 +51,34 @@ import { SITE } from '../../data/site';
   if (pre.order) $('dl-order').value = pre.order;
   if (pre.token) $('dl-token').value = pre.token;
   if (pre.order && pre.token) go(pre.order, pre.token);
+
+  // Token reset via the Wallet Standard (any Sui wallet with sui:signPersonalMessage).
+  const wallets: any[] = [];
+  const api = { register: (...ws: any[]) => { wallets.push(...ws); return () => {}; } };
+  window.addEventListener('wallet-standard:register-wallet', (e: any) => { try { e.detail(api); } catch {} });
+  window.dispatchEvent(new CustomEvent('wallet-standard:app-ready', { detail: api }));
+  const rmsg = (t: string) => ($('rs-msg').textContent = t);
+  const post = (body: object) => fetch('/api/store/reset', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).then((x) => x.json()).catch(() => ({ ok: false, reason: 'network_error' }));
+  $('rs-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const orderId = $('rs-order').value.trim();
+    const w = wallets.find((x) => x.features?.['sui:signPersonalMessage'] && x.features?.['standard:connect']);
+    if (!w) return rmsg('No Sui wallet found in this browser. Install or unlock the wallet that paid, then reload.');
+    try {
+      rmsg('Requesting a one-time message…');
+      const ch = await post({ orderId });
+      if (!ch.ok) return rmsg(`Not available: ${ch.reason ?? 'error'}`);
+      const { accounts } = await w.features['standard:connect'].connect();
+      let last = 'reset_refused';
+      for (const account of accounts ?? []) {
+        rmsg(`Sign the message in ${w.name} (account ${account.address.slice(0, 8)}…)`);
+        const { signature } = await w.features['sui:signPersonalMessage'].signPersonalMessage({ message: new TextEncoder().encode(ch.message), account });
+        const r = await post({ orderId, message: ch.message, signature });
+        if (r.ok) { $('rs-token').value = r.token; ($('rs-out') as unknown as HTMLElement).hidden = false; $('dl-order').value = orderId; $('dl-token').value = r.token; return rmsg('Done. Your old token no longer works.'); }
+        last = r.detail ?? r.reason; if (r.reason !== 'reset_refused' || r.detail !== 'not_the_paying_address') break;
+        const again = await post({ orderId }); if (!again.ok) break; ch.message = again.message;
+      }
+      rmsg(last === 'not_the_paying_address' ? 'That wallet did not pay for this order.' : `Reset refused (${last}).`);
+    } catch (err: any) { rmsg(`Wallet error: ${err?.message ?? err}`); }
+  });
 </script>
