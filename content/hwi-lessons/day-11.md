@@ -12,7 +12,7 @@ Every desk needs a way to stop instantly, without discussion. Ours is the plaine
 ## How it works
 - Create a file named `HALT` in your desk-kit folder (or at the root of your desk folder for your other bots).
 - From that moment, the bot places **no new orders**. Every routine starts with the HALT check, sees the file, tells you once that HALT is set, and stops.
-- Only **you** remove it. The bot never deletes or renames it.
+- **You** remove it, and your bot is told never to remove it.
 
 One thing HALT does *not* do: it doesn't cancel orders already resting on the book. That's deliberate. Cancelling is also an action, and in a fast market you may want to choose. If you want them gone, cancel them yourself, or tell your bot "cancel all resting orders" and confirm.
 
@@ -45,6 +45,6 @@ The best time to learn the emergency stop is when there's no emergency. During t
 ## Remember
 - One empty `HALT` file stops all new orders.
 - It doesn't cancel resting orders; you decide that.
-- Only you remove it. Practice it now, while nothing is at stake.
+- You remove it, and your bot is told never to remove it. Practice it now, while nothing is at stake.
 
 *Education only, not financial advice. No returns are promised or implied.*
