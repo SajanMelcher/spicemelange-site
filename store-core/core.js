@@ -87,6 +87,11 @@ export function loadConfig(env = {}) {
     statusPerHour: int(env.STORE_STATUS_PER_HOUR, 60, 5, 1000), // per order: status + token downloads (separate from verify attempts)
     resetPerHour: int(env.STORE_RESET_PER_HOUR, 6, 1, 50), // per order: token-reset challenges and attempts
     maxOrdersPerIpPerHour: int(env.STORE_MAX_ORDERS_PER_IP_HOUR, 6, 1, 100),
+    // Siona S5: the hosted connector sends x-connector-key (this secret) + x-connector-client (its hashed client id).
+    // Only with a valid key do we rate-limit per forwarded client instead of the connector's shared IP.
+    connectorKey: String(env.STORE_CONNECTOR_KEY ?? '').length >= 32 ? String(env.STORE_CONNECTOR_KEY) : null,
+    maxOrdersPerConnectorClientHour: int(env.STORE_MAX_ORDERS_PER_CONNECTOR_CLIENT_HOUR, 3, 1, 50),
+    maxOrdersPerConnectorHour: int(env.STORE_MAX_ORDERS_PER_CONNECTOR_HOUR, 60, 1, 1000),
     selftestKey: String(env.STORE_SELFTEST_KEY ?? '').length >= 24 ? String(env.STORE_SELFTEST_KEY) : null,
     webhookUrl: String(env.HWI_WEBHOOK_URL ?? '').trim() || null,
     webhookSecret: String(env.HWI_WEBHOOK_SECRET ?? '') || null,
@@ -105,6 +110,14 @@ async function hmacKey(secret) {
 }
 export async function hmac(secret, msg) {
   return b64url(new Uint8Array(await crypto.subtle.sign('HMAC', await hmacKey(secret), enc.encode(msg))));
+}
+/** S5: the forwarded client id, trusted only when x-connector-key matches STORE_CONNECTOR_KEY. Else null (use the IP). */
+export function connectorClientFrom(cfg, headers) {
+  if (!cfg.connectorKey) return null;
+  const key = headers.get('x-connector-key') ?? '';
+  const id = (headers.get('x-connector-client') ?? '').toLowerCase();
+  if (!safeEqual(key, cfg.connectorKey) || !/^[0-9a-f]{24}$/.test(id)) return null;
+  return id;
 }
 export function safeEqual(a, b) {
   if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
@@ -236,7 +249,7 @@ export function cleanSource(src) {
   return out;
 }
 
-export async function createOrder(cfg, { sku, email, ipHash, selftestKey, source, nowMs = Date.now() }) {
+export async function createOrder(cfg, { sku, email, ipHash, connectorClient, selftestKey, source, nowMs = Date.now() }) {
   await maybePurge(cfg, nowMs); // S3 retention (unpaid orders > 30 days, old counters); gated, never throws
   const p = bySku(sku);
   if (!p || p.comingSoon || p.retired || p.addon) return { ok: false, status: 400, reason: 'unknown_product' }; // retired: download-only; addon: delivered with its parent
@@ -247,12 +260,19 @@ export async function createOrder(cfg, { sku, email, ipHash, selftestKey, source
   if (email !== undefined && email !== null && email !== '' && !/^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,24}$/i.test(String(email))) {
     return { ok: false, status: 400, reason: 'bad_email' };
   }
-  if (ipHash) { // approximate (KV) limit; abuse brake, not a money guard
-    const k = `ip:${ipHash}:${Math.floor(nowMs / 3_600_000)}`;
+  // Approximate (KV) limits; abuse brakes, not money guards. A verified connector client (see connectorClientFrom) is
+  // limited per forwarded client plus a total for the connector, instead of the connector's shared IP.
+  const hr = Math.floor(nowMs / 3_600_000);
+  const brakes = connectorClient
+    ? [[`cc:${connectorClient}:${hr}`, cfg.maxOrdersPerConnectorClientHour], [`cc:*:${hr}`, cfg.maxOrdersPerConnectorHour]]
+    : ipHash ? [[`ip:${ipHash}:${hr}`, cfg.maxOrdersPerIpPerHour]] : [];
+  const counts = [];
+  for (const [k, max] of brakes) {
     const n = Number((await cfg.kv.get(k)) ?? 0);
-    if (n >= cfg.maxOrdersPerIpPerHour) return { ok: false, status: 429, reason: 'too_many_orders' };
-    await cfg.kv.put(k, String(n + 1), { expirationTtl: 3700 });
+    if (n >= max) return { ok: false, status: 429, reason: 'too_many_orders' };
+    counts.push([k, n]);
   }
+  for (const [k, n] of counts) await cfg.kv.put(k, String(n + 1), { expirationTtl: 3700 });
   const base = decimalToAtomic(p.priceUsdc);
   const id = newOrderId();
   const token = newToken();
