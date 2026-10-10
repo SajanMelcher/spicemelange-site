@@ -90,7 +90,7 @@ export function lessonEmail(lcfg, sub, day) {
     + L.html
     + `<hr style="border:0;border-top:1px solid #eadfcb;margin:24px 0 12px">`
     + `<p style="margin:0 0 8px;font-size:12px;color:#7a6a55;line-height:1.5">${why}</p>`
-    + `<p style="margin:0;font-size:12px;color:#7a6a55"><a href="${u}" style="color:#7a6a55">Unsubscribe in one click</a> · The Spice Melange · thespicemelange.org</p>`
+    + `<p style="margin:0;font-size:12px;color:#7a6a55"><a href="${u.replace(/&/g, '&amp;')}" style="color:#7a6a55">Unsubscribe in one click</a> · The Spice Melange · thespicemelange.org</p>`
     + `</div></body></html>`;
   const text = `Hwi's practice lessons · Day ${day} of ${LESSON_DAYS}\n\n${L.text}\n\n--\n${why}\nUnsubscribe in one click: ${u}\nThe Spice Melange · https://thespicemelange.org\n`;
   return {

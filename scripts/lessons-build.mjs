@@ -25,10 +25,11 @@ export function parseFront(md) {
 }
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 function inlineHtml(s) {
-  const parts = s.split(/(`[^`]+`)/);
-  return parts.map((p) => p.startsWith('`') && p.endsWith('`') && p.length > 1
-    ? `<code style="background:#f3ece0;padding:1px 4px;border-radius:3px;font-size:90%">${esc(p.slice(1, -1))}</code>`
-    : esc(p).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/\*([^*]+)\*/g, '<em>$1</em>')).join('');
+  // code spans -> placeholders first, so **bold** may wrap `code`
+  const codes = [];
+  const t = esc(s.replace(/`([^`]+)`/g, (_, c) => `\u0000${codes.push(c) - 1}\u0000`))
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  return t.replace(/\u0000(\d+)\u0000/g, (_, i) => `<code style="background:#f3ece0;padding:1px 4px;border-radius:3px;font-size:90%">${esc(codes[Number(i)])}</code>`);
 }
 const inlineText = (s) => s.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*]+)\*/g, '$1');
 
