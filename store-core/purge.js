@@ -11,13 +11,40 @@
 //  - course rows handed off to the 14-day lessons: 7 days after the handoff                             -> deleted
 //  - reply-keyword suggestions: older than 90 days                                                      -> deleted
 //  Unsubscribes are minimized at once (lessons.js / course.js); only email_suppressions (hash + date) is kept, indefinitely.
+//  - rows still status='unsubscribed' (fallback / pre-GL2): suppression written if missing, then row + history deleted (needs salt)
 // The Worker cron (every 10 min) also calls purge(), so these run even when the site is quiet.
 export const PURGE_EVERY_MS = 10 * 60_000;
 export const RETENTION = { readHashMs: 3_600_000, counterDays: 3, reportHashDays: 90, unpaidOrderDays: 30,
   courseIpHashMs: 3_600_000, unconfirmedDays: 7, afterLastLessonDays: 30, handoffDays: 7, suggestionDays: 90 };
 const DAY = 86_400_000;
 
-export async function purge(db, nowMs = Date.now()) {
+import { emailHash } from './suppress.js';
+
+/**
+ * Rows left with status='unsubscribed' (the never-fail fallback, or rows from before GL2): write the HMAC suppression
+ * record first if missing (keeping the earliest date), then delete the row and its send history/suggestions.
+ * Needs the SUPPRESSION_SALT secret; without it nothing is touched (reported as a skip) so no block is ever lost.
+ */
+export async function minimizeUnsubscribed(db, salt, nowMs = Date.now(), limit = 200) {
+  if (!salt || String(salt).length < 16) return { skip: 'no_suppression_salt' };
+  const out = {};
+  for (const [list, table, extra] of [['lessons', 'lesson_subs', ['lesson_sends']], ['course', 'course_subs', ['course_sends', 'course_suggestions']]]) {
+    let n = 0;
+    try {
+      const { results = [] } = await db.prepare(`SELECT id, email, unsub_ms FROM ${table} WHERE status = 'unsubscribed' LIMIT ?1`).bind(limit).all();
+      for (const r of results) {
+        await db.prepare(`INSERT OR IGNORE INTO email_suppressions (email_hash, list, unsub_ms) VALUES (?1, ?2, ?3)`).bind(await emailHash(salt, r.email), list, Number(r.unsub_ms ?? nowMs)).run();
+        for (const t of extra) await db.prepare(`DELETE FROM ${t} WHERE sub_id = ?1`).bind(r.id).run();
+        await db.prepare(`DELETE FROM ${table} WHERE id = ?1 AND status = 'unsubscribed'`).bind(r.id).run();
+        n++;
+      }
+      out[list] = n;
+    } catch (e) { out[list] = `skip: ${String(e?.message ?? e).slice(0, 80)}`; }
+  }
+  return out;
+}
+
+export async function purge(db, nowMs = Date.now(), { salt = '' } = {}) {
   const minuteCut = Math.floor((nowMs - RETENTION.readHashMs) / 60_000);
   const dayCut = Math.floor(nowMs / DAY) - RETENTION.counterDays;
   const reportCut = nowMs - RETENTION.reportHashDays * DAY;
@@ -38,11 +65,12 @@ export async function purge(db, nowMs = Date.now()) {
   await run('lessonSends', `DELETE FROM lesson_sends WHERE sub_id IN (${lessonOld})`, pendCut, doneCut);
   await run('lessonSubs', `DELETE FROM lesson_subs WHERE id IN (${lessonOld})`, pendCut, doneCut);
   const courseOld = `SELECT id FROM course_subs WHERE (status IN ('pending','expired') AND consent_ms < ?1) OR (status = 'done' AND last_sent_ms < ?2)
-    OR (status = 'handed_off' AND COALESCE(handoff_ms, 0) < ?3) OR status = 'unsubscribed'`;
+    OR (status = 'handed_off' AND COALESCE(handoff_ms, 0) < ?3)`; // 'unsubscribed' rows: minimizeUnsubscribed (keeps the block)
   const hoCut = nowMs - RETENTION.handoffDays * DAY;
   await run('courseSuggestions', `DELETE FROM course_suggestions WHERE sub_id IN (${courseOld}) OR received_ms < ?4`, pendCut, doneCut, hoCut, nowMs - RETENTION.suggestionDays * DAY);
   await run('courseSends', `DELETE FROM course_sends WHERE sub_id IN (${courseOld})`, pendCut, doneCut, hoCut);
   await run('courseSubs', `DELETE FROM course_subs WHERE id IN (${courseOld})`, pendCut, doneCut, hoCut);
+  n.unsubscribedMinimized = await minimizeUnsubscribed(db, salt, nowMs);
   await run('expiredHolds', `DELETE FROM amount_holds WHERE hold_until_ms < ?1 AND order_id NOT IN (SELECT id FROM orders WHERE status = 'open')`, nowMs);
   return n;
 }

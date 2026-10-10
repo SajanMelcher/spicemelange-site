@@ -18,7 +18,7 @@ const summary = (r) => ({ ...r, details: (r.details ?? []).map(({ sub, day, kind
 export default {
   async scheduled(event, env, ctx) {
     // GL2/GL3: retention purge every run (IP hashes ~1 h, unconfirmed signups 7 d, finished subs 30 d, suggestions 90 d)
-    if (env.STORE_DB) ctx.waitUntil(purge(env.STORE_DB, event.scheduledTime).then((n) => console.log('retention purge', JSON.stringify(n))).catch((e) => console.log('purge error', String(e?.message ?? e))));
+    if (env.STORE_DB) ctx.waitUntil(purge(env.STORE_DB, event.scheduledTime, { salt: env.SUPPRESSION_SALT }).then((n) => console.log('retention purge', JSON.stringify(n))).catch((e) => console.log('purge error', String(e?.message ?? e))));
     ctx.waitUntil(scheduledRun(env, { nowMs: event.scheduledTime }).then((r) => console.log(JSON.stringify({ at: new Date(event.scheduledTime).toISOString(), confirmations: r.confirmations.details ? summary(r.confirmations) : r.confirmations, lessons: r.lessons.details ? summary(r.lessons) : r.lessons }))));
   },
   async fetch(request, env) {
