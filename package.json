@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "astro build && node scripts/csp-headers.mjs",
     "preview": "astro preview --host 127.0.0.1 --port 4321",
     "snapshot": "node scripts/deepbook-snapshot.mjs",
     "shots": "node scripts/screenshots.mjs",

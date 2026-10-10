@@ -1,3 +1,6 @@
+# Site-wide security headers (HSTS, CSP with inline-script hashes, XFO, nosniff, Referrer-, Permissions-Policy) are
+# prepended to dist/_headers at build time by scripts/csp-headers.mjs. /desk-sign/* adds its stricter CSP on top
+# (both policies apply) and its own Referrer-Policy (no-referrer).
 /templates/versions.json
   Cache-Control: public, max-age=300
 /templates/versions.json.sig
@@ -14,8 +17,6 @@
   Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; manifest-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors 'none'; require-trusted-types-for 'script'
   X-Robots-Tag: noindex, nofollow, noarchive
   Referrer-Policy: no-referrer
-  X-Content-Type-Options: nosniff
-  X-Frame-Options: DENY
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Resource-Policy: same-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()
