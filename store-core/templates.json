@@ -6,49 +6,58 @@
     {
       "sku": "god-emperor",
       "name": "The God Emperor",
-      "title": "Orchestrator"
+      "title": "Orchestrator",
+      "sha256": "504b5bf21743449d080f69fc1acd555faeea6304ddf53a28522b817c8a58b2d8"
     },
     {
       "sku": "moneo",
       "name": "Moneo",
-      "title": "Mentat Researcher"
+      "title": "Mentat Researcher",
+      "sha256": "3b26b6257c1059750ef650e2ae63331ac379cebd3ce32860fccd2491eb97a0e2"
     },
     {
       "sku": "duncan-idaho",
       "name": "Duncan Idaho",
-      "title": "Income Base and Ticket Planner"
+      "title": "Income Base and Ticket Planner",
+      "sha256": "93e4f00125283dec20ab27b91ef8cca348c621f302e1a8ca9d0f1a6e61b2c117"
     },
     {
       "sku": "fish-speakers",
       "name": "The Fish Speakers",
-      "title": "Execution Operator"
+      "title": "Execution Operator",
+      "sha256": "50384ad1b6b3fd7a11dd7b6401e64848ce08cb02a510533fd127f030fdb21152"
     },
     {
       "sku": "anteac",
       "name": "Anteac",
-      "title": "Truthsayer Verifier"
+      "title": "Truthsayer Verifier",
+      "sha256": "8818056e06dd61c73f500c7853c9c481cd1efa1cf6228196bf328cfe6cef8ea5"
     },
     {
       "sku": "hwi-noree",
       "name": "Hwi Noree",
-      "title": "Ambassador of the Trading Desk"
+      "title": "Ambassador of the Trading Desk",
+      "sha256": "79a9a0c3d958c8cbbe503f59c550509506960689a1b243bf97ba2c2bd39efef0"
     },
     {
       "sku": "ixians",
       "name": "Ixians",
-      "title": "Toolmaker and Infrastructure"
+      "title": "Toolmaker and Infrastructure",
+      "sha256": "148a5f467e167021318aeef757ac59b450e9a53430e5628d3a526786e35ba85e"
     }
   ],
   "packs": [
     {
       "sku": "leto-journals",
       "name": "Leto's Secret Journals",
-      "title": "System templates"
+      "title": "System templates",
+      "sha256": "b72355485c0fb1402da09f6465dba3e9c737221304717f48fa1ca13289bf4dc2"
     },
     {
       "sku": "dune-saga-collection",
       "name": "The Dune Saga Collection",
-      "title": "Every template, now and future: the 7 desk templates plus Leto's Secret Journals"
+      "title": "Every template, now and future: the 7 desk templates plus Leto's Secret Journals",
+      "sha256": "5fb75c118841f8aa2ae403f43c55ac6943be6b99f4fc87b904f5945213074417"
     }
   ],
   "releases": [
