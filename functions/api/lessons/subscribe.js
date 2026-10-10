@@ -1,6 +1,7 @@
 // GET  /api/lessons/subscribe  -> { open } so the checkout box and order-page form show only when signup is open.
 // POST /api/lessons/subscribe {orderId, email, source: "checkout"|"order_page"}, Authorization: Bearer <order token>
-//      Opt in to Hwi's 14-day practice lessons. Lessons start after the order is paid. Email never echoed back.
+//      Double opt-in step 1 for Hwi's 14-day practice lessons. A confirmation email follows once the order is paid;
+//      lessons start only after the buyer confirms. Email never echoed back.
 import { json, readJson, sameOrigin, tokenFrom } from '../../../store-core/http.js';
 import { lessonsConfig, subscribe } from '../../../store-core/lessons.js';
 

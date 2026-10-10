@@ -1,21 +1,24 @@
 # Hwi's practice lessons: daily sender Worker (Cron Trigger). Deploy from this folder:
 #   preview:     npx --yes -p node@22 -p wrangler -- wrangler deploy --env preview
 #   production:  npx --yes -p node@22 -p wrangler -- wrangler deploy        (only after Hwi's review; see HWI-REVIEW.md)
-# Secrets (wrangler secret put ... [--env preview]): RESEND_API_KEY, LESSONS_ADMIN_KEY (>= 32 chars).
+# Secrets (wrangler secret put ... [--env preview]): RESEND_API_KEY, LESSONS_ADMIN_KEY (>= 32 chars),
+#   LESSONS_FOOTER (CAN-SPAM sender line: name · postal address · contact; production refuses to send without it).
 # THE production switch: LESSONS_PRODUCTION_SENDING = "1" in [vars] below AND in the Pages production vars (site wrangler.toml),
-# because the Pages var opens signup and the Worker var opens sending. Both read the same name; flip both in one commit.
+# because the Pages var opens signup and the Worker var opens sending. Same flag; flip both in one commit.
+# ON since Sajan's yes, 2026-10-10 7:16 AM PT ("9 AM PT daily, double opt-in only, reply-to reserve@, one-click unsubscribe").
 name = "hwi-lessons-cron"
 main = "index.js"
 compatibility_date = "2026-10-01"
 workers_dev = true
 
 [triggers]
-crons = ["0 16 * * *"] # 16:00 UTC daily = 9:00 AM PT (PDT) / 8:00 AM PT (PST)
+# Every 10 min: confirmation emails go out within minutes; lessons only when America/Los_Angeles reads 9 AM (in code, DST-proof).
+crons = ["*/10 * * * *"]
 
 [vars]
 SUI_NETWORK = "mainnet"
-LESSONS_PRODUCTION_SENDING = "0" # Hwi reviews the lessons first. Set "1" to go live.
-LESSONS_FROM = "Hwi Noree <hwi@thespicemelange.org>"
+LESSONS_PRODUCTION_SENDING = "1"
+LESSONS_FROM = '"Hwi Noree, The Spice Melange" <hwi@thespicemelange.org>'
 LESSONS_REPLY_TO = "reserve@thespicemelange.org"
 LESSONS_BASE_URL = "https://thespicemelange.org"
 
@@ -29,14 +32,14 @@ name = "hwi-lessons-cron-preview"
 workers_dev = true
 
 [env.preview.triggers]
-crons = ["0 16 * * *"]
+crons = ["*/10 * * * *"]
 
 [env.preview.vars]
 SUI_NETWORK = "testnet"
 LESSONS_PRODUCTION_SENDING = "0"
 # Test mode: only these addresses ever get mail from the preview sender (Resend's test sink; no real person).
 LESSONS_TEST_RECIPIENTS = "delivered@resend.dev"
-LESSONS_FROM = "Hwi Noree <hwi@thespicemelange.org>"
+LESSONS_FROM = '"Hwi Noree, The Spice Melange" <hwi@thespicemelange.org>'
 LESSONS_REPLY_TO = "reserve@thespicemelange.org"
 LESSONS_BASE_URL = "https://hwi-lessons.spicemelange-site.pages.dev"
 
