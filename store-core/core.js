@@ -278,6 +278,13 @@ async function authOrder(cfg, orderId, token) {
   if (!safeEqual(o.tokenHash, await sha256Hex(token))) return { err: 'unknown_order' }; // do not reveal existence
   return { o };
 }
+/** Signal feed (draft): a PAID order proven by its token. No rate counting here; the feed keeps its own limits. */
+export async function paidOrder(cfg, orderId, token) {
+  const { o, err } = await authOrder(cfg, orderId, token);
+  if (err) return { ok: false, status: 401, reason: 'bad_order_or_token' };
+  if (o.status !== 'paid') return { ok: false, status: 402, reason: 'order_not_paid' };
+  return { ok: true, order: o };
+}
 const digestOwner = async (cfg, d) => (await cfg.db.prepare('SELECT order_id FROM redemptions WHERE net = ?1 AND digest = ?2').bind(cfg.net, d).first())?.order_id ?? null;
 
 /**
