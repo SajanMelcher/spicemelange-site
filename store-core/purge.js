@@ -86,7 +86,7 @@ export async function maybePurge(cfg, nowMs = Date.now()) {
       if (nowMs - last < PURGE_EVERY_MS) return null;
       await cfg.kv.put('purge:last', String(nowMs), { expirationTtl: 86_400 });
     }
-    const n = await purge(cfg.db, nowMs);
+    const n = await purge(cfg.db, nowMs, { salt: cfg.suppressSalt });
     console.log('retention purge', JSON.stringify(n));
     return n;
   } catch (e) { console.log('retention purge failed', String(e?.message ?? e)); return null; }

@@ -79,6 +79,7 @@ export function loadConfig(env = {}) {
     graphqlUrl: GRAPHQL[net],
     secret,
     kv: env.STORE_KV, // outbox + approximate IP rate limit only
+    suppressSalt: String(env.SUPPRESSION_SALT ?? ''), // purge: minimize leftover unsubscribed rows (never returned by any API)
     db: env.STORE_DB, // D1: orders, amount holds, redemptions (strongly consistent)
     // Unique tag added to the price. Default: 1..9999 atomic units (< 1 cent, like Plumbline).
     // "Unique cents" mode for wallets/exchanges that cannot send 6 decimals: UNIT=10000, RANGE=99.

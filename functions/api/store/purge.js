@@ -12,7 +12,7 @@ export async function onRequestPost(context) {
   if (!m || !safeEqual(m[1], key)) return json(401, { ok: false, reason: 'unauthorized' });
   const { cfg, res } = guard(context);
   if (res) return res;
-  const deleted = await purge(cfg.db, Date.now());
+  const deleted = await purge(cfg.db, Date.now(), { salt: context.env.SUPPRESSION_SALT });
   console.log('scheduled retention purge', JSON.stringify(deleted));
   return json(200, { ok: true, deleted });
 }
