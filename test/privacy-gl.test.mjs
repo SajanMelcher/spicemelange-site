@@ -99,3 +99,25 @@ test('Who helps us: every third-party origin in CSP connect-src is named on /pri
   assert.match(read('../workers/hwi-lessons/wrangler.toml'), new RegExp(`LESSONS_REPLY_TO = "${REPLY_CONTACT.replace('.', '\\.')}"`));
   assert.match(priv, /Replies to lesson and course emails go to/);
 });
+test('purge: status=unsubscribed rows (fallback / pre-GL2) -> HMAC suppression written first, then the row and sends deleted; no salt -> untouched', async () => {
+  const { emailHash } = await import('../store-core/suppress.js');
+  const SALT = 's'.repeat(32);
+  const seed = () => {
+    const db = makeD1(MIG);
+    db.raw.prepare(`INSERT INTO orders (id, sku, net, amount_atomic, token_hash, created_ms, expires_ms, status, attempts, pay_to) VALUES ('SM-AAAAAAAAAA','fish-speakers','mainnet','1','h',?,?,'paid',0,'0x1')`).run(NOW, NOW);
+    db.raw.prepare(`INSERT INTO lesson_subs (id, net, order_id, email, consent_ms, consent_source, status, next_day, confirm_token, unsub_token, unsub_ms) VALUES ('ls_old','mainnet','SM-AAAAAAAAAA','old@x.example',?,'checkout','unsubscribed',2,'lc_a','lu_a',?)`).run(NOW - 1000, NOW - 500);
+    db.raw.prepare(`INSERT INTO lesson_sends (sub_id, day, sent_ms, mode) VALUES ('ls_old', 1, ?, 'production')`).run(NOW - 900);
+    return db;
+  };
+  const off = seed();
+  assert.deepEqual((await purge(off, NOW)).unsubscribedMinimized, { skip: 'no_suppression_salt' });
+  assert.equal(off.raw.prepare('SELECT COUNT(*) n FROM lesson_subs').get().n, 1);
+  const db = seed();
+  const n = await purge(db, NOW, { salt: SALT });
+  assert.equal(n.unsubscribedMinimized.lessons, 1);
+  assert.equal(db.raw.prepare('SELECT COUNT(*) n FROM lesson_subs').get().n, 0);
+  assert.equal(db.raw.prepare('SELECT COUNT(*) n FROM lesson_sends').get().n, 0);
+  const sup = db.raw.prepare('SELECT * FROM email_suppressions').all().map((r) => ({ ...r }));
+  assert.deepEqual(sup, [{ email_hash: await emailHash(SALT, 'old@x.example'), list: 'lessons', unsub_ms: NOW - 500 }]);
+  assert.equal((await purge(db, NOW + 1, { salt: SALT })).unsubscribedMinimized.lessons, 0); // idempotent
+});
