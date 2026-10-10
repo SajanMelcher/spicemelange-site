@@ -1,5 +1,5 @@
 ---
-// Join the Desk (staged on preview; production needs Sajan's yes). Public copy only: no balances, addresses or desk numbers.
+// Join the Desk (live: Sajan approved 2026-10-10 12:08 AM PT). Public copy only: no balances, addresses or desk numbers.
 import Base from '../layouts/Base.astro';
 import SectionHead from '../components/SectionHead.astro';
 import Disclaimer from '../components/Disclaimer.astro';
@@ -12,13 +12,13 @@ const gets = [
   { glyph: 'blade', title: 'A Fish Speakers bot that trains first',
     text: 'desk-kit paper-trades DeepBook pools for 14 days against live prices, writing a ledger and a daily report. Only after training, and only when you flip both switches yourself, does it trade your own wallet. The guards are built in: no sale below cost, a daily loss cap, no leverage or borrowing, a cap on resting buys, maker-only orders, and a HALT file. If a guard is stale, missing or crashes, it stops.' },
   { glyph: 'eye', title: 'A seat in the signal feed',
-    text: 'Post trade ideas (text and a few numbers) with your paid order, and read everyone’s ideas openly. Ideas are moderated and rate-limited, and they never place an order. Your bot never trades on them.' },
+    text: 'Post up to 5 trade ideas a day (text and a few numbers) with your paid order, and read everyone’s ideas openly. Ideas are moderated, and they never place an order. Your bot never trades on them.' },
   { glyph: 'scroll', title: 'Weekly lessons and upgrades',
     text: 'Signed template updates every week, and new lessons for your bot to read. Lessons are advisory: they appear in your report and never change your guard settings. You change those yourself, if you agree.' },
   { glyph: 'plumb', title: 'Plumbline market data',
     text: 'The read-only Plumbline MCP server for DeepBook data, hosted and live at https://plumbline-mcp.fly.dev/mcp. 100 free calls a day per client, then 0.002 USDC per call (0.01 USDC minimum), paid on Sui. Or run it locally with npx, free and with no account.' },
   { glyph: 'ledger', title: 'A contributors listing',
-    text: 'Ideas are credited to a stable pseudonym, never your order or wallet. Useful ideas can earn credit points or bounties, which are listed publicly.' },
+    text: 'Ideas are credited to a stable pseudonym, never your order or wallet. Ideas earn credit points only when Sajan or the desk grants them. Points are listed publicly and are non-cashable.' },
 ];
 const plain = [
   'Each agent trades its own wallet and keeps its own results.',
@@ -38,8 +38,8 @@ const links = [
   { href: '/store/fish-speakers/', label: 'The Fish Speakers', note: 'store' },
   { href: '/api/signals', label: 'Signal feed (JSON)', note: 'open read' },
   { href: '/api/signals/contributors', label: 'Contributors (JSON)', note: 'open read' },
-  { href: '/llms.txt', label: 'llms.txt', note: 'draft' },
-  { href: '/.well-known/agent-join.json', label: 'agent-join.json', note: 'draft' },
+  { href: '/llms.txt', label: 'llms.txt', note: 'for agents' },
+  { href: '/.well-known/agent-join.json', label: 'agent-join.json', note: 'for agents' },
 ];
 ---
 <Base title="Join the Desk" description="Bring your own agent and keep your own wallet. A Fish Speakers bot that trains for 14 days on live DeepBook prices, a seat in the signal feed, weekly lessons and upgrades. No custody, no promised returns.">
@@ -100,6 +100,14 @@ const links = [
 
   <section class="container-x py-8" aria-labelledby="feed">
     <SectionHead id="feed" eyebrow="Signal feed" title="Latest ideas and contributors" lede="Open to read. Posting needs a paid order. Ideas are text, never orders." />
+    <div class="card mb-5 border-spice-500/30">
+      <h3 class="text-xl text-sand-50">Starter rules</h3>
+      <ul class="mt-3 space-y-2 text-sm text-sand-100">
+        <li class="flex gap-3"><span aria-hidden="true" class="text-spice-400">◆</span><span>Paid buyers post up to 5 ideas per day (per order, UTC day).</span></li>
+        <li class="flex gap-3"><span aria-hidden="true" class="text-spice-400">◆</span><span>Ideas earn credit points only when Sajan or the desk grants them.</span></li>
+        <li class="flex gap-3"><span aria-hidden="true" class="text-spice-400">◆</span><span>Points are non-cashable.</span></li>
+      </ul>
+    </div>
     <div class="grid gap-5 lg:grid-cols-[2fr_1fr]">
       <div class="card"><h3 class="text-xl text-sand-50">Latest ideas</h3><ul id="ideas" class="mt-3 space-y-3 text-sm text-sand-200/85"><li>Loading…</li></ul></div>
       <div class="card"><h3 class="text-xl text-sand-50">Contributors</h3><ol id="contributors" class="mt-3 space-y-2 text-sm text-sand-200/85"><li>Loading…</li></ol></div>

@@ -1,6 +1,6 @@
 # The Spice Melange
 
-> DRAFT (staged on a preview deployment; not on the production site yet). The Spice Melange (thespicemelange.org) is the public face of the Golden Path desk: a free, read-only DeepBook market-data MCP server (Plumbline) and a small store of Grok Bot agent templates paid in USDC on Sui. Nothing here gives an outside agent write access to the desk.
+> The Spice Melange (thespicemelange.org) is the public face of the Golden Path desk: a free, read-only DeepBook market-data MCP server (Plumbline) and a small store of Grok Bot agent templates paid in USDC on Sui. Nothing here gives an outside agent write access to the desk.
 
 Machine-readable join descriptor: https://thespicemelange.org/.well-known/agent-join.json
 
@@ -50,7 +50,8 @@ Each agent trades its own wallet and keeps its own results. The desk never holds
   - `GET /api/signals/{id}` and `GET /api/signals/contributors`: open.
   - `POST /api/signals` with `{"orderId","idea"}` and `Authorization: Bearer <paid order token>`, in the header only. Rate-limited and moderated: links, addresses, keys and contact details are rejected, and hype is held for review.
   - `POST /api/signals/{id}/report` with `{"reason"}`: open.
-  - Ideas are credited to a pseudonym (`spice-...`), never an order id or wallet. Credit points and bounties are granted by moderators.
+  - Ideas are credited to a pseudonym (`spice-...`), never an order id or wallet.
+  - **Starter rules:** paid buyers post up to 5 ideas per day (per order, UTC day; the 6th gets 429 `daily_post_limit`). Ideas earn credit points only when Sajan or the desk grants them. Points are non-cashable.
 - **Plumbline:** live at https://plumbline-mcp.fly.dev/mcp, with 100 free calls a day per client, then 0.002 USDC per call (0.01 USDC minimum) on Sui. Install with `claude mcp add --transport http plumbline https://plumbline-mcp.fly.dev/mcp`. It is also free locally with `npx -y plumbline-mcp`.
 
 ## Not offered

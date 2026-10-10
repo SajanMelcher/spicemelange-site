@@ -1,5 +1,8 @@
 /**
- * DRAFT desk signal feed (branch signal-feed-draft; NOT deployed, needs the owner's yes).
+ * Desk signal feed. Sajan approved go-live 2026-10-10 12:08 AM PT with the starter rules:
+ *   - paid buyers post up to 5 ideas per day (per order, UTC day; env can lower it, never raise it)
+ *   - ideas earn credit points only when Sajan or the desk grants them (admin key)
+ *   - points are non-cashable
  * Trade IDEAS only: text plus a small JSON of numbers/tags. The server never builds, signs, routes or executes
  * anything, and the response marks every item executable:false.
  *   read   : open (GET), per-IP rate limit, visible items only
@@ -16,13 +19,17 @@ import { hmac, paidOrder, randomBytes, sha256Hex } from './core.js';
 const truthy = (v) => v === '1' || v === 'true' || v === true;
 const int = (v, d, lo, hi) => { const n = v === undefined || v === '' ? d : Number(v); return Number.isInteger(n) && n >= lo && n <= hi ? n : d; };
 export const DISCLAIMER = 'User-posted trade ideas. Not investment advice. Nothing here places or executes trades.';
+export const MAX_IDEAS_PER_DAY = 5; // starter rule (Sajan 2026-10-10 12:08 AM PT)
+export const RULES = { ideasPerOrderPerDay: MAX_IDEAS_PER_DAY, dayBoundary: 'UTC', points: 'granted only by Sajan or the desk', pointsCashable: false };
+export const POINTS_NOTE = 'Credit points are granted only by Sajan or the desk and are non-cashable.';
 
 export function signalsConfig(env = {}) {
   if (!truthy(env.SIGNALS_ENABLED)) return { enabled: false, reason: 'signals_not_open' };
   const admin = String(env.SIGNALS_ADMIN_KEY ?? '');
   return {
     enabled: true,
-    postsPerDay: int(env.SIGNALS_POSTS_PER_DAY, 5, 1, 100),
+    postsPerDay: int(env.SIGNALS_POSTS_PER_DAY, MAX_IDEAS_PER_DAY, 1, MAX_IDEAS_PER_DAY), // accepted ideas per order per UTC day
+    attemptsPerDay: int(env.SIGNALS_ATTEMPTS_PER_DAY, 20, 5, 200), // anti-spam: all post attempts per order per day
     minGapSec: int(env.SIGNALS_MIN_GAP_SEC, 600, 0, 86400),
     readsPerMin: int(env.SIGNALS_READS_PER_MIN, 120, 10, 10000),
     reportsPerDay: int(env.SIGNALS_REPORTS_PER_DAY, 20, 1, 1000),
@@ -107,7 +114,7 @@ export async function listSignals(cfg, { pool, limit, before } = {}) {
   const rows = results ?? [];
   const cr = await creditsFor(cfg.db, rows.map((r) => r.id));
   const items = rows.map((r) => publicItem(r, cr[r.id]));
-  return { ok: true, items, next: rows.length === lim ? items.at(-1).createdAt : null, disclaimer: DISCLAIMER };
+  return { ok: true, items, next: rows.length === lim ? items.at(-1).createdAt : null, rules: RULES, pointsNote: POINTS_NOTE, disclaimer: DISCLAIMER };
 }
 
 export async function getSignal(cfg, id) {
@@ -125,7 +132,12 @@ export async function createSignal(cfg, scfg, { orderId, token, idea, nowMs = Da
   const author = await authorOf(cfg, auth.order.id);
   const last = await cfg.db.prepare('SELECT MAX(created_ms) AS t FROM signals WHERE author = ?1').bind(author).first();
   if (last?.t && nowMs - Number(last.t) < scfg.minGapSec * 1000) return { ok: false, status: 429, reason: 'too_soon', retryAfterSec: Math.ceil((scfg.minGapSec * 1000 - (nowMs - Number(last.t))) / 1000) };
-  if (!(await hit(cfg.db, `post:${auth.order.id}`, day(nowMs), scfg.postsPerDay))) return { ok: false, status: 429, reason: 'daily_post_limit' };
+  const dayStart = Math.floor(nowMs / 86_400_000) * 86_400_000;
+  const countToday = async () => Number((await cfg.db.prepare('SELECT COUNT(*) AS n FROM signals WHERE order_id = ?1 AND created_ms >= ?2 AND created_ms < ?3')
+    .bind(auth.order.id, dayStart, dayStart + 86_400_000).first())?.n ?? 0);
+  const limitRes = { ok: false, status: 429, reason: 'daily_post_limit', limit: scfg.postsPerDay, retryAfterSec: Math.ceil((dayStart + 86_400_000 - nowMs) / 1000) };
+  if ((await countToday()) >= scfg.postsPerDay) return limitRes;
+  if (!(await hit(cfg.db, `post:${auth.order.id}`, day(nowMs), scfg.attemptsPerDay))) return { ok: false, status: 429, reason: 'daily_attempt_limit' };
   const text = [idea.thesis, ...(idea.tags ?? [])].join(' ');
   const mod = moderate(text);
   if (mod.reject) return { ok: false, status: 422, reason: mod.reject };
@@ -139,6 +151,10 @@ export async function createSignal(cfg, scfg, { orderId, token, idea, nowMs = Da
   } catch (e) {
     if (/UNIQUE/i.test(String(e?.message ?? e))) return { ok: false, status: 409, reason: 'duplicate_idea' };
     throw e;
+  }
+  if ((await countToday()) > scfg.postsPerDay) { // concurrent posts: strict cap, newest loses
+    await cfg.db.prepare('DELETE FROM signals WHERE id = ?1').bind(id).run();
+    return limitRes;
   }
   return { ok: true, status: 201, id, author, state: mod.hold ? 'held' : 'visible', ...(mod.hold ? { heldFor: mod.hold } : {}) };
 }
@@ -186,5 +202,5 @@ export async function listContributors(cfg, { limit } = {}) {
        FROM signals s LEFT JOIN signal_credits c ON c.signal_id = s.id
       WHERE s.net = ?1 AND s.status = 'visible'
       GROUP BY s.author ORDER BY points DESC, ideas DESC, last_ms DESC LIMIT ?2`).bind(cfg.net, lim).all();
-  return { ok: true, contributors: (results ?? []).map((r) => ({ author: r.author, ideas: Number(r.ideas), points: Number(r.points), bounties: Number(r.bounties), lastIdeaAt: new Date(Number(r.last_ms)).toISOString() })), disclaimer: DISCLAIMER };
+  return { ok: true, contributors: (results ?? []).map((r) => ({ author: r.author, ideas: Number(r.ideas), points: Number(r.points), bounties: Number(r.bounties), lastIdeaAt: new Date(Number(r.last_ms)).toISOString() })), rules: RULES, pointsNote: POINTS_NOTE, disclaimer: DISCLAIMER };
 }

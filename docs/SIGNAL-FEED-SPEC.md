@@ -1,15 +1,21 @@
-# Desk signal feed: spec (DRAFT, not deployed)
+# Desk signal feed: spec (LIVE)
 
-Status: this is a draft on the `signal-feed-draft` branch. It is not merged, not pushed, not deployed, and the migration has not been applied. It needs the owner's yes before any of that happens.
+Status: live on thespicemelange.org. Sajan approved it on 2026-10-10 at 12:08 AM PT: "Yes, put Join the Desk and the signal feed live with those starter rules."
+
+## Starter rules (Sajan, 2026-10-10)
+1. Paid buyers post **up to 5 ideas per day**. The count is per order, per UTC day, and only accepted ideas count; rejected attempts don't use a slot. This is enforced in code (`MAX_IDEAS_PER_DAY = 5`). Env can lower it, never raise it. The 6th idea gets 429 `daily_post_limit`.
+2. Ideas earn **credit points only when Sajan or the desk grants them**, through the admin key on `/api/signals/moderate`. Nothing is automatic.
+3. **Points are non-cashable.** Public responses carry `rules` and `pointsNote`.
 
 ## Purpose
 Paid template buyers can share trade ideas, and anyone can read them. The `desk-kit` client (`signals list` / `signals post`) talks to this API. Ideas are text plus a few numbers. The server never builds, signs, routes or executes a transaction, every item carries `executable: false`, and the client never feeds ideas into its trading cycle.
 
 ## Switches
-- `SIGNALS_ENABLED=1` must be set, and the store itself must be enabled. Otherwise every endpoint returns 503 `signals_not_open`. `wrangler.toml` is unchanged on this branch, so the feed stays off even if the branch were deployed.
+- `SIGNALS_ENABLED=1` must be set, and the store itself must be enabled. Otherwise every endpoint returns 503 `signals_not_open`. It is set in `wrangler.toml` for both production and preview.
 - `SIGNALS_ADMIN_KEY` is a Pages secret of 32 characters or more. Without it, moderation returns 503.
 - Optional limits (defaults in brackets):
-  - `SIGNALS_POSTS_PER_DAY` [5] per order
+  - `SIGNALS_POSTS_PER_DAY` [5, max 5] accepted ideas per order per UTC day
+  - `SIGNALS_ATTEMPTS_PER_DAY` [20] post attempts per order per day (anti-spam)
   - `SIGNALS_MIN_GAP_SEC` [600] between posts by one author
   - `SIGNALS_READS_PER_MIN` [120] per IP hash
   - `SIGNALS_REPORTS_PER_DAY` [20] per IP hash
@@ -44,27 +50,27 @@ Paid template buyers can share trade ideas, and anyone can read them. The `desk-
 - **Duplicates:** the same author with the same normalized thesis gets 409.
 - **Reports:** N distinct reporters put an idea on `held`. A moderator then restores, hides or removes it.
 
-## Attribution (for bounties and credit later)
+## Attribution and credit
 - The public `author` is the pseudonym `spice-<hmac(order id)>`. It stays the same for one order, and the order id is never shown.
-- `signals.order_id` is stored privately, so a bounty or credit can later be paid to the buyer: either the wallet that paid, or the email on the order.
+- `signals.order_id` is stored privately, so granted credit can be tied to the buyer. Points and bounties are recognition only; they are non-cashable.
+- `GET /api/signals/contributors` lists pseudonyms with idea counts and granted points.
 - `signal_credits` is append-only, and only admins can write to it. Items show `credits: {points, bounties}`.
 
 ## Data (`migrations/0004_signals.sql`)
 Tables: `signals`, `signal_reports`, `signal_credits`, `signal_mod_log`, `signal_hits`. IPs are stored only as salted hashes, the same scheme the store uses.
 
-## Code on this branch
+## Code
 - `store-core/signals.js`: validation, moderation, limits, the CRUD operations and attribution
 - `store-core/signals-http.js`: the feature switch and JSON helpers
 - `store-core/core.js`: adds `paidOrder(cfg, orderId, token)`, a read-only check
 - `functions/api/signals/index.js`, `[id].js`, `[id]/report.js`, `moderate.js`
-- `test/signals.test.mjs`: 8 tests. Run with `npx -p node@22 -- node --test test/signals.test.mjs`.
+- `functions/api/signals/contributors.js`
+- `test/signals.test.mjs`: 11 tests. Run with `npx -p node@22 -- node --test test/signals.test.mjs`.
 
-## Needs the owner's yes before
-1. Merging or pushing this branch.
-2. Applying `0004_signals.sql` to the preview database, then production.
-3. Setting `SIGNALS_ENABLED`, `SIGNALS_ADMIN_KEY` and any limits as Pages secrets or vars, preview first.
-4. Deciding the bounty and credit policy (what points are worth and how payout works), and who moderates.
-5. Adding the feed URL to the template packs and the desk-kit config example.
+## Go-live (2026-10-10)
+- The production D1 was backed up, then `0004_signals.sql` was applied.
+- `SIGNALS_ENABLED=1` is in production `[vars]`. A new production `SIGNALS_ADMIN_KEY` is set as a Pages secret, with a copy kept outside the repo.
+- Moderators: Sajan or the desk, holding the admin key.
 
 ## Open questions
 - Should read access stay fully anonymous, or need any paid token? The spec says open.

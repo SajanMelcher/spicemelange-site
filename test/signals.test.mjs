@@ -87,7 +87,7 @@ test('rate limits: per-order daily cap, minimum gap, duplicate thesis, reads per
   const post = (thesis, nowMs = T0) => createSignal(cfg, scfg, { orderId: o.orderId, token: o.token, idea: idea({ thesis }), nowMs });
   assert.equal((await post('First idea about the range low holding up well.')).ok, true);
   assert.equal((await post('First idea about the range low holding up well.')).reason, 'duplicate_idea');
-  assert.equal((await post('Second idea about the range high getting sold.')).ok, false);   // dupe used a slot
+  assert.equal((await post('Second idea about the range high getting sold.')).ok, true);    // a rejected dupe does not use a slot
   assert.equal((await post('Third idea about volume drying up into the weekend.')).reason, 'daily_post_limit');
   const gapEnv = mkEnv({ SIGNALS_MIN_GAP_SEC: '600' }); const g = await paid(gapEnv, '8'.repeat(43)); const gs = signalsConfig(gapEnv);
   assert.equal((await createSignal(g.cfg, gs, { orderId: g.o.orderId, token: g.o.token, idea: idea(), nowMs: T0 })).ok, true);
@@ -145,4 +145,29 @@ test('contributors listing: pseudonyms, idea counts and points; no order ids', a
   assert.equal(r.status, 200); assert.equal(b.contributors.length, 1);
   assert.equal(b.contributors[0].points, 7); assert.equal(b.contributors[0].ideas, 1);
   assert.ok(!JSON.stringify(b).includes(o.orderId));
+});
+
+test('starter rule: at most 5 accepted ideas per order per UTC day; env cannot raise it; rejects do not count; resets next day', async () => {
+  const { MAX_IDEAS_PER_DAY } = await import('../store-core/signals.js');
+  assert.equal(MAX_IDEAS_PER_DAY, 5);
+  assert.equal(signalsConfig(mkEnv({ SIGNALS_POSTS_PER_DAY: '50' })).postsPerDay, 5);
+  assert.equal(signalsConfig(mkEnv()).postsPerDay, 5);
+  const env = mkEnv({ SIGNALS_POSTS_PER_DAY: '50' }); const { cfg, o } = await paid(env); const scfg = signalsConfig(env);
+  const day0 = Math.floor(T0 / 86_400_000) * 86_400_000 + 3_600_000;
+  const post = (n, at) => createSignal(cfg, scfg, { orderId: o.orderId, token: o.token, idea: idea({ thesis: `Distinct idea number ${n} about the order book shape today.` }), nowMs: at });
+  const bad = await createSignal(cfg, scfg, { orderId: o.orderId, token: o.token, idea: idea({ thesis: 'Visit https://example.com for the full idea write-up today.' }), nowMs: day0 });
+  assert.equal(bad.ok, false);
+  for (let i = 1; i <= 5; i++) assert.equal((await post(i, day0 + i * 700_000)).ok, true, `idea ${i}`);
+  const sixth = await post(6, day0 + 6 * 700_000);
+  assert.equal(sixth.reason, 'daily_post_limit'); assert.equal(sixth.limit, 5); assert.equal(sixth.status, 429);
+  assert.equal((await post(7, day0 + 86_400_000)).ok, true); // next UTC day
+});
+
+test('starter rule: points only by admin grant, non-cashable note in public responses', async () => {
+  const env = mkEnv(); const { cfg, o } = await paid(env); const scfg = signalsConfig(env);
+  const s = await createSignal(cfg, scfg, { orderId: o.orderId, token: o.token, idea: idea(), nowMs: T0 });
+  assert.equal((await moderateSignal(cfg, scfg, { adminKey: 'x'.repeat(40), id: s.id, action: 'credit', points: 5 })).ok, false);
+  const l = await listSignals(cfg, {});
+  assert.equal(l.rules.pointsCashable, false); assert.equal(l.rules.ideasPerOrderPerDay, 5);
+  assert.match(l.pointsNote, /non-cashable/);
 });
