@@ -24,7 +24,16 @@ export const sameOrigin = (request) => {
 };
 
 /** Order token from `Authorization: Bearer smt_...`, then a JSON body field, then the legacy `token` query param. */
-export function tokenFrom(request, body, url) {
+// S6 leftover (Siona; Sajan approved ~2:59 AM PT 2026-10-10): the legacy `?token=` query param is accepted, with a log line,
+// only until LEGACY_TOKEN_QUERY_CUTOFF (14 days out), then rejected (treated as no token).
+export const LEGACY_TOKEN_QUERY_CUTOFF = Date.parse('2026-10-24T07:00:00Z'); // Oct 24, 2026, 00:00 PT
+export function tokenFrom(request, body, url, nowMs = Date.now()) {
   const m = /^Bearer\s+(\S+)$/i.exec(request.headers.get('authorization') ?? '');
-  return m?.[1] ?? (body && typeof body.token === 'string' ? body.token : null) ?? url?.searchParams.get('token') ?? null;
+  const fromBody = body && typeof body.token === 'string' ? body.token : null;
+  if (m?.[1] ?? fromBody) return m?.[1] ?? fromBody;
+  const q = url?.searchParams.get('token') ?? null;
+  if (!q) return null;
+  if (nowMs >= LEGACY_TOKEN_QUERY_CUTOFF) { console.log('legacy ?token= rejected (after cutoff)', url.pathname); return null; }
+  console.log('legacy ?token= accepted until 2026-10-24 PT', url.pathname);
+  return q;
 }

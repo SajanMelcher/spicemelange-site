@@ -1,0 +1,44 @@
+---
+// Human gallery: one card per template (wording: Tleilaxu, store/CATALOG-WORDING.md, DRAFT pending Sajan). Agents read /store/catalog.json.
+import Base from '../../layouts/Base.astro';
+import Glyph from '../../components/Glyph.astro';
+import Disclaimer from '../../components/Disclaimer.astro';
+import { LISTED } from '../../../store-core/catalog.js';
+import { CARDS, ORDER, STANDARD, role, PITCHES, PITCH_END } from '../../../store-core/catalog-wording.js';
+import { WORDING } from '../../../store-core/agent-store.js';
+const items = LISTED.filter((p) => CARDS[p.sku]).sort((a, b) => ORDER.indexOf(a.sku) - ORDER.indexOf(b.sku));
+---
+<Base title="Template gallery" description="Every agent template for a guarded trading desk, one card each. $50 per template or $300 for every template, now and future, in USDC on Sui. Educational templates, not financial advice.">
+  <section class="container-x pt-16 pb-6">
+    <p class="eyebrow mb-4">The Golden Path Desk · gallery</p>
+    <h1 class="text-5xl leading-tight text-sand-50">Template gallery</h1>
+    <p class="mt-5 max-w-2xl text-lg text-sand-200/90">{WORDING.summary}</p>
+    <p class="mt-3 text-sm text-sand-300/80">For agents: <a class="text-ibad-300" href="/store/catalog.json">catalog.json</a> · <a class="text-ibad-300" href="/llms.txt">llms.txt</a> · <a class="text-ibad-300" href="/.well-known/agent-join.json">agent-join.json</a> · <a class="text-ibad-300" href="/.well-known/mcp.json">mcp.json</a> · <a class="text-ibad-300" href="/terms/">terms</a></p>
+  </section>
+  <section class="container-x py-6">
+    <ul class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {items.map((p) => { const c = CARDS[p.sku]; return (
+        <li class="card flex flex-col">
+          <div class="flex items-center gap-3 text-spice-300"><Glyph name={p.glyph} class="h-11 w-11" /><p class="eyebrow !tracking-[0.18em]">{role(p.sku)}</p></div>
+          <h2 class="mt-3 text-2xl text-sand-50"><a href={`/store/${p.sku}/`} class="no-underline hover:text-ibad-300">{c.title}</a></h2>
+          <p class="mt-1 font-serif text-lg italic text-sand-300/90">{c.tagline}</p>
+          {p.version && <p class="mt-2 text-xs text-ibad-300">v{p.version}</p>}
+          <p class="mt-3 text-sm leading-relaxed text-sand-200/85">{PITCHES[p.sku]}</p>
+          <p class="mt-2 text-xs italic text-sand-300/80">{PITCH_END}</p>
+          <ul class="mt-3 list-disc space-y-1 pl-5 text-sm leading-relaxed text-sand-200/85">{c.bullets.map((b) => <li>{b}</li>)}</ul>
+          <div class="mt-auto flex items-center justify-between gap-3 pt-6">
+            <p><span class="font-serif text-3xl text-spice-300">${p.priceUsdc}</span> <span class="text-xs text-sand-300/70">USDC on Sui</span></p>
+            <a class="btn-ghost !px-4" href={`/store/${p.sku}/`}>Details</a>
+          </div>
+        </li>); })}
+    </ul>
+    <div class="mt-10 max-w-3xl space-y-2 text-sm text-sand-300/85">
+      <p><strong class="text-sand-100">Hard limits first.</strong> {STANDARD.hardLimits}</p>
+      <p><strong class="text-sand-100">Licence.</strong> {STANDARD.license} <a class="text-ibad-300" href="/terms/">Terms</a></p>
+      <p><strong class="text-sand-100">Payment.</strong> {WORDING.payment}</p>
+      <p><strong class="text-sand-100">Joining the desk.</strong> {WORDING.readOnlyJoin}</p>
+      <p>Hard limits come first, and the owner approves every order. {STANDARD.terms} {STANDARD.disclaimer}</p>
+    </div>
+  </section>
+  <Disclaimer />
+</Base>

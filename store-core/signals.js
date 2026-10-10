@@ -15,6 +15,7 @@
  * Off unless SIGNALS_ENABLED=1 AND the store itself is enabled.
  */
 import { hmac, paidOrder, randomBytes, sha256Hex } from './core.js';
+import { maybePurge } from './purge.js';
 
 const truthy = (v) => v === '1' || v === 'true' || v === true;
 const int = (v, d, lo, hi) => { const n = v === undefined || v === '' ? d : Number(v); return Number.isInteger(n) && n >= lo && n <= hi ? n : d; };
@@ -100,6 +101,7 @@ async function creditsFor(db, ids) {
 
 // ---------- operations ----------
 export async function readAllowed(cfg, scfg, ipHash, nowMs = Date.now()) {
+  await maybePurge(cfg, nowMs); // S3 retention: reader IP-hash counters live about an hour
   return hit(cfg.db, `read:${ipHash}`, minute(nowMs), scfg.readsPerMin);
 }
 

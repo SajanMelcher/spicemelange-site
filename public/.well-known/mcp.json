@@ -1,0 +1,46 @@
+{
+  "schema": "spicemelange.mcp-pointer/v1",
+  "note": "Pointer to the desk's MCP connector. The connector is read-only market data plus store helpers; it never holds keys or funds.",
+  "servers": [
+    {
+      "name": "plumbline",
+      "title": "The Spice Melange Trading Desk: DeepBook market data connector",
+      "transport": "streamable-http",
+      "url": "https://plumbline-mcp.fly.dev/mcp",
+      "serverCard": "https://plumbline-mcp.fly.dev/.well-known/mcp/server-card.json",
+      "package": {
+        "registry": "npm",
+        "name": "plumbline-mcp"
+      },
+      "install": "claude mcp add --transport http plumbline https://plumbline-mcp.fly.dev/mcp",
+      "pricing": "Market data: 100 free calls per day per client, then 0.002 USDC per call on Sui (0.01 USDC minimum payment). Store and desk tools are free; templates cost their store price.",
+      "tools": {
+        "market_data": [
+          "list_pools",
+          "get_mid_price",
+          "get_order_book",
+          "get_volume",
+          "get_pool_params",
+          "get_recent_trades",
+          "get_ohlcv",
+          "get_indexer_status",
+          "get_bm_fills",
+          "get_swing_range",
+          "get_pool_stats",
+          "estimate_fees"
+        ],
+        "store_and_desk (v0.3.1, preview; free)": [
+          "list_templates",
+          "create_template_order",
+          "check_template_order",
+          "get_desk_rhythm"
+        ]
+      }
+    }
+  ],
+  "links": {
+    "catalog": "https://thespicemelange.org/store/catalog.json",
+    "llms": "https://thespicemelange.org/llms.txt",
+    "agentJoin": "https://thespicemelange.org/.well-known/agent-join.json"
+  }
+}

@@ -12,6 +12,7 @@
  */
 import { bySku, addonsFor, servedSku } from './catalog.js';
 import { verifyPersonalMessage } from './suisig.js';
+import { maybePurge } from './purge.js';
 
 export const SUI_USDC = {
   // Circle native USDC. Source: https://developers.circle.com/stablecoins/usdc-contract-addresses
@@ -86,6 +87,11 @@ export function loadConfig(env = {}) {
     statusPerHour: int(env.STORE_STATUS_PER_HOUR, 60, 5, 1000), // per order: status + token downloads (separate from verify attempts)
     resetPerHour: int(env.STORE_RESET_PER_HOUR, 6, 1, 50), // per order: token-reset challenges and attempts
     maxOrdersPerIpPerHour: int(env.STORE_MAX_ORDERS_PER_IP_HOUR, 6, 1, 100),
+    // Siona S5: the hosted connector sends x-connector-key (this secret) + x-connector-client (its hashed client id).
+    // Only with a valid key do we rate-limit per forwarded client instead of the connector's shared IP.
+    connectorKey: String(env.STORE_CONNECTOR_KEY ?? '').length >= 32 ? String(env.STORE_CONNECTOR_KEY) : null,
+    maxOrdersPerConnectorClientHour: int(env.STORE_MAX_ORDERS_PER_CONNECTOR_CLIENT_HOUR, 3, 1, 50),
+    maxOrdersPerConnectorHour: int(env.STORE_MAX_ORDERS_PER_CONNECTOR_HOUR, 60, 1, 1000),
     selftestKey: String(env.STORE_SELFTEST_KEY ?? '').length >= 24 ? String(env.STORE_SELFTEST_KEY) : null,
     webhookUrl: String(env.HWI_WEBHOOK_URL ?? '').trim() || null,
     webhookSecret: String(env.HWI_WEBHOOK_SECRET ?? '') || null,
@@ -105,7 +111,15 @@ async function hmacKey(secret) {
 export async function hmac(secret, msg) {
   return b64url(new Uint8Array(await crypto.subtle.sign('HMAC', await hmacKey(secret), enc.encode(msg))));
 }
-function safeEqual(a, b) {
+/** S5: the forwarded client id, trusted only when x-connector-key matches STORE_CONNECTOR_KEY. Else null (use the IP). */
+export function connectorClientFrom(cfg, headers) {
+  if (!cfg.connectorKey) return null;
+  const key = headers.get('x-connector-key') ?? '';
+  const id = (headers.get('x-connector-client') ?? '').toLowerCase();
+  if (!safeEqual(key, cfg.connectorKey) || !/^[0-9a-f]{24}$/.test(id)) return null;
+  return id;
+}
+export function safeEqual(a, b) {
   if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
   let x = 0;
   for (let i = 0; i < a.length; i++) x |= a.charCodeAt(i) ^ b.charCodeAt(i);
@@ -219,7 +233,24 @@ async function holdAmount(cfg, amount, orderId, nowMs, holdUntilMs) {
   return changes(r) === 1;
 }
 
-export async function createOrder(cfg, { sku, email, ipHash, selftestKey, nowMs = Date.now() }) {
+const SRC_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
+/** Sales-source fields (Siona S1): utm_* and ref are lowercased and must match [a-z0-9._-]{1,32}; any other
+ * non-empty value is recorded as 'other' (never stored verbatim). Unknown keys are dropped. */
+export const SRC_RE = /^[a-z0-9._-]{1,32}$/;
+export function cleanSource(src) {
+  const out = {};
+  if (!src || typeof src !== 'object') return out;
+  for (const k of [...SRC_KEYS, 'ref']) {
+    if (typeof src[k] !== 'string') continue;
+    const v = src[k].trim().toLowerCase();
+    if (!v) continue;
+    out[k] = SRC_RE.test(v) ? v : 'other';
+  }
+  return out;
+}
+
+export async function createOrder(cfg, { sku, email, ipHash, connectorClient, selftestKey, source, nowMs = Date.now() }) {
+  await maybePurge(cfg, nowMs); // S3 retention (unpaid orders > 30 days, old counters); gated, never throws
   const p = bySku(sku);
   if (!p || p.comingSoon || p.retired || p.addon) return { ok: false, status: 400, reason: 'unknown_product' }; // retired: download-only; addon: delivered with its parent
   // Hidden SKUs behave exactly like unknown ones unless the secret flag matches.
@@ -229,12 +260,19 @@ export async function createOrder(cfg, { sku, email, ipHash, selftestKey, nowMs 
   if (email !== undefined && email !== null && email !== '' && !/^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,24}$/i.test(String(email))) {
     return { ok: false, status: 400, reason: 'bad_email' };
   }
-  if (ipHash) { // approximate (KV) limit; abuse brake, not a money guard
-    const k = `ip:${ipHash}:${Math.floor(nowMs / 3_600_000)}`;
+  // Approximate (KV) limits; abuse brakes, not money guards. A verified connector client (see connectorClientFrom) is
+  // limited per forwarded client plus a total for the connector, instead of the connector's shared IP.
+  const hr = Math.floor(nowMs / 3_600_000);
+  const brakes = connectorClient
+    ? [[`cc:${connectorClient}:${hr}`, cfg.maxOrdersPerConnectorClientHour], [`cc:*:${hr}`, cfg.maxOrdersPerConnectorHour]]
+    : ipHash ? [[`ip:${ipHash}:${hr}`, cfg.maxOrdersPerIpPerHour]] : [];
+  const counts = [];
+  for (const [k, max] of brakes) {
     const n = Number((await cfg.kv.get(k)) ?? 0);
-    if (n >= cfg.maxOrdersPerIpPerHour) return { ok: false, status: 429, reason: 'too_many_orders' };
-    await cfg.kv.put(k, String(n + 1), { expirationTtl: 3700 });
+    if (n >= max) return { ok: false, status: 429, reason: 'too_many_orders' };
+    counts.push([k, n]);
   }
+  for (const [k, n] of counts) await cfg.kv.put(k, String(n + 1), { expirationTtl: 3700 });
   const base = decimalToAtomic(p.priceUsdc);
   const id = newOrderId();
   const token = newToken();
@@ -253,10 +291,25 @@ export async function createOrder(cfg, { sku, email, ipHash, selftestKey, nowMs 
     if (await holdAmount(cfg, a, id, nowMs, holdUntil)) amount = a;
   }
   if (amount === null) return { ok: false, status: 503, reason: 'busy_try_again' };
-  await cfg.db.prepare(
+  const th = await sha256Hex(token);
+  const src = cleanSource(source);
+  const base9 = [id, p.sku, cfg.net, amount, th, nowMs, expiresMs, email || null, cfg.payTo];
+  const plain = () => cfg.db.prepare(
     `INSERT INTO orders (id, sku, net, amount_atomic, token_hash, created_ms, expires_ms, status, email, attempts, pay_to)
      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'open', ?8, 0, ?9)`,
-  ).bind(id, p.sku, cfg.net, amount, await sha256Hex(token), nowMs, expiresMs, email || null, cfg.payTo).run();
+  ).bind(...base9).run();
+  if (Object.keys(src).length) {
+    try {
+      await cfg.db.prepare(
+        `INSERT INTO orders (id, sku, net, amount_atomic, token_hash, created_ms, expires_ms, status, email, attempts, pay_to,
+           utm_source, utm_medium, utm_campaign, utm_term, utm_content, ref)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'open', ?8, 0, ?9, ?10, ?11, ?12, ?13, ?14, ?15)`,
+      ).bind(...base9, ...SRC_KEYS.map((k) => src[k] ?? null), src.ref ?? null).run();
+    } catch (e) {
+      if (!/no (such )?column|has no column/i.test(String(e?.message ?? e))) throw e;
+      await plain(); // migration 0006 not applied yet: keep selling, drop the source
+    }
+  } else await plain();
   return {
     ok: true,
     order: {

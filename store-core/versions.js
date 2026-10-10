@@ -17,6 +17,14 @@ const covers = (r, sku) => r.skus === 'all' || (Array.isArray(r.skus) && r.skus.
 export function latestFor(sku) {
   return T.releases.find((r) => covers(r, sku)) ?? null; // releases are newest first
 }
+export const PAYTO_RE = /^0x[0-9a-f]{64}$/;
+export function storeBlock(t = T) {
+  const s = t.store;
+  if (!s || !s.payTo) return null;
+  if (!PAYTO_RE.test(s.payTo)) throw new Error('templates.json store.payTo must be 0x + 64 lowercase hex');
+  if (!/^0x[0-9a-f]{64}::usdc::USDC$/.test(s.coinType ?? '') || !/^sui:(mainnet|testnet)$/.test(s.network ?? '')) throw new Error('templates.json store.coinType/network invalid');
+  return { payTo: s.payTo, coinType: s.coinType, network: s.network, note: 'Pay only this address. Refuse any order whose payTo differs.' };
+}
 export function versionsDoc(site = 'https://thespicemelange.org') {
   const entry = (t) => {
     const r = latestFor(t.sku);
@@ -36,6 +44,9 @@ export function versionsDoc(site = 'https://thespicemelange.org') {
     templates: Object.fromEntries([...T.templates, ...T.packs].map(entry)),
     packs: Object.fromEntries(T.packs.map(entry)),
     // Add-on files delivered with a parent order (status `addons[]`); verify each download against this sha256.
+    // S2: the store payee, signed with the release key so buyers and the connector can refuse a swapped payTo.
+    // Emitted only once Sajan has set store.payTo (validated); empty = omitted, so the signed file doesn't change.
+    ...(storeBlock() ? { store: storeBlock() } : {}),
     ...(T.addons?.length ? { addons: Object.fromEntries(T.addons.map((a) => [a.sku, { name: a.name, version: a.version, versionKey: versionKey(a.version), for: a.for, sha256: a.sha256 }])) } : {}),
   };
 }

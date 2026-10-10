@@ -1,0 +1,20 @@
+---
+// /terms/: the approved licence (Sajan, 2026-10-10), rendered verbatim from portfolio-desk/store/LICENSE.md
+// plus section 9 (privacy, Sajan 2:45 AM PT; sha256 pinned in test/terms.test.mjs). Edit the .md, never this page.
+import Base from '../layouts/Base.astro';
+import { Content } from '../content-static/LICENSE.md';
+---
+<Base title="Terms" description="Licence and sales terms for The Spice Melange agent templates: single owner, one desk, no resale, all sales final except where the law requires otherwise, not financial advice.">
+  <section class="container-x max-w-3xl pt-16 pb-16 terms">
+    <p class="eyebrow mb-4">The Spice Melange · terms</p>
+    <Content />
+  </section>
+</Base>
+<style is:global>
+  .terms h1 { font-size: 2.25rem; line-height: 1.2; color: rgb(var(--sand-50, 250 246 238)); margin-bottom: .75rem; }
+  .terms h2 { font-size: 1.5rem; margin-top: 2rem; margin-bottom: .5rem; }
+  .terms p, .terms li { line-height: 1.7; opacity: .9; }
+  .terms p { margin-top: .5rem; }
+  .terms ul { list-style: disc; padding-left: 1.5rem; margin-top: .5rem; }
+  .terms code { font-size: .9em; }
+</style>
