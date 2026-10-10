@@ -37,9 +37,11 @@ import { SITE } from '../../data/site';
 <script>
   const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
   const msg = (t: string) => ($('dl-msg').textContent = t);
-  // Accept ?order=&token= or #order=&token=, then strip them from the address bar.
+  // S6 (Siona; Sajan 2:45 AM PT): only the order ID may come from the URL. A token in an old link is ignored (the buyer pastes it,
+  // and it goes only in the Authorization header). Both are stripped from the address bar.
   const q = new URLSearchParams(location.search), h = new URLSearchParams(location.hash.slice(1));
-  const pre = { order: q.get('order') ?? h.get('order') ?? '', token: q.get('token') ?? h.get('token') ?? '' };
+  const legacyToken = Boolean(q.get('token') || h.get('token'));
+  const pre = { order: q.get('order') ?? h.get('order') ?? '', token: '' };
   if (location.search || location.hash) history.replaceState(null, '', location.pathname);
   async function go(order: string, token: string) {
     msg('Checking your order…'); ($('dl-link') as unknown as HTMLAnchorElement).hidden = true;
@@ -53,8 +55,8 @@ import { SITE } from '../../data/site';
   }
   $('dl-form').addEventListener('submit', (e) => { e.preventDefault(); go($('dl-order').value.trim(), $('dl-token').value.trim()); });
   if (pre.order) $('dl-order').value = pre.order;
-  if (pre.token) $('dl-token').value = pre.token;
-  if (pre.order && pre.token) go(pre.order, pre.token);
+  if (legacyToken) msg('For your safety, links no longer carry the token. Paste your token below.');
+  if (pre.order) $('dl-token').focus();
 
   // Token reset via the Wallet Standard (any Sui wallet with sui:signPersonalMessage).
   const wallets: any[] = [];

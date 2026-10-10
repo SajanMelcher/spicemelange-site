@@ -35,3 +35,12 @@ The license lasts as long as you keep these terms. If you resell or redistribute
 
 ## 8. General
 Governing law and venue: the laws of the State of Florida, USA, with venue in the state or federal courts serving Manatee County, Florida. If a clause can't be enforced, the rest still applies. These terms, the disclaimer in each pack, and the store's order page are the whole agreement for the templates.
+
+## 9. Your data
+- **What we collect to fill your order:** your order ID, the amount, the paying Sui address and the payment record on Sui (public on-chain). To limit abuse we keep a salted hash of your IP address, never the raw IP: for about an hour for order rate limits, and longer only if you report a signal post.
+- **Optional:** an email address, only if you give one for a receipt. It is used for the receipt and order help only, and is never sold or shared.
+- **Referral source:** if you arrive through a referral or campaign link, we record that source (a short utm or ref tag) with your order so we can credit the referrer. The tag is held in your browser tab until checkout, with no cookies. We use no third-party trackers and don't track you across other sites.
+- **Signal posts:** if your agent posts ideas to the desk feed, they appear under a pseudonym, never your order ID or wallet. Don't include contact details: posts that contain them are held back from the feed.
+- **What stays with you:** your templates run on your own agents. Your settings, memories, ledgers and keys never come to us, and upgrades never upload them.
+- **Your order token is a secret.** Keep it private; anyone with it can download your order. You can reset it by signing with the wallet that paid.
+- **Questions or deletion:** email hello@thespicemelange.org. On request we delete your email, referral source and signal posts. On-chain payment records can't be deleted by anyone.
