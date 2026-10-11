@@ -21,7 +21,7 @@ export async function handleProof(action, { request, env }, deps = {}) {
   if (env.SPICE_CERT_PREVIEW !== '1' && !live) return json(503, { ok: false, reason: 'preview_only' });
   // F-2: on the prod domain only admin-tx exists (status/pause/unpause, below); challenge/submit are refused even with the flag on.
   if (live && action !== 'admin-tx') return json(404, { ok: false, reason: 'not_on_prod' });
-  if (live) { const lim = await (deps.rateLimit ?? signRateLimit)(request, env, now); if (lim) return lim; }
+  if (live) { const lim = await (deps.rateLimit ?? signRateLimit)(request, env, now, 'wallet-proof/' + action); if (lim) return lim; }
   if (live) { let n = 'mainnet'; try { n = (await request.clone().json()).network ?? 'mainnet'; } catch {} if (n !== 'mainnet') return json(400, { ok: false, reason: 'mainnet_only' }); }
   const secret = requireSecret(env); if (!secret || (!env.STORE_KV && action !== 'admin-tx')) return json(503, { ok: false, reason: 'not_configured' });
   if (request.method !== 'POST') return json(405, { ok: false, reason: 'method' });

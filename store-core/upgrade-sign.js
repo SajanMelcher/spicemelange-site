@@ -57,7 +57,7 @@ async function gql(fetchImpl, query, variables) {
 }
 export async function handleUpgradeSign(action, { request, env }, fetchImpl = fetch, deps = {}) {
   if (!enabled(env)) return json(404, { ok: false, reason: 'not_found' });
-  if (env?.SPICE_CERT_PREVIEW !== '1') { const lim = await (deps.rateLimit ?? signRateLimit)(request, env); if (lim) return lim; } // F-2 (prod domain)
+  if (env?.SPICE_CERT_PREVIEW !== '1') { const lim = await (deps.rateLimit ?? signRateLimit)(request, env, Date.now(), 'upgrade-sign/' + action); if (lim) return lim; } // F-2 (prod domain)
   const s = await served(env); if (s.err) return s.err;
   if (action === 'tx' && request.method === 'GET') {
     // Re-simulate now so a stale gas coin (any tx from the sender) is caught before Sajan signs.

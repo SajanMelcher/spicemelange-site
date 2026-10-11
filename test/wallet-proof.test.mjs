@@ -9,7 +9,8 @@ import { handleProof, proofMessage, verifyProofSignature, field } from '../store
 
 const SECRET = 'x'.repeat(40), HOST = 'prove.example.pages.dev';
 const kv = () => { const m = new Map(); return { m, get: async (k) => m.get(k) ?? null, put: async (k, v) => { m.set(k, v); } }; };
-const env = (o = {}) => ({ SPICE_CERT_PREVIEW: '1', SPICE_SESSION_SECRET: SECRET, STORE_KV: kv(), ...o });
+const okDb = () => ({ prepare: (sql) => ({ bind: (...a) => ({ sql, a }) }), batch: async () => [{ results: [] }, { results: [{ count: 1 }] }] }); // rate limiter: always under the limit
+const env = (o = {}) => ({ SPICE_CERT_PREVIEW: '1', SPICE_SESSION_SECRET: SECRET, STORE_KV: kv(), STORE_DB: okDb(), ...o });
 const req = (a, body, origin = `https://${HOST}`) => new Request(`https://${HOST}/api/wallet-proof/${a}`, { method: 'POST', headers: { 'content-type': 'application/json', origin }, body: JSON.stringify(body) });
 const call = async (a, body, e, deps) => (await handleProof(a, { request: req(a, body), env: e }, deps)).json();
 const sign = async (kp, msg) => (await kp.signPersonalMessage(new TextEncoder().encode(msg))).signature;
@@ -143,22 +144,18 @@ test('F-1: browser-side checks compute sha + digest from the bytes and pin every
   const { adminTx } = await import('../store-core/admin-actions.js');
   assert.equal(typeof adminTx, 'function');
 });
-test('F-2: per-IP rate limit on the /sign APIs (prod domain), fails closed without KV/secret', async () => {
-  const k = kv(), e = { STORE_KV: k, SPICE_SESSION_SECRET: SECRET };
-  const r = (ip) => new Request('https://x/api/upgrade-sign/tx', { headers: { 'cf-connecting-ip': ip } });
-  for (let i = 0; i < SIGN_RATE.perMinute; i++) assert.equal(await signRateLimit(r('1.2.3.4'), e, 60_000), null);
-  assert.equal((await signRateLimit(r('1.2.3.4'), e, 60_000)).status, 429);
-  assert.equal(await signRateLimit(r('5.6.7.8'), e, 60_000), null);
-  assert.equal(await signRateLimit(r('1.2.3.4'), e, 120_000), null, 'next minute');
-  assert.ok([...k.m.keys()].every((x) => !x.includes('1.2.3.4')), 'no raw IP stored');
-  assert.equal((await signRateLimit(r('1.2.3.4'), {}, 0)).status, 503);
+test('F-2: admin-tx and upgrade-sign/tx call the limiter on prod (endpoint-labelled); the limiter itself is in sign-ratelimit.test.mjs', async () => {
   const live = env({ SPICE_CERT_PREVIEW: undefined, WALLET_PAGES_LIVE: '1' });
-  let n429 = 0; for (let i = 0; i < SIGN_RATE.perMinute + 2; i++) { const x = await call('admin-tx', { network: 'mainnet', issuerId: '0x2', sender: '0x3', action: 'status' }, live, { adminTx: async () => ({ ok: true }) }); if (x.reason === 'rate_limited') n429++; }
-  assert.ok(n429 >= 2, 'admin-tx is rate limited on prod');
+  let label = null; const x = await call('admin-tx', { network: 'mainnet', issuerId: '0x2', sender: '0x3', action: 'status' }, live, { adminTx: async () => ({ ok: true }), rateLimit: async (_r, _e, _n, ep) => { label = ep; return new Response('{"ok":false,"reason":"rate_limited"}', { status: 429 }); } });
+  assert.equal(x.reason, 'rate_limited'); assert.equal(label, 'wallet-proof/admin-tx');
   const { handleUpgradeSign } = await import('../store-core/upgrade-sign.js');
   const TX = JSON.parse(readFileSync(new URL('../store-core/upgrade-tx.json', import.meta.url), 'utf8'));
-  let seen = 0; const u = await handleUpgradeSign('tx', { request: new Request('https://x/api/upgrade-sign/tx'), env: { WALLET_PAGES_LIVE: '1', UPGRADE_SIGN_ENABLED: '1', UPGRADE_REVIEWED_SHA256: TX.sha256 } }, fetch, { rateLimit: async () => { seen++; return new Response('{}', { status: 429 }); } });
-  assert.equal(u.status, 429); assert.equal(seen, 1);
+  let ep = null; const u = await handleUpgradeSign('tx', { request: new Request('https://x/api/upgrade-sign/tx'), env: { WALLET_PAGES_LIVE: '1', UPGRADE_SIGN_ENABLED: '1', UPGRADE_REVIEWED_SHA256: TX.sha256 } }, fetch, { rateLimit: async (_r, _e, _n, e2) => { ep = e2; return new Response('{}', { status: 429 }); } });
+  assert.equal(u.status, 429); assert.equal(ep, 'upgrade-sign/tx');
+  assert.equal(SIGN_RATE.perMinute, 20);
+  // without a D1 binding the real limiter fails closed on prod
+  const noDb = await call('admin-tx', { network: 'mainnet', issuerId: '0x2', sender: '0x3', action: 'status' }, env({ SPICE_CERT_PREVIEW: undefined, WALLET_PAGES_LIVE: '1', STORE_DB: undefined }), { adminTx: async () => ({ ok: true }) });
+  assert.equal(noDb.reason, 'not_configured');
 });
 test('Low: signed withdrawal requests: 30 days on /privacy/ and purged after 30 days', async () => {
   const p = readFileSync(new URL('../src/pages/privacy.astro', import.meta.url), 'utf8');
@@ -215,5 +212,5 @@ test('S-3: only PIN.account is used, never accounts[0]; page guards upgrade and 
 test('S-4: /privacy/ names the ~2 minute hashed IP for /sign/ rate limits (matches SIGN_RATE ttl)', () => {
   const p = readFileSync(new URL('../src/pages/privacy.astro', import.meta.url), 'utf8');
   assert.match(p, /The wallet signing tools at \/sign\/ keep a salted hash of your IP address for about 2 minutes, to rate-limit requests\./);
-  assert.equal(SIGN_RATE.ttlSec, 120);
+  assert.equal(SIGN_RATE.retentionSec, 120);
 });
