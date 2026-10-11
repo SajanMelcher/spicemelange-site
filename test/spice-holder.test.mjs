@@ -289,7 +289,7 @@ test('copy: buy page, home and nav say holders of The Secret Journals; testnet b
   assert.doesNotMatch(optA, /leverage|borrow/i, 'HOLD (Tleilaxu 8:47 PM): no leverage/borrowing claim in option A');
   // Final leverage wording (Sajan 8:53 PM PT via Tleilaxu), verbatim.
   assert.match(base, /no leverage, no hurry, think in decades\./);
-  assert.match(home, /HOME_FUNDS_LINE_AT_BUILD\s*\? \{ title: 'No leverage, no borrowed money', glyph: 'shield', text: 'The Spice Melange trading desk trades on Sui with its own funds only\.' \}\s*: \{ title: 'No leverage', glyph: 'shield', text: 'No margin, no futures, no borrowed spice on the trading desk\. Leverage turns a bad week into a lost path\.' \}/);
+  assert.match(home, /HOME_FUNDS_LINE_AT_BUILD\s*\? \{ title: 'No leverage, no borrowed money', glyph: 'shield', text: 'The Spice Melange trading desk trades on Sui with no leverage and no borrowed money\.' \}\s*: \{ title: 'No leverage', glyph: 'shield', text: 'No margin, no futures, no borrowed spice on the trading desk\. Leverage turns a bad week into a lost path\.' \}/);
   assert.match(home, /Quietly and patiently\./);
   assert.doesNotMatch((home + base).replace("No margin, no futures, no borrowed spice on the trading desk.", ''), /No leveraged trading|borrowed spice|borrowing against tomorrow|no leveraged trading/); // live card text is the SJ21 fallback
 });
@@ -299,10 +299,13 @@ test('privacy (SC16): names the server-side Sui reads and the holder data', () =
 });
 
 test('cert footer leverage line (Sajan 8:53 PM PT) is exact and renders only on the certificate pages', () => {
-  const LINE = "The Spice Melange trading desk trades on Sui with its own funds only: no leverage and no borrowed money. It is separate from the owner's personal brokerage and exchange accounts. The desk may borrow against bitcoin only as a last resort to pay certificate withdrawals, and only with the owner's explicit approval.";
+  const FILE = new URL('../src/content-static/CERT-FOOTER-LINE-v2.txt', import.meta.url);
+  const FSHA = '64ff22a9ccd4b1013f5f3b1fa3c4fa0efb6f104f6171b0c85de5d66f92e7a1db'; // FOOTER-LINE-v2.txt, Sajan 9:19 PM PT
+  assert.equal(createHash('sha256').update(readFileSync(FILE)).digest('hex'), FSHA);
+  const LINE = readFileSync(FILE, 'utf8').replace(/\n$/, '');
   const src = readFileSync(new URL('../src/data/certificates.ts', import.meta.url), 'utf8');
   assert.ok(src.includes(JSON.stringify(LINE)));
-  assert.doesNotMatch(src, /liquidation risk/, 'the 8:36 PM line is gone');
+  assert.doesNotMatch(src, /liquidation risk|its own funds only|personal brokerage/, 'the 8:36 and 8:53 PM lines are gone');
   for (const f of ['certificates/index.astro', 'certificates/holder/index.astro'])
     assert.match(readFileSync(new URL('../src/pages/' + f, import.meta.url), 'utf8'), /<CertFooterHook \/>/, f);
   assert.doesNotMatch(readFileSync(new URL('../src/pages/index.astro', import.meta.url), 'utf8'), /CertFooterHook/);
@@ -318,17 +321,19 @@ test('use of proceeds: no debt or loan repayment / pay down anywhere (sources, l
     ...(existsSync(join(root, 'dist')) ? walk(join(root, 'dist')).filter((f) => /\.(html|js|json|txt|xml)$/.test(f)) : []),
   ].filter((f) => !/LICENSE-2026\.10\.10\.md$/.test(f) && existsSync(f));
   const LI = '/home/box/agent-data/shared/portfolio-desk/spice-certificates/LESSON-INSERTS.md';
-  for (const f of files) assert.doesNotMatch(readFileSync(f, 'utf8'), REPAY, f.slice(root.length));
+  // explicit negations are the approved wording ("Certificate money is never used to repay debt."), not use-of-proceeds claims
+  const NEG = /(is )?never (used to )?repays? (the )?(debt|loan)|with no other obligations/gi;
+  for (const f of files) assert.doesNotMatch(readFileSync(f, 'utf8').replace(NEG, ''), REPAY, f.slice(root.length));
   if (existsSync(LI)) {
     // reviewer notes and explicit negations ("never repays the loan", "no other obligations") are not use-of-proceeds claims
-    const body = readFileSync(LI, 'utf8').split('\n').filter((l) => !/^(- \*\*HC9|HC1 funding)/.test(l)).join('\n').replace(/never repays the loan|with no other obligations/gi, '');
+    const body = readFileSync(LI, 'utf8').split('\n').filter((l) => !/^(- \*\*HC9|HC1 funding)/.test(l)).join('\n').replace(NEG, '');
     assert.doesNotMatch(body, REPAY, 'LESSON-INSERTS.md');
   }
   for (const bad of ['to pay down the loan', 'paydown', 'repay the loan', 'loan repayment', 'debt repayment', 'towards the loan', 'repaying debt'])
     assert.match(bad, REPAY, `pattern must catch "${bad}"`);
-  for (const ok of ['We never have to repay you on a set date.', 'Cash for bills or debt payments stays untouchable.', 'carries heavy bitcoin and debt exposure'])
+  for (const ok of ['We never have to repay you on a set date.', 'Certificate money is never used to repay debt.'.replace(NEG, ''), 'Cash for bills or debt payments stays untouchable.', 'carries heavy bitcoin and debt exposure'])
     assert.doesNotMatch(ok, REPAY, `pattern must allow "${ok}"`);
-  assert.match(readFileSync(new URL('../src/content-static/SPICE-CERT-TERMS.md', import.meta.url), 'utf8'), /cash reserve\. It is used only for trading, buying bitcoin and paying withdrawals\./);
+  assert.match(readFileSync(new URL('../src/content-static/SPICE-CERT-TERMS.md', import.meta.url), 'utf8'), /held as a USDC reserve on Sui\. It pays withdrawals, and a small portion is used for automated trading/);
 });
 test('SJ17: a certs-off build serves no certificate content (only _headers config may mention it); gate strips orphan chunks', () => {
   const cfg = readFileSync(new URL('../astro.config.mjs', import.meta.url), 'utf8');
@@ -357,7 +362,7 @@ test('SJ21: home funds line is behind HOME_FUNDS_LINE_LIVE, ON in production (Sa
   const idx = new URL('../dist/index.html', import.meta.url);
   if (existsSync(idx) && !existsSync(new URL('../dist/certificates/', import.meta.url)) && process.env.HOME_FUNDS_LINE_LIVE !== '0') {
     const h = readFileSync(idx, 'utf8'); // a production-like build (flag ON in production)
-    assert.match(h, /No leverage, no borrowed money/); assert.match(h, /trades on Sui with its own funds only\./); assert.doesNotMatch(h, /No margin, no futures/);
+    assert.match(h, /No leverage, no borrowed money/); assert.match(h, /trades on Sui with no leverage and no borrowed money\./); assert.doesNotMatch(h, /own funds only/); assert.doesNotMatch(h, /No margin, no futures/);
   }
 });
 
@@ -394,10 +399,15 @@ test('Spice Certificate terms (Sajan approved 8:40 PM PT 10/10): sha pinned, ren
   const b = readFileSync(new URL('../src/content-static/SPICE-CERT-TERMS.md', import.meta.url));
   const pin = readFileSync(new URL('../src/data/cert-terms.ts', import.meta.url), 'utf8').match(/CERT_TERMS_SHA256 = '([0-9a-f]{64})'/)[1];
   assert.equal(createHash('sha256').update(b).digest('hex'), pin);
-  assert.equal(pin, 'f87694b7b267d3ad6ea35567726294b9bca0d04a7fc2879e168cc6a062e5c707', 'TERMS-FINAL.md, Sajan 8:53 PM PT');
-  // TERMS-FINAL.md was edited again after approval (9:14/9:15 PM PT, unapproved). The approved bytes are kept as .bak-f87694b7.
-  const SRC = '/home/box/agent-data/shared/portfolio-desk/spice-certificates/design/TERMS-FINAL.md.bak-f87694b7';
-  if (existsSync(SRC)) assert.ok(readFileSync(SRC).equals(b), 'site copy must equal the approved TERMS-FINAL (f87694b7) byte for byte');
+  assert.equal(pin, '93bfbef2aa66053c358bf28e92b93cac30ab324834d16345b890d1d95ae73558', 'TERMS-FINAL.md v2026.10.10.2, Sajan 9:19 PM PT');
+  // Compare with the shared file only while it still has the approved bytes (it was edited after approval before).
+  const SRC = '/home/box/agent-data/shared/portfolio-desk/spice-certificates/design/TERMS-FINAL.md';
+  if (existsSync(SRC) && createHash('sha256').update(readFileSync(SRC)).digest('hex') === pin) assert.ok(readFileSync(SRC).equals(b));
+  // superseded terms files / pins are never referenced by the site
+  const walk = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(join(d, e.name)) : [join(d, e.name)]));
+  const root = fileURLToPath(new URL('..', import.meta.url));
+  for (const f of ['src', 'store-core', 'functions', 'scripts', 'public', 'docs', 'content'].flatMap((d) => walk(join(root, d))).filter((f) => /\.(ts|js|mjs|astro|md|txt|json)$/.test(f)))
+    assert.doesNotMatch(readFileSync(f, 'utf8'), new RegExp(['TERMS-plain', 'TERMS-DRAFT', 'design/TERMS\\.md', '4b19' + 'db06', 'f876' + '94b7'].join('|')), f.slice(root.length));
   assert.match(readFileSync(new URL('../src/pages/certificates/terms/index.astro', import.meta.url), 'utf8'), /SPICE-CERT-TERMS\.md/);
   for (const f of ['certificates/index.astro', 'certificates/holder/index.astro'])
     assert.match(readFileSync(new URL('../src/pages/' + f, import.meta.url), 'utf8'), /href="\/certificates\/terms\/" data-cert-terms-link/, f);

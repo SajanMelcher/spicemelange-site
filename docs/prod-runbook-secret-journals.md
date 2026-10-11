@@ -7,7 +7,7 @@ Nothing here deploys certificates: production keeps `SPICE_CERTS_LIVE = "0"` (wr
   (2271d634). PENDING SAJAN: to take singles off, change that one line to `"0"`. Then the build (deploy.sh reads the same line),
   createOrder (Pages runtime) and /terms/ (LICENSE 2026.10.10.1, 9bd55791) all switch together.
 - `HOME_FUNDS_LINE_LIVE = "1"` (SJ21): the home card shows Sajan's 8:53 wording ("No leverage, no borrowed money" / "The Spice
-  Melange trading desk trades on Sui with its own funds only."). Settled by Sajan 9:18 PM PT. Set to "0" to fall back to the old card.
+  Melange trading desk trades on Sui with no leverage and no borrowed money."; Sajan 9:19 PM PT). Settled by Sajan 9:18 PM PT. Set to "0" to fall back to the old card.
 - `SPICE_CERTS_LIVE = "0"`: no /certificates/*, no home card, no nav link, no sign-in API (404), live footer text, no
   certificates section on /privacy/. The rename to The Secret Journals and the retired Leto single DO ship.
 
@@ -31,7 +31,7 @@ Nothing here deploys certificates: production keeps `SPICE_CERTS_LIVE = "0"` (wr
 5. **Verify** (GET only): no certificate chunk is served (SJ17/SJ26):
    `for f in $(curl -s https://thespicemelange.org/ https://thespicemelange.org/store/ | grep -oE '/_astro/[^"]+\.js' | sort -u); do curl -s https://thespicemelange.org$f | grep -il certificat && echo "LEAK $f"; done`
    and `grep -ril certificat dist --exclude=_headers` printed nothing before upload · home card reads "No leverage, no borrowed money" /
-   "...trades on Sui with its own funds only." · `/certificates/` 404 · `/api/certificates/challenge` 404 · home has no Certificates link/card ·
+   "...trades on Sui with no leverage and no borrowed money." · `/certificates/` 404 · `/api/certificates/challenge` 404 · home has no Certificates link/card ·
    `/store/catalog.json` lists The Secret Journals and no leto-journals · `/store/leto-journals/` 301 · `/terms/` version matches
    the singles switch · footer text unchanged.
 
