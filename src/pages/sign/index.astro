@@ -35,7 +35,7 @@ const EXPECTED_SHA = PIN.upgradeSha256, EXPECTED_DIGEST = PIN.upgradeDigest;
 </Standalone>
 <script>
   import { apiCall, failText, blocked } from '../../lib/wallet-errors.js';
-  import { PIN, checkUpgradeBytes, checkPauseTx } from '../../lib/sign-verify.js';
+  import { PIN, checkUpgradeBytes, checkPauseTx, pickAccount, isPinned } from '../../lib/sign-verify.js';
   // F-1: only PIN (hard-coded, reviewed) is trusted; server-reported sha/digest/sender are never used for a decision.
   const $ = (id) => document.getElementById(id);
   const say = (t) => { $('status').textContent = t; };
@@ -53,10 +53,10 @@ const EXPECTED_SHA = PIN.upgradeSha256, EXPECTED_DIGEST = PIN.upgradeDigest;
   }
   async function connect(w) {
     blocked.length = 0;
-    try { const { accounts } = await w.features['standard:connect'].connect(); st.w = w; st.acct = accounts.find((a) => a.chains?.includes('sui:mainnet')) ?? accounts[0]; }
+    try { const { accounts } = await w.features['standard:connect'].connect(); st.w = w; st.acct = pickAccount(accounts); }
     catch (e) { say(failText(w.name + ' connect', e)); return; }
     if (!st.acct) { st.w = null; say('This wallet did not share the account ' + PIN.account + '. Switch to it and connect again.'); render(); return; }
-    $('wallets').innerHTML = ''; say('Connected ' + PIN.account);
+    $('wallets').innerHTML = ''; say('Connected ' + st.acct.address);
     refreshUpgrade(); admin('status');
   }
   async function refreshUpgrade() {
@@ -66,7 +66,7 @@ const EXPECTED_SHA = PIN.upgradeSha256, EXPECTED_DIGEST = PIN.upgradeDigest;
     const v = await checkUpgradeBytes(r.txBytesB64); // computed in this browser from the bytes
     st.tx = { b64: r.txBytesB64, simOk: r.simulation?.status === 'SUCCESS' };
     $('usha').textContent = v.sha; $('udig').textContent = v.digest; $('usim').textContent = r.simulation?.status ?? 'UNKNOWN';
-    const ok = v.ok && st.tx.simOk && st.acct?.address === PIN.account;
+    const ok = v.ok && st.tx.simOk && isPinned(st.acct);
     $('up').disabled = !ok;
     $('uout').textContent = !v.ok ? 'Do not sign: the bytes this page received hash to a different SHA-256 / digest than the reviewed ones.'
       : !st.tx.simOk ? 'Do not sign: the transaction no longer simulates (stale). Ask the Ixians for a rebuild.'
@@ -74,7 +74,7 @@ const EXPECTED_SHA = PIN.upgradeSha256, EXPECTED_DIGEST = PIN.upgradeDigest;
   }
   $('up').onclick = async () => {
     blocked.length = 0; $('up').disabled = true;
-    const v = await checkUpgradeBytes(st.tx.b64); if (!v.ok || st.acct?.address !== PIN.account) { $('uout').textContent = 'Refused: bytes or account changed.'; return; }
+    const v = await checkUpgradeBytes(st.tx.b64); if (!v.ok || !isPinned(st.acct)) { $('uout').textContent = 'Refused: bytes or account changed.'; return; }
     try {
       $('uout').textContent = 'Approve the upgrade in ' + st.w.name + '…';
       // The bytes are fully built (sender, gas coin, budget, price), so a wallet that rebuilds them gets the same bytes and digest.
@@ -84,6 +84,7 @@ const EXPECTED_SHA = PIN.upgradeSha256, EXPECTED_DIGEST = PIN.upgradeDigest;
     } catch (e) { $('uout').textContent = 'Not sent. ' + failText(st.w.name + ' signAndExecuteTransaction', e); $('up').disabled = false; }
   };
   async function admin(action) {
+    if (!isPinned(st.acct)) { $('pout').textContent = 'Refused: connect the account ' + PIN.account + '.'; return; }
     const r = await apiCall('/api/wallet-proof/admin-tx', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ network: 'mainnet', issuerId: PIN.issuer, sender: PIN.account, action }) });
     if (r.status) {
       $('pstate').textContent = (r.status.paused ? 'PAUSED (sales closed)' : 'UNPAUSED (sales open)') + (r.status.admin_cap ? '; this wallet holds the AdminCap' : '; this wallet does NOT hold the AdminCap');
@@ -95,6 +96,7 @@ const EXPECTED_SHA = PIN.upgradeSha256, EXPECTED_DIGEST = PIN.upgradeDigest;
     try { checkPauseTx(r.tx_json, action); } catch (e) { $('pout').textContent = 'Refused: the server-built transaction is not exactly set_paused(' + (action === 'pause') + ') on the pinned Issuer: ' + e.message; return; }
     blocked.length = 0; $('pout').textContent = 'Dry-run passed and checked in this browser: one call to set_paused(' + (action === 'pause') + ') on Issuer ' + PIN.issuer.slice(0, 10) + '…. Approve it in your wallet…';
     try {
+      if (!isPinned(st.acct)) { $('pout').textContent = 'Refused: account changed.'; return; }
       const checked = r.tx_json; // the exact string checkPauseTx accepted
       const out = await st.w.features[SAE].signAndExecuteTransaction({ transaction: { toJSON: async () => checked }, account: st.acct, chain: 'sui:mainnet' });
       $('pout').textContent = 'Sent: ' + String(out.digest).replace(/[^A-Za-z0-9]/g, ''); setTimeout(() => admin('status'), 3000);

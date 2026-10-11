@@ -39,24 +39,29 @@ export async function checkUpgradeBytes(b64) {
 export function checkPauseTx(txJson, action) {
   const t = typeof txJson === 'string' ? JSON.parse(txJson) : txJson;
   const fail = (m) => { throw new Error(m); };
-  if (!t || t.version !== 2) fail('not a v2 transaction');
+  const exact = (o, keys, what) => { if (!o || typeof o !== 'object' || Array.isArray(o) || Object.keys(o).sort().join() !== [...keys].sort().join()) fail(`${what}: keys must be exactly ${keys.join(',')}`); };
+  exact(t, ['version', 'sender', 'expiration', 'gasData', 'inputs', 'commands'], 'transaction');
+  if (t.version !== 2) fail('not a v2 transaction');
   if (t.sender !== PIN.account) fail('sender is not ' + PIN.account);
-  if (t.expiration !== null && t.expiration !== undefined) fail('unexpected expiration');
-  const g = t.gasData ?? {};
-  if ((g.owner ?? null) !== null && g.owner !== PIN.account) fail('gas paid by another address');
-  if ((g.payment ?? null) !== null) fail('gas payment pre-set');
-  const keys = Object.keys(t).sort().join(','); if (keys !== 'commands,expiration,gasData,inputs,sender,version') fail('unexpected fields: ' + keys);
+  if (t.expiration !== null) fail('unexpected expiration');
+  // S-1: the wallet sets ALL gas fields; any pre-set budget, price, owner or payment is rejected.
+  exact(t.gasData, ['budget', 'price', 'owner', 'payment'], 'gasData');
+  for (const k of ['budget', 'price', 'owner', 'payment']) if (t.gasData[k] !== null) fail(`gas ${k} must be unset (the wallet sets gas)`);
   if (!Array.isArray(t.commands) || t.commands.length !== 1) fail('must be exactly one command');
-  const c = t.commands[0]; if (Object.keys(c).join() !== 'MoveCall') fail('command is not a MoveCall');
-  const m = c.MoveCall;
+  exact(t.commands[0], ['MoveCall'], 'command'); const m = t.commands[0].MoveCall;
+  exact(m, ['package', 'module', 'function', 'typeArguments', 'arguments'], 'MoveCall');
   if (m.package !== PIN.certPackage || m.module !== 'certificate' || m.function !== 'set_paused') fail('call target is not the pinned set_paused');
-  if ((m.typeArguments ?? []).length) fail('type arguments present');
-  if (JSON.stringify(m.arguments) !== JSON.stringify([{ Input: 0 }, { Input: 1 }, { Input: 2 }])) fail('unexpected arguments');
+  if (!Array.isArray(m.typeArguments) || m.typeArguments.length) fail('type arguments present');
+  if (!Array.isArray(m.arguments) || m.arguments.length !== 3) fail('unexpected arguments');
+  m.arguments.forEach((a, i) => { exact(a, ['Input'], 'argument'); if (a.Input !== i) fail('unexpected arguments'); });
   if (!Array.isArray(t.inputs) || t.inputs.length !== 3) fail('must have exactly three inputs');
-  const objId = (i) => i?.UnresolvedObject?.objectId ?? i?.Object?.ImmOrOwnedObject?.objectId ?? i?.Object?.SharedObject?.objectId;
-  if (objId(t.inputs[0]) !== PIN.adminCap) fail('first input is not the pinned AdminCap');
-  if (objId(t.inputs[1]) !== PIN.issuer) fail('second input is not the pinned Issuer');
+  const obj = (inp, id, what) => { exact(inp, ['UnresolvedObject'], what); exact(inp.UnresolvedObject, ['objectId'], what); if (inp.UnresolvedObject.objectId !== id) fail(`${what} is not the pinned ${what}`); };
+  obj(t.inputs[0], PIN.adminCap, 'AdminCap'); obj(t.inputs[1], PIN.issuer, 'Issuer');
+  exact(t.inputs[2], ['Pure'], 'flag input'); exact(t.inputs[2].Pure, ['bytes'], 'flag input');
   const want = action === 'pause' ? 'AQ==' : action === 'unpause' ? 'AA==' : fail('bad action');
-  if (t.inputs[2]?.Pure?.bytes !== want) fail(`flag is not ${action === 'pause' ? 'true' : 'false'}`);
+  if (t.inputs[2].Pure.bytes !== want) fail(`flag is not ${action === 'pause' ? 'true' : 'false'}`);
   return true;
 }
+/** S-3: the only account the page will use is PIN.account; never accounts[0]. */
+export const pickAccount = (accounts) => (Array.isArray(accounts) ? accounts.find((a) => a?.address === PIN.account) ?? null : null);
+export const isPinned = (acct) => !!acct && acct.address === PIN.account;

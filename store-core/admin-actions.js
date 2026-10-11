@@ -15,6 +15,10 @@ const client = (network) => new SuiGrpcClient({ network, baseUrl: NETS[network] 
 const big = (_, v) => (typeof v === 'bigint' ? v.toString() : v);
 const str = (v, max = 300) => (typeof v === 'string' && v.length > 0 && v.length <= max ? v : null);
 
+export function unsetGas(txJson) {
+  const t = JSON.parse(txJson); t.gasData = { budget: null, price: null, owner: null, payment: null };
+  return JSON.stringify(t, null, 2);
+}
 export function pinnedIssuer(network, issuerId, pinned = PINNED) {
   const id = normAddr(issuerId);
   return (pinned[network] || []).find((p) => normAddr(p.issuerId) === id) || null;
@@ -96,6 +100,8 @@ export async function adminTx(req, c, pinned = PINNED) {
     const r = await c.core.simulateTransaction({ transaction: tx, include: { effects: true } });
     dry = r.$kind === 'Transaction' ? { status: 'success' } : { status: 'failure', error: r.FailedTransaction?.status?.error?.message?.slice(0, 200) };
   } catch (e) { dry = { status: 'error', error: String(e.message || e).slice(0, 200) }; }
-  const tx_json = dry.status === 'success' ? await tx.toJSON({ client: c }) : null;
+  let tx_json = dry.status === 'success' ? await tx.toJSON({ client: c }) : null;
+  // Siona S-1: the wallet sets gas. Never hand over a budget, price, owner or payment for set_paused (the page rejects any).
+  if (tx_json && (action === 'pause' || action === 'unpause')) tx_json = unsetGas(tx_json);
   return JSON.parse(JSON.stringify({ ok: true, ready: !!tx_json, action, network, target, status, dry_run: dry, tx_json }, big));
 }

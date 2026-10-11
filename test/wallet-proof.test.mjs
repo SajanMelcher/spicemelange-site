@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { Secp256k1Keypair } from '@mysten/sui/keypairs/secp256k1';
 import { readFileSync } from 'node:fs';
-import { PIN, checkUpgradeBytes, checkPauseTx, txDigest, base58 } from '../src/lib/sign-verify.js';
+import { PIN, checkUpgradeBytes, checkPauseTx, txDigest, base58, pickAccount, isPinned } from '../src/lib/sign-verify.js';
 import { signRateLimit, SIGN_RATE } from '../store-core/sign-ratelimit.js';
 import { handleProof, proofMessage, verifyProofSignature, field } from '../store-core/wallet-proof.js';
 
@@ -138,7 +138,7 @@ test('F-1: browser-side checks compute sha + digest from the bytes and pin every
   bad((t) => { t.gasData.owner = '0x' + '5'.repeat(64); }, /gas/);
   bad((t) => { t.gasData.payment = []; }, /gas payment/);
   bad((t) => { t.commands[0] = { TransferObjects: {} }; }, /MoveCall/);
-  bad((t) => { t.extra = 1; }, /unexpected fields/);
+  bad((t) => { t.extra = 1; }, /transaction: keys/);
   // the real server-built tx shape (admin-actions) passes
   const { adminTx } = await import('../store-core/admin-actions.js');
   assert.equal(typeof adminTx, 'function');
@@ -168,4 +168,52 @@ test('Low: signed withdrawal requests: 30 days on /privacy/ and purged after 30 
   const seen = []; const db = { prepare: (sql) => ({ bind: (...b) => ({ run: async () => { seen.push([sql, b]); return { meta: { changes: 0 } }; }, all: async () => ({ results: [] }) }) }) };
   const now = 100 * 86_400_000; await purge(db, now);
   const w = seen.find(([s]) => /spice_withdraw_requests/.test(s)); assert.ok(w); assert.match(w[0], /created_ms < \?1/); assert.equal(w[1][0], now - 30 * 86_400_000);
+});
+
+test('S-1/S-2: set_paused check rejects pre-set gas and any extra key; server output leaves gas unset', async () => {
+  const good = () => ({ version: 2, sender: PIN.account, expiration: null, gasData: { budget: null, price: null, owner: null, payment: null },
+    inputs: [{ UnresolvedObject: { objectId: PIN.adminCap } }, { UnresolvedObject: { objectId: PIN.issuer } }, { Pure: { bytes: 'AA==' } }],
+    commands: [{ MoveCall: { package: PIN.certPackage, module: 'certificate', function: 'set_paused', typeArguments: [], arguments: [{ Input: 0 }, { Input: 1 }, { Input: 2 }] } }] });
+  assert.equal(checkPauseTx(good(), 'unpause'), true);
+  const bad = (mut, re) => { const t = good(); mut(t); assert.throws(() => checkPauseTx(t, 'unpause'), re); };
+  bad((t) => { t.gasData.price = '1000000'; t.gasData.budget = '50000000000'; }, /gas (budget|price) must be unset/); // Siona's case
+  bad((t) => { t.gasData.budget = '1'; }, /gas budget must be unset/);
+  bad((t) => { t.gasData.price = '1000'; }, /gas price must be unset/);
+  bad((t) => { t.gasData.owner = PIN.account; }, /gas owner must be unset/);
+  bad((t) => { delete t.gasData.payment; }, /gasData: keys/);
+  bad((t) => { t.gasData.sponsor = null; }, /gasData: keys/);
+  bad((t) => { t.inputs[0].UnresolvedObject.version = '1'; }, /AdminCap: keys/);
+  bad((t) => { t.inputs[0].UnresolvedObject.digest = 'x'; }, /AdminCap: keys/);
+  bad((t) => { t.inputs[1].UnresolvedObject.initialSharedVersion = '1'; }, /Issuer: keys/);
+  bad((t) => { t.inputs[1] = { Object: { SharedObject: { objectId: PIN.issuer, initialSharedVersion: '1', mutable: true } } }; }, /Issuer: keys/);
+  bad((t) => { t.inputs[0].extra = 1; }, /AdminCap: keys/);
+  bad((t) => { t.inputs[2].Pure.type = 'bool'; }, /flag input: keys/);
+  bad((t) => { t.inputs[2].$kind = 'Pure'; }, /flag input: keys/);
+  bad((t) => { t.commands[0].MoveCall.extra = 1; }, /MoveCall: keys/);
+  bad((t) => { delete t.commands[0].MoveCall.typeArguments; }, /MoveCall: keys/);
+  bad((t) => { t.commands[0].$kind = 'MoveCall'; }, /command: keys/);
+  bad((t) => { t.commands[0].MoveCall.arguments[0].kind = 'Input'; }, /argument: keys/);
+  bad((t) => { t.commands[0].MoveCall.arguments = [{ Input: 1 }, { Input: 0 }, { Input: 2 }]; }, /arguments/);
+  bad((t) => { t.digest = 'x'; }, /transaction: keys/);
+  const { unsetGas } = await import('../store-core/admin-actions.js');
+  const pre = good(); pre.gasData = { budget: '50000000000', price: '1000000', owner: PIN.account, payment: [{ objectId: '0x1', version: '1', digest: 'x' }] };
+  const out = JSON.parse(unsetGas(JSON.stringify(pre)));
+  assert.deepEqual(out.gasData, { budget: null, price: null, owner: null, payment: null }); assert.equal(checkPauseTx(out, 'unpause'), true);
+  assert.match(readFileSync(new URL('../store-core/admin-actions.js', import.meta.url), 'utf8'), /action === 'pause' \|\| action === 'unpause'\)\) tx_json = unsetGas\(tx_json\)/);
+});
+test('S-3: only PIN.account is used, never accounts[0]; page guards upgrade and pause on it and shows the real address', () => {
+  const other = { address: '0x' + '9'.repeat(64) }, mine = { address: PIN.account };
+  assert.equal(pickAccount([other, mine]), mine); assert.equal(pickAccount([other]), null); assert.equal(pickAccount(undefined), null);
+  assert.equal(isPinned(mine), true); assert.equal(isPinned(other), false); assert.equal(isPinned(null), false);
+  const page = readFileSync(new URL('../src/pages/sign/index.astro', import.meta.url), 'utf8');
+  assert.match(page, /st\.acct = pickAccount\(accounts\)/); assert.doesNotMatch(page, /accounts\[0\]/);
+  assert.match(page, /say\('Connected ' \+ st\.acct\.address\)/);
+  assert.match(page, /async function admin\(action\) \{\n    if \(!isPinned\(st\.acct\)\)/);
+  assert.match(page, /if \(!v\.ok \|\| !isPinned\(st\.acct\)\)/); assert.match(page, /isPinned\(st\.acct\);/);
+  assert.ok((page.match(/isPinned\(st\.acct\)/g) || []).length >= 4);
+});
+test('S-4: /privacy/ names the ~2 minute hashed IP for /sign/ rate limits (matches SIGN_RATE ttl)', () => {
+  const p = readFileSync(new URL('../src/pages/privacy.astro', import.meta.url), 'utf8');
+  assert.match(p, /The wallet signing tools at \/sign\/ keep a salted hash of your IP address for about 2 minutes, to rate-limit requests\./);
+  assert.equal(SIGN_RATE.ttlSec, 120);
 });
