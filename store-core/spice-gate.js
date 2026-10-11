@@ -36,8 +36,8 @@ export const GATE_COPY = {
   collection_only: {
     who: `holders of ${COLLECTION_NAME}`,
     short: `For holders of ${COLLECTION_NAME} only`,
-    rule: `Spice Certificates can be bought only by wallets that hold the ${COLLECTION_NAME} license token: the non-transferable license minted when you buy ${COLLECTION_NAME} (every template, now and later) from our store. A single-template license does not qualify; you keep your templates either way.`,
-    notEligible: `This wallet does not hold the ${COLLECTION_NAME} license token, so it can't buy Spice Certificates. Certificates are available only to holders of ${COLLECTION_NAME}.`,
+    rule: `Spice Certificates can be bought only by wallets that hold the license token for ${COLLECTION_NAME}: the non-transferable license minted when you buy ${COLLECTION_NAME} (every template, now and later) from our store. A single-template license does not qualify; you keep your templates either way.`,
+    notEligible: `This wallet does not hold the license token for ${COLLECTION_NAME}, so it can't buy Spice Certificates. Certificates are available only to holders of ${COLLECTION_NAME}.`,
     cta: { href: '/store/dune-saga-collection/', label: `Get ${COLLECTION_NAME} ($300)` },
   },
   any_template: {
