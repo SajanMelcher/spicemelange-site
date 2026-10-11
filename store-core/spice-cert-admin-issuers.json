@@ -1,0 +1,22 @@
+{
+  "_comment": "V4-4: the ONLY Issuers the wallet admin page will build AdminCap transactions for. The package is read from the Issuer's on-chain type and must equal packageId here. Mainnet is added only after the mainnet publish (by hand, reviewed).",
+  "testnet": [
+    {
+      "label": "canonical v5",
+      "issuerId": "0xec6501b5f6bd0c7002322b322f1a8eaba80f49fd47035abe98497ceaa7cce99d",
+      "packageId": "0xeb064b13ab6593505349d24bbc76b216a381ebb8923f6ffc773182bd6b7f8826"
+    },
+    {
+      "label": "e2e mirror v5",
+      "issuerId": "0x9b44f356d0d6c702603cd29ce21deb1155bf81c973dd2714b30854ca19ce7564",
+      "packageId": "0x0d132b6211aa46c05c2b963124236b9fc65229bf3cd473064c5321eb4a7412bc"
+    }
+  ],
+  "mainnet": [
+    {
+      "label": "mainnet v6 (publish CHZB4o24\u2026, setup 49A8ae7W\u2026)",
+      "issuerId": "0x7fb5656aa9d4a504361d683fe0183df3e33b56a3e58e8c13714dc19fc5421319",
+      "packageId": "0x294b4ff76830aaace850ba390fad5f2bb7692a36cb5b4b4f078590a0bb34e24f"
+    }
+  ]
+}

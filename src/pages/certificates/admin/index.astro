@@ -1,0 +1,121 @@
+---
+// /certificates/admin/: PREVIEW ONLY. Wallet-side AdminCap tool for Sajan (Siona V3-7): pause, unpause, revoke a MintCap
+// from the wallet that holds the AdminCap. The page builds + dry-runs; the wallet signs. No key ever leaves the wallet.
+import Base from '../../../layouts/Base.astro';
+import ALL from '../../../../store-core/spice-cert-admin-issuers.json';
+const PINNED = { mainnet: ALL.mainnet }; // prod-domain branch: mainnet pinned Issuer only
+---
+<Base title="Spice Certificates admin (wallet)" description="Pause, unpause or revoke the watcher from the wallet that holds the AdminCap." noindex>
+  <section class="container-x max-w-2xl pt-16 pb-16">
+    <p class="eyebrow mb-4">The Spice Melange · preview · AdminCap tool</p>
+    <h1 class="text-3xl mb-4">Pause or revoke from your wallet</h1>
+    <p class="muted mb-4">Only the wallet that holds the Spice Certificate AdminCap can do these. Each button builds the transaction, dry-runs it, then your wallet asks you to sign (a small gas fee in SUI). Nothing is signed by us.</p>
+    <div class="grid gap-2 mb-4 text-sm">
+      <label>Network <select id="net" class="ml-2 bg-transparent border px-2 py-1"><option value="mainnet">Sui mainnet</option></select></label>
+      <label>Issuer <select id="iss" class="w-full bg-transparent border px-2 py-1 font-mono text-xs"></select></label>
+      <p class="muted">Only the pinned Spice Certificate Issuers are listed. The package is read from the Issuer on-chain; this page never takes a package id. Before you sign, check that your wallet shows the call target printed below (package 0x… ::certificate::…).</p>
+    </div>
+    <div id="wallets" class="flex flex-wrap gap-2 mb-4"></div>
+    <div id="acts" class="flex flex-wrap gap-2 mb-4" hidden>
+      <button data-a="status" class="border px-3 py-2">Refresh status</button>
+      <button data-a="pause" class="border px-3 py-2">Pause sales + watcher</button>
+      <button data-a="unpause" class="border px-3 py-2">Unpause</button>
+      <select id="mc" class="bg-transparent border px-2 py-1 font-mono text-xs"></select>
+      <button data-a="revoke_mint_cap" class="border px-3 py-2">Revoke this MintCap</button>
+    </div>
+    <div id="more" class="grid gap-2 mb-4 text-sm" hidden>
+      <p><b>Redemptions</b> (escrowed at the Issuer): <select id="pend" class="bg-transparent border px-2 py-1 font-mono text-xs"></select></p>
+      <p><input id="amt" placeholder="payout amount (base units)" class="bg-transparent border px-2 py-1" /> <input id="ptx" placeholder="payout tx / reference" class="bg-transparent border px-2 py-1" />
+        <button data-a="burn_redeemed" class="border px-3 py-1">Burn (after payout)</button></p>
+      <p><input id="why" placeholder="reason" class="bg-transparent border px-2 py-1" /> <button data-a="reject_redemption" class="border px-3 py-1">Reject (return to holder)</button></p>
+      <p><b>New MintCap</b> <input id="mcto" placeholder="watcher address 0x…" class="bg-transparent border px-2 py-1 font-mono w-80" /> <input id="mclim" value="25" class="bg-transparent border px-2 py-1 w-16" />/day <button data-a="create_mint_cap" class="border px-3 py-1">Create</button></p>
+      <p><b>Template</b> <input id="tpl" placeholder="template id" class="bg-transparent border px-2 py-1" /> <label><input type="checkbox" id="tplon" checked /> allowed</label> <button data-a="set_template_allowed" class="border px-3 py-1">Set</button></p>
+      <p><b>Display</b> <select id="dfield" class="bg-transparent border px-2 py-1"><option>link</option><option>project_url</option><option>image_url</option><option>name</option><option>description</option></select>
+        <input id="dval" placeholder="new value (https://…)" class="bg-transparent border px-2 py-1 w-80" /> <button data-a="display_edit" class="border px-3 py-1">Edit</button></p>
+    </div>
+    <p id="target" class="text-xs font-mono break-all mb-2"></p>
+    <p id="status" class="mb-2" role="status" aria-live="polite">Looking for Sui wallets…</p>
+    <pre id="state" class="text-xs whitespace-pre-wrap break-all"></pre>
+  </section>
+</Base>
+<script define:vars={{ PINNED }}>
+  // inline copy of src/lib/wallet-errors.js (define:vars scripts can't import; a test checks they match)
+  const blocked = [];
+  document.addEventListener('securitypolicyviolation', (e) => blocked.push(`${e.effectiveDirective} blocked ${e.blockedURI}`));
+  if (typeof window !== 'undefined' && window.fetch && !window.fetch.__spiceWrapped) {
+    const f0 = window.fetch.bind(window);
+    const w = async (input, init) => {
+      try { return await f0(input, init); } catch (e) {
+        try { const u = new URL(typeof input === 'string' ? input : input?.url ?? String(input), location.href); blocked.push(`fetch ${u.origin}${u.pathname} failed: ${e?.message || e}`); } catch {}
+        throw e;
+      }
+    };
+    w.__spiceWrapped = true; window.fetch = w;
+  }
+  async function apiCall(ep, init = {}, fetchFn = globalThis.fetch) {
+    const m = init.method ?? 'GET';
+    let r;
+    try { r = await fetchFn(ep, init); } catch (e) { return { ok: false, reason: 'network_error', detail: `${m} ${ep}: ${e?.message || e} (no HTTP response)` }; }
+    const j = await r.json().catch(() => null);
+    if (!j || typeof j !== 'object') return { ok: false, reason: 'bad_response', detail: `${m} ${ep}: HTTP ${r.status}, not JSON` };
+    if (!j.ok) j.detail = (typeof j.detail === 'string' ? j.detail + '; ' : '') + `${m} ${ep}: HTTP ${r.status}`;
+    return j;
+  }
+  function failText(step, e) {
+    const b = [...new Set(blocked)];
+    return `Cancelled or failed at step "${step}": ${String(e?.message || e).slice(0, 200)}` + (b.length ? ` | page blocked: ${b.join(', ').slice(0, 300)}` : '');
+  }
+  // end wallet-errors
+  const wallets = []; const st = { w: null, acct: null };
+  const reg = { register: (...ws) => { wallets.push(...ws); render(); return () => {}; } };
+  window.addEventListener('wallet-standard:register-wallet', (e) => { try { e.detail(reg); } catch {} });
+  window.dispatchEvent(new CustomEvent('wallet-standard:app-ready', { detail: reg }));
+  const $ = (id) => document.getElementById(id); const say = (t) => { $('status').textContent = t; };
+  const q = new URLSearchParams(location.search);
+  function fillIssuers() {
+    const sel = $('iss'); sel.innerHTML = '';
+    for (const p of PINNED[$('net').value] || []) { const o = document.createElement('option'); o.value = p.issuerId; o.textContent = p.label + ' ' + p.issuerId.slice(0, 10) + '…'; sel.appendChild(o); }
+    if (!sel.children.length) say('No pinned Issuer on this network yet.');
+  }
+  $('net').value = 'mainnet'; fillIssuers(); $('net').onchange = fillIssuers;
+  const api = (body) => apiCall('/api/wallet-proof/admin-tx', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  function render() {
+    const box = $('wallets'); box.innerHTML = '';
+    for (const w of wallets.filter((w) => w.features?.['sui:signAndExecuteTransaction'])) {
+      const b = document.createElement('button'); b.className = 'border px-3 py-2'; b.textContent = 'Connect ' + w.name; b.onclick = () => connect(w); box.appendChild(b);
+    }
+    say(box.children.length ? 'Connect the wallet that holds the AdminCap.' : 'No Sui wallet that can sign transactions was found in this browser.');
+  }
+  async function connect(w) {
+    blocked.length = 0;
+    let accounts;
+    try { ({ accounts } = await w.features['standard:connect'].connect()); } catch (e) { say(failText(w.name + ' connect', e)); return; }
+    st.w = w; st.acct = accounts.find((a) => a.chains?.includes('sui:' + $('net').value)) ?? accounts[0];
+    $('acts').hidden = false; $('more').hidden = false; say('Connected ' + st.acct.address); run('status');
+  }
+  async function run(action) {
+    const network = $('net').value;
+    const r = await api({ network, issuerId: $('iss').value, sender: st.acct.address, action, mintCapId: $('mc').value,
+      certId: $('pend').value, payoutAmount: $('amt').value.trim(), payoutTx: $('ptx').value.trim(), reason: $('why').value.trim(),
+      recipient: $('mcto').value.trim(), dailyLimit: Number($('mclim').value), templateId: $('tpl').value.trim(), allowed: $('tplon').checked,
+      field: $('dfield').value, value: $('dval').value.trim() });
+    $('target').textContent = r.target ? 'Call target: ' + r.target : '';
+    if (r.status) {
+      $('state').textContent = JSON.stringify(r.status, null, 1);
+      $('pend').innerHTML = ''; for (const p of r.status.pending_redemptions || []) { const o = document.createElement('option'); o.value = p.id; o.textContent = 'No. ' + p.serial + ' ' + p.id.slice(0, 10) + '…'; $('pend').appendChild(o); }
+      $('mc').innerHTML = ''; for (const id of r.status.mint_caps) { const o = document.createElement('option'); o.value = id; o.textContent = id.slice(0, 10) + '…' + id.slice(-6); $('mc').appendChild(o); }
+    }
+    if (!r.ok) { say('Not available: ' + r.reason + (r.detail ? ` [${r.detail}]` : '')); return; }
+    if (action === 'status') { say(r.status.admin_cap ? 'This wallet holds the AdminCap.' : 'This wallet does not hold the AdminCap.'); return; }
+    if (!r.ready) { say('Dry-run did not pass: ' + (r.dry_run?.error || r.dry_run?.status)); return; }
+    blocked.length = 0;
+    say('Dry-run passed. Check that your wallet shows ' + r.target + ', then sign…');
+    try {
+      const tx = r.tx_json;
+      const out = await st.w.features['sui:signAndExecuteTransaction'].signAndExecuteTransaction({ transaction: { toJSON: async () => tx }, account: st.acct, chain: 'sui:' + network });
+      say('Done: ' + String(out.digest).replace(/[^A-Za-z0-9]/g, '')); setTimeout(() => run('status'), 3000);
+    } catch (e) { say('Not signed. ' + failText(st.w.name + ' signAndExecuteTransaction', e)); }
+  }
+  document.querySelectorAll('[data-a]').forEach((b) => { b.onclick = () => run(b.dataset.a); });
+  setTimeout(render, 1500);
+</script>

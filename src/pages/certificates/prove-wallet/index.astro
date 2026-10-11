@@ -1,0 +1,79 @@
+---
+// /certificates/prove-wallet/: PREVIEW ONLY. Wallet ownership proof for the Spice Certificate admin caps (Siona).
+// Any Sui wallet (Wallet Standard: standard:connect + sui:signPersonalMessage). No gas, no transaction.
+import Base from '../../../layouts/Base.astro';
+---
+<Base title="Prove wallet ownership" description="Sign a message (no gas, no transaction) to prove you control a Sui wallet." noindex>
+  <section class="container-x max-w-2xl pt-16 pb-16">
+    <p class="eyebrow mb-4">The Spice Melange · preview · wallet ownership proof</p>
+    <h1 class="text-3xl mb-4">Prove you control your Sui wallet</h1>
+    <p class="muted mb-2">This page asks your wallet to sign a short message. It is a message, not a transaction: no gas, nothing moves, nothing is approved on-chain. We never ask for a seed phrase or private key.</p>
+    <p class="muted mb-6">The signed message names the wallet that signed it and says you accept the Spice Certificate AdminCap and UpgradeCap. The desk only sends those caps to an address whose signature checks out.</p>
+    <div class="mb-4">
+      <label class="text-sm">Network the wallet signs for
+        <select id="net" class="ml-2 bg-transparent border px-2 py-1"><option value="mainnet" selected>Sui mainnet</option></select>
+      </label>
+    </div>
+    <div id="wallets" class="flex flex-wrap gap-2 mb-4"></div>
+    <p id="status" class="mb-4" role="status" aria-live="polite">Looking for Sui wallets in this browser…</p>
+    <div id="result" hidden>
+      <p class="mb-2">Signed by: <span id="addr" class="font-mono break-all"></span> <span id="scheme" class="muted"></span></p>
+      <p class="text-sm muted mb-1">Signed message (exact text):</p>
+      <pre id="msg" class="text-xs whitespace-pre-wrap break-all border p-3 mb-3"></pre>
+      <p class="text-sm muted mb-1">Signature (base64):</p>
+      <pre id="sig" class="text-xs whitespace-pre-wrap break-all border p-3 mb-3"></pre>
+      <button id="copy" class="border px-3 py-1 text-sm">Copy message + signature</button>
+    </div>
+  </section>
+</Base>
+<script>
+  import { apiCall, failText, blocked } from '../../../lib/wallet-errors.js';
+  const wallets = [];
+  const reg = { register: (...ws) => { wallets.push(...ws); render(); return () => {}; } };
+  window.addEventListener('wallet-standard:register-wallet', (e) => { try { e.detail(reg); } catch {} });
+  window.dispatchEvent(new CustomEvent('wallet-standard:app-ready', { detail: reg }));
+  const $ = (id) => document.getElementById(id);
+  const say = (t) => { $('status').textContent = t; };
+  const REASONS = { nonce_expired: 'The message expired (15 minutes). Try again.', wrong_domain: 'The message was for another site.',
+    signature_invalid: 'The signature did not check out.', signer_is_not_the_named_wallet: 'A different wallet signed the message.',
+    preview_only: 'This page only works on the preview site.', not_configured: 'Not switched on here yet.', network_error: 'Network error.', bad_response: 'The server answered oddly.' };
+  const api = (a, body) => apiCall('/api/wallet-proof/' + a, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const why = (r) => (REASONS[r.reason] ?? r.reason) + (r.detail ? ` [${r.detail}]` : '');
+  let step = 'start';
+  function render() {
+    const box = $('wallets'); box.innerHTML = '';
+    const sui = wallets.filter((w) => w.chains?.some((c) => c.startsWith('sui:')) || w.features?.['sui:signPersonalMessage']);
+    for (const w of sui) {
+      const b = document.createElement('button'); b.className = 'border px-3 py-2';
+      b.textContent = 'Sign with ' + w.name; b.onclick = () => prove(w); box.appendChild(b);
+    }
+    say(sui.length ? 'Choose your wallet.' : 'No Sui wallet found in this browser yet.');
+  }
+  async function prove(w) {
+    try {
+      if (!w.features?.['sui:signPersonalMessage']) { say(`${w.name} does not offer Sui message signing (sui:signPersonalMessage), so it can't sign this proof here.`); return; }
+      step = 'wallet connect'; blocked.length = 0;
+      const { accounts } = await w.features['standard:connect'].connect();
+      const network = $('net').value;
+      const acct = accounts.find((a) => a.chains?.includes('sui:' + network)) ?? accounts.find((a) => a.chains?.some((c) => c.startsWith('sui:'))) ?? accounts[0];
+      if (!acct) { say('The wallet shared no Sui account.'); return; }
+      say(`Connected ${acct.address}. Getting the message…`);
+      step = 'get message (POST /api/wallet-proof/challenge)';
+      const ch = await api('challenge', { address: acct.address, network });
+      if (!ch.ok) { say('Unavailable: ' + why(ch)); return; }
+      step = `${w.name} signPersonalMessage`;
+      say(`Sign the message in ${w.name}. No gas, nothing moves.`);
+      const { signature } = await w.features['sui:signPersonalMessage'].signPersonalMessage({ message: new TextEncoder().encode(ch.message), account: acct, chain: 'sui:' + network });
+      step = 'verify (POST /api/wallet-proof/submit)';
+      const r = await api('submit', { message: ch.message, signature });
+      $('result').hidden = false; $('addr').textContent = acct.address; $('msg').textContent = ch.message; $('sig').textContent = signature;
+      if (!r.ok) { say('Not verified: ' + why(r) + (r.scheme ? ` (${r.scheme})` : '')); return; }
+      $('scheme').textContent = `(${r.scheme}, ${r.network})`;
+      say('Verified and recorded. You can close this page. Thank you.');
+      $('copy').onclick = () => navigator.clipboard?.writeText(ch.message + '\n\nSignature: ' + signature);
+    } catch (e) {
+      say(failText(step, e));
+    }
+  }
+  setTimeout(render, 1500);
+</script>

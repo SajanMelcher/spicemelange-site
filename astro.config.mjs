@@ -10,6 +10,10 @@ import { CERTS_LIVE_AT_BUILD } from './store-core/launch.js';
 const certsLaunchGate = {
   name: 'certs-launch-gate',
   hooks: { 'astro:build:done': ({ dir, logger }) => {
+    // Wallet-signing pages (prove-wallet, admin): held off the prod domain until Siona passes them (WALLET_PAGES_LIVE).
+    if (process.env.WALLET_PAGES_LIVE !== '1') for (const r of ['certificates/prove-wallet/', 'certificates/admin/']) {
+      rmSync(new URL(r, dir), { recursive: true, force: true }); logger.info(`WALLET_PAGES_LIVE off: removed /${r}`);
+    }
     if (CERTS_LIVE_AT_BUILD) return;
     rmSync(new URL('certificates/', dir), { recursive: true, force: true });
     logger.info(`SPICE_CERTS_LIVE off: removed ${fileURLToPath(new URL('certificates/', dir))}`);
