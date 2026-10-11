@@ -8,6 +8,7 @@ import Glyph from '../components/Glyph.astro';
 import Eye from '../components/Eye.astro';
 import CodeCopy from '../components/CodeCopy.astro';
 import LearnInvite from '../components/LearnInvite.astro';
+import { CERTS_LIVE_AT_BUILD } from '../../store-core/launch.js';
 
 const gets = [
   { glyph: 'blade', title: 'A Fish Speakers bot that trains first',
@@ -25,7 +26,10 @@ const gets = [
 ];
 const plain = [
   'Each agent trades its own wallet and keeps its own results.',
-  'The desk never holds anyone’s keys or money. There is no custody, no pooled account and no copy-trading.',
+  // SPICE_CERTS_LIVE: certs off = the current no-custody sentence (true until launch); on = JOIN-PAGE-LINE.txt (b5d33672…7a9b,
+  // Sajan 9:50 PM PT 10/10 via Tleilaxu), verbatim.
+  CERTS_LIVE_AT_BUILD ? "Your templates and keys stay with you. The desk holds money only for Spice Certificates, as described in their terms."
+    : 'The desk never holds anyone’s keys or money. There is no custody, no pooled account and no copy-trading.',
   'Nothing here promises returns. Training results are a simulation, and live trading can lose money.',
   'Going live is your decision alone: set mode to live and create the APPROVE_LIVE file. The bot never does either for you.',
   'Signal ideas are text. Nothing executes automatically.',

@@ -1,5 +1,5 @@
 # Spice Certificates: Terms
-Version 2026.10.10.2 (approved by the issuer 2026-10-10) · Issuer: Sajan Melcher, doing business as The Spice Melange ("we") · Holder: you, the buyer
+Version 2026.10.10.3 (approved by the issuer 2026-10-10) · Issuer: Sajan Melcher, doing business as The Spice Melange ("we") · Holder: you, the buyer
 
 *In the deep desert, water is promised to no one. Read this first.*
 
@@ -30,15 +30,17 @@ Version 2026.10.10.2 (approved by the issuer 2026-10-10) · Issuer: Sajan Melche
 ## How to buy
 - Buy through our contract, from the Sui wallet that holds your license. Send exactly **100 USDC on Sui**.
 - Your license is **checked on-chain** when you buy through the contract. If it doesn't qualify, no certificate is minted.
+- **Paying the contract directly** mints your certificate in the same transaction. Your license is checked on-chain in that same step.
 - Payments sent the wrong way, such as the wrong amount, a payment from an exchange, or a payment from a wallet without a qualifying license, get no certificate. We refund them by hand, which can take time. We pay the network fee on refunds.
+- We can pause new sales or stop the automated minting key at any time. Pausing never blocks a withdrawal request.
 
 ## How your money is used
-- **62%** buys STRC, a preferred stock, held on a third-party crypto platform. Its price and dividend can fall. Its dividends are reinvested and may buy bitcoin.
-- **38%** is held as a USDC reserve on Sui. It pays withdrawals, and a small portion is used for automated trading by the desk's agents, with no leverage. About $19 per certificate is kept for withdrawals.
+- **62%** buys STRC, a preferred stock, held on a third-party crypto platform. Its price and dividend can fall. Its daily dividends are added to the USDC reserve.
+- **38%** is held as a USDC reserve on Sui. (Your payment first arrives in the issuer's own exchange account and is then moved to Sui.) It pays withdrawals. The desk's agents trade only to rebalance certificate funds back to the 62/38 golden-ratio split, with no leverage. About $19 per certificate is kept for withdrawals.
 - **Certificate money is never used to repay debt.**
 - **Where it is held:** certificate money is held in the issuer's own exchange and wallet accounts. It is not segregated, not in a trust and not in a separate account. Nothing is set aside in your name.
-- **If the reserve runs short**, we cover withdrawals in this order: the cash reserve, then selling STRC, then selling other assets. **Borrowing against bitcoin to pay withdrawals is the last resort only, with the owner's explicit approval.** Borrowing carries liquidation risk.
-- The Spice Melange trading desk trades on Sui with no leverage and no borrowed money. A small portion of the USDC reserve is used for that automated trading.
+- **If the reserve runs short**, we cover withdrawals in this order: the cash reserve, then selling STRC, then selling other assets, possibly at a loss. We never borrow to pay withdrawals.
+- The Spice Melange trading desk trades on Sui with no leverage and no borrowed money. Its automated trading only rebalances certificate funds back to the 62/38 split.
 
 ## How the 8% is credited
 - We aim to credit **8% a year** on 100 USDC. Simple interest, actual days out of 365, starting the day after you buy.
@@ -76,12 +78,12 @@ Version 2026.10.10.2 (approved by the issuer 2026-10-10) · Issuer: Sajan Melche
 - **Open requests.** While your request is open, the contract holds your certificate and only we can complete or reject it. You can't cancel it yourself.
 - **STRC.** Its price and dividend can fall or stop. Its issuer carries heavy bitcoin and debt exposure. A loss on STRC means less to pay you.
 - **Bitcoin.** It swings hard. Your sats and any BTC payout can lose value fast. If you choose BTC, you carry the bitcoin price risk, and what you get can be worth less than $100.
-- **Trading and borrowing.** The Spice Melange trading desk trades on Sui with no leverage and no borrowed money. A small portion of the USDC reserve is used for that automated trading, and trading can lose money. Certificate money is never used to repay debt. We may borrow against bitcoin only as a last resort to pay certificate withdrawals, and only with the owner's explicit approval. Borrowing carries liquidation risk.
+- **Trading.** The Spice Melange trading desk trades on Sui with no leverage and no borrowed money. Its automated trading only rebalances certificate funds back to the 62/38 split, and rebalancing trades can lose money. Certificate money is never used to repay debt.
 - **Exchanges and custodians.** Certificate money sits in our own accounts at third-party exchanges and custodians. They can freeze, lose or be hacked out of funds, or change their rules or go offline. That can delay or stop payouts, or cause losses.
 - **Other creditors.** You are unsecured. If we have other creditors, they may be paid before you, and there may be less or nothing left for holders.
 - **Rounding.** Daily rounding keeps your rate a bit under 8%.
 - **No resale.** There is no market for certificates and you can't transfer them.
-- **Run risk.** With no cap and redemption any time, the total we owe can grow past our reserve. If many holders ask at once, for example after a bitcoin or STRC drop or bad news about us, the reserve can run out. We may have to sell STRC at a loss or borrow, miss the 6-hour aim by days or more, and pay later requests late or only in part.
+- **Run risk.** With no cap and redemption any time, the total we owe can grow past our reserve. If many holders ask at once, for example after a bitcoin or STRC drop or bad news about us, the reserve can run out. We may have to sell STRC or other assets at a loss, miss the 6-hour aim by days or more, and pay later requests late or only in part.
 - **No end date.** We never have to repay you on a set date. You get paid only by asking to redeem.
 - **Tech.** Bugs, network outages, lost wallets or stolen keys can cause loss. If you lose the wallet that holds your certificate, you may not be able to request a withdrawal.
 - **Minting key and contract.** Certificates are minted by an automated key through our smart contract. A bug or a stolen key could stop minting or redemptions, or create invalid certificates. We will not honour certificates that were not validly bought from us.
@@ -107,7 +109,8 @@ Taxes on what you receive are yours to pay.
 
 ## Your data
 - **Public on the blockchain, forever:** your certificate's serial, the wallet that holds it, the license object, amounts, dates, status, redemption requests and payout transactions. That's how blockchains work. We can't hide it.
-- **Private, never published:** your email, payout address, signed requests and withdrawal emails. We use them only for your certificate and withdrawals, keep them apart from our main ledger, and archive them only encrypted. We don't sell them. We never publish anything linking your wallet to you.
+- **Private, never published by us:** your email, payout address, signed requests and withdrawal emails. We use them only for your certificate and withdrawals, keep them apart from our main ledger, and archive them only encrypted. We don't sell them. We never publish anything linking your wallet to you.
+- **Your payout address can still be seen.** The payout transaction is recorded on-chain, and it can show your payout address publicly.
 - To ask about deletion, email hello@thespicemelange.org. On-chain records can't be deleted, and we may need to keep sales and payout records.
 
 ## Changes

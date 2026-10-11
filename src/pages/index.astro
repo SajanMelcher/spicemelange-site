@@ -66,7 +66,9 @@ const ways = [
     <div class="grid gap-10 md:grid-cols-2 md:items-start">
       <SectionHead id="what" eyebrow="What the desk is" title="A one-person desk, a small council of agents" />
       <div class="prose-desert">
-        <p>The Spice Melange is Sajan Melcher’s personal bitcoin desk. It is a practice, not a fund. A handful of software agents help with the grind: they read the markets, check every number twice, draft letters and build open tools. Sajan makes every decision himself.</p>
+        <p>{CERTS_LIVE_AT_BUILD /* Sajan 9:51 PM PT 10/10 via Tleilaxu; certs off keeps the current line */
+          ? 'A bitcoin practice desk run by Sajan Melcher. The templates are education. Spice Certificates are a separate holders-only offering with their own terms.'
+          : 'The Spice Melange is Sajan Melcher’s personal bitcoin desk. It is a practice, not a fund.'} A handful of software agents help with the grind: they read the markets, check every number twice, draft letters and build open tools. Sajan makes every decision himself.</p>
         <p>Three things live here: plain-spoken education for family and friends, open-source tools for the Sui DeepBook ecosystem, and a public window into how a patient desk thinks.</p>
       </div>
     </div>

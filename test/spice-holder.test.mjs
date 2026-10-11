@@ -298,14 +298,16 @@ test('privacy (SC16): names the server-side Sui reads and the holder data', () =
   for (const s of ['graphql.mainnet.sui.io', 'graphql.testnet.sui.io', 'fullnode.testnet.sui.io', 'payout address', 'signature', '30 days', 'display name', 'wallet address']) assert.ok(p.includes(s), s);
 });
 
-test('cert footer leverage line (Sajan 8:53 PM PT) is exact and renders only on the certificate pages', () => {
-  const FILE = new URL('../src/content-static/CERT-FOOTER-LINE-v2.txt', import.meta.url);
-  const FSHA = '64ff22a9ccd4b1013f5f3b1fa3c4fa0efb6f104f6171b0c85de5d66f92e7a1db'; // FOOTER-LINE-v2.txt, Sajan 9:19 PM PT
+test('cert footer line (FOOTER-LINE-v3, Sajan 9:50 PM PT) is exact and renders only on the certificate pages', () => {
+  const FILE = new URL('../src/content-static/CERT-FOOTER-LINE-v3.txt', import.meta.url);
+  const FSHA = '4c2757c5a9340cea69a39584b355a20e1ca15b63e9f3f6c8fd2ebd942b108237'; // FOOTER-LINE-v3.txt, Sajan 9:50 PM PT
+  const SHARED = '/home/box/agent-data/shared/portfolio-desk/spice-certificates/design/FOOTER-LINE-v3.txt';
+  if (existsSync(SHARED) && createHash('sha256').update(readFileSync(SHARED)).digest('hex') === FSHA) assert.ok(readFileSync(SHARED).equals(readFileSync(FILE)));
   assert.equal(createHash('sha256').update(readFileSync(FILE)).digest('hex'), FSHA);
   const LINE = readFileSync(FILE, 'utf8').replace(/\n$/, '');
   const src = readFileSync(new URL('../src/data/certificates.ts', import.meta.url), 'utf8');
   assert.ok(src.includes(JSON.stringify(LINE)));
-  assert.doesNotMatch(src, /liquidation risk|its own funds only|personal brokerage/, 'the 8:36 and 8:53 PM lines are gone');
+  assert.doesNotMatch(src, /liquidation risk|its own funds only|personal brokerage|may borrow against bitcoin/, 'the 8:36, 8:53 and 9:19 PM lines are gone');
   for (const f of ['certificates/index.astro', 'certificates/holder/index.astro'])
     assert.match(readFileSync(new URL('../src/pages/' + f, import.meta.url), 'utf8'), /<CertFooterHook \/>/, f);
   assert.doesNotMatch(readFileSync(new URL('../src/pages/index.astro', import.meta.url), 'utf8'), /CertFooterHook/);
@@ -333,9 +335,9 @@ test('use of proceeds: no debt or loan repayment / pay down anywhere (sources, l
     assert.match(bad, REPAY, `pattern must catch "${bad}"`);
   for (const ok of ['We never have to repay you on a set date.', 'Certificate money is never used to repay debt.'.replace(NEG, ''), 'Cash for bills or debt payments stays untouchable.', 'carries heavy bitcoin and debt exposure'])
     assert.doesNotMatch(ok, REPAY, `pattern must allow "${ok}"`);
-  assert.match(readFileSync(new URL('../src/content-static/SPICE-CERT-TERMS.md', import.meta.url), 'utf8'), /held as a USDC reserve on Sui\. It pays withdrawals, and a small portion is used for automated trading/);
+  assert.match(readFileSync(new URL('../src/content-static/SPICE-CERT-TERMS.md', import.meta.url), 'utf8'), /\*\*38%\*\* is held as a USDC reserve on Sui\. [\s\S]*It pays withdrawals\.[\s\S]*We never borrow to pay withdrawals\./); // v2026.10.10.3
 });
-test('cert terms pin: one line to swap; not final for certs=1 (2026.10.10.3 pending Sajan)', async () => {
+test('cert terms pin: one line to swap; 2026.10.10.3 is final (Sajan 9:50 PM PT)', async () => {
   const src = readFileSync(new URL('../src/data/cert-terms.ts', import.meta.url), 'utf8');
   const pinLines = src.split('\n').filter((l) => /^export const CERT_TERMS_/.test(l));
   assert.equal(pinLines.length, 1, 'sha, version and status live on ONE line');
@@ -344,7 +346,7 @@ test('cert terms pin: one line to swap; not final for certs=1 (2026.10.10.3 pend
   const { wranglerVar } = await import('../scripts/wrangler-var.mjs');
   const prodCerts = wranglerVar(readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf8'), 'SPICE_CERTS_LIVE', 'production');
   if (prodCerts === '1') assert.equal(status, 'final', 'SPICE_CERTS_LIVE=1 in production needs the FINAL (Sajan-approved launch) terms pin');
-  assert.equal(status, 'interim', 'today: 93bfbef2 is interim (2026.10.10.3 pending)');
+  assert.equal(status, 'final', 'v2026.10.10.3 (2f6f6eab) approved by Sajan 9:50 PM PT as the launch text');
 });
 test('SJ17: a certs-off build serves no certificate content (only _headers config may mention it); gate strips orphan chunks', () => {
   const cfg = readFileSync(new URL('../astro.config.mjs', import.meta.url), 'utf8');
@@ -410,15 +412,16 @@ test('Spice Certificate terms (Sajan approved 8:40 PM PT 10/10): sha pinned, ren
   const b = readFileSync(new URL('../src/content-static/SPICE-CERT-TERMS.md', import.meta.url));
   const pin = readFileSync(new URL('../src/data/cert-terms.ts', import.meta.url), 'utf8').match(/CERT_TERMS_SHA256 = '([0-9a-f]{64})'/)[1];
   assert.equal(createHash('sha256').update(b).digest('hex'), pin);
-  assert.equal(pin, '93bfbef2aa66053c358bf28e92b93cac30ab324834d16345b890d1d95ae73558', 'TERMS-FINAL.md v2026.10.10.2, Sajan 9:19 PM PT');
+  assert.equal(pin, '2f6f6eaba83c64e7c6dfe6c015bee93d354ede2529d1cf77518d56eaf1e7c3ec', 'TERMS-FINAL-v3.md v2026.10.10.3, Sajan 9:50 PM PT');
+  assert.match(b.toString('utf8'), /^Version 2026\.10\.10\.3 /m);
   // Compare with the shared file only while it still has the approved bytes (it was edited after approval before).
-  const SRC = '/home/box/agent-data/shared/portfolio-desk/spice-certificates/design/TERMS-FINAL.md';
+  const SRC = '/home/box/agent-data/shared/portfolio-desk/spice-certificates/design/TERMS-FINAL-v3.md';
   if (existsSync(SRC) && createHash('sha256').update(readFileSync(SRC)).digest('hex') === pin) assert.ok(readFileSync(SRC).equals(b));
   // superseded terms files / pins are never referenced by the site
   const walk = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(join(d, e.name)) : [join(d, e.name)]));
   const root = fileURLToPath(new URL('..', import.meta.url));
   for (const f of ['src', 'store-core', 'functions', 'scripts', 'public', 'docs', 'content'].flatMap((d) => walk(join(root, d))).filter((f) => /\.(ts|js|mjs|astro|md|txt|json)$/.test(f)))
-    assert.doesNotMatch(readFileSync(f, 'utf8'), new RegExp(['TERMS-plain', 'TERMS-DRAFT', 'design/TERMS\\.md', '4b19' + 'db06', 'f876' + '94b7'].join('|')), f.slice(root.length));
+    assert.doesNotMatch(readFileSync(f, 'utf8'), new RegExp(['TERMS-plain', 'TERMS-DRAFT', 'design/TERMS\\.md', 'TERMS-FINAL\\.md', 'FOOTER-LINE-v2', '4b19' + 'db06', 'f876' + '94b7', '93bf' + 'bef2', '64ff' + '22a9'].join('|')), f.slice(root.length));
   assert.match(readFileSync(new URL('../src/pages/certificates/terms/index.astro', import.meta.url), 'utf8'), /SPICE-CERT-TERMS\.md/);
   for (const f of ['certificates/index.astro', 'certificates/holder/index.astro'])
     assert.match(readFileSync(new URL('../src/pages/' + f, import.meta.url), 'utf8'), /href="\/certificates\/terms\/" data-cert-terms-link/, f);
@@ -466,4 +469,26 @@ test('SJ3 on the buy path: only a dune-saga-collection, non-test license is used
   assert.equal(licenseQualifies({ template_id: 'dune-saga-collection', order_id: 'SM-TEST-DESK-1' }), false);
   const fake = { core: { listOwnedObjects: async () => ({ objects: [{ objectId: '0x1', json: { template_id: 'moneo', order_id: 'SM-1' } }] }), getBalance: async () => ({ balance: { balance: '0' } }) } };
   assert.equal((await certBuyQuote({ address: ADDR }, fake)).reason, 'testnet_license_not_eligible');
+});
+
+test('join-the-desk and home lines (Sajan 9:50/9:51 PM PT) follow SPICE_CERTS_LIVE; certs off keeps the current lines', () => {
+  const F = new URL('../src/content-static/JOIN-PAGE-LINE.txt', import.meta.url);
+  assert.equal(createHash('sha256').update(readFileSync(F)).digest('hex'), 'b5d3367228c2dd71c6d47ccd34624f3691ca7fd092045caa52d559bd4e929a7b');
+  const JOIN = readFileSync(F, 'utf8').replace(/\n$/, '');
+  const j = readFileSync(new URL('../src/pages/join-the-desk.astro', import.meta.url), 'utf8');
+  assert.ok(j.includes('CERTS_LIVE_AT_BUILD ? ' + JSON.stringify(JOIN)), 'join line verbatim behind the launch flag');
+  assert.match(j, /: 'The desk never holds anyone’s keys or money\. There is no custody, no pooled account and no copy-trading\.'/);
+  const h = readFileSync(new URL('../src/pages/index.astro', import.meta.url), 'utf8');
+  assert.ok(h.includes("? 'A bitcoin practice desk run by Sajan Melcher. The templates are education. Spice Certificates are a separate holders-only offering with their own terms.'"));
+  assert.ok(h.includes(": 'The Spice Melange is Sajan Melcher’s personal bitcoin desk. It is a practice, not a fund.'"));
+  const holder = readFileSync(new URL('../src/pages/certificates/holder/index.astro', import.meta.url), 'utf8');
+  assert.match(holder, /38% USDC reserve on Sui, 62% STRC on a third-party platform/); assert.doesNotMatch(holder, /cash reserve/);
+  // built output matches the build's flag
+  const d = (p) => new URL('../dist/' + p, import.meta.url);
+  if (existsSync(d('index.html')) && existsSync(d('join-the-desk/index.html'))) {
+    const on = existsSync(d('certificates/terms/index.html'));
+    assert.equal(readFileSync(d('index.html'), 'utf8').includes('A bitcoin practice desk run by Sajan Melcher.'), on);
+    assert.equal(readFileSync(d('join-the-desk/index.html'), 'utf8').includes('The desk holds money only for Spice Certificates'), on);
+    assert.equal(readFileSync(d('join-the-desk/index.html'), 'utf8').includes('There is no custody, no pooled account'), !on);
+  }
 });
