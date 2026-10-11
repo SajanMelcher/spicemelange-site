@@ -8,9 +8,9 @@ pages_build_output_dir = "./dist"
 compatibility_date = "2026-10-01"
 
 [vars]
-# Wallet-signing pages /certificates/prove-wallet/ + /certificates/admin/ on thespicemelange.org: OFF until Siona passes them
-# (build strips them, API answers preview_only). Mainnet only when ON.
-WALLET_PAGES_LIVE = "0"
+# Wallet signing page /sign/ on thespicemelange.org: ON (Sajan 10:31 PM PT; Siona passed f122f0a, 11:04 PM PT). Mainnet only;
+# prove-wallet/admin are never in production builds. "0" strips /sign/ again (API answers preview_only).
+WALLET_PAGES_LIVE = "1"
 # /sign/ upgrade action: serves store-core/upgrade-tx.json only if its sha256 is listed here (Siona-reviewed). Also needs WALLET_PAGES_LIVE.
 UPGRADE_SIGN_ENABLED = "1"
 UPGRADE_REVIEWED_SHA256 = "e000df0ffd6f7cd271a691fffe77dc0eeb324c7df9cc4704c6db2b6799dc6566"

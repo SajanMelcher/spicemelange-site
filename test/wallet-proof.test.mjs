@@ -86,7 +86,7 @@ test('prod domain: WALLET_PAGES_LIVE off -> preview_only; on -> mainnet only', a
   assert.equal((await call('challenge', { address: addr }, prod({ WALLET_PAGES_LIVE: '1' }))).reason, 'not_on_prod');
   assert.equal((await call('submit', { message: 'x', signature: 'y' }, prod({ WALLET_PAGES_LIVE: '1' }))).reason, 'not_on_prod');
   const toml = (await import('node:fs')).readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf8');
-  assert.match(toml.split('[env.')[0], /\nWALLET_PAGES_LIVE = "0"/);
+  assert.match(toml.split('[env.')[0], /\nWALLET_PAGES_LIVE = "1"/); // prod /sign/ ON since 11:04 PM PT (Siona passed f122f0a)
 });
 
 test('prod domain admin-tx: only status / pause / unpause', async () => {
