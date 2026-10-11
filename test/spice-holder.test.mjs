@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { ed25519 } from '@noble/curves/ed25519';
 import * as H from '../store-core/spice-holder.js';
-import { handle, gate } from '../store-core/spice-api.js';
+import { handle, gate, ownedSerials } from '../store-core/spice-api.js';
 import { personalMessageDigest, suiAddress } from '../store-core/suisig.js';
 import { referencePrices } from '../store-core/spice-wallet.js';
 import { checkTrade, minOut, TRADE_LIMITS } from '../store-core/spice-trade.js';
@@ -147,4 +147,12 @@ test('page wording: TESTNET PREVIEW label, targets not promises, no forbidden wo
   const r = summary({ display_name: '<img src=x>', mode: 'token_view_only', as_of: 'a', btc_price_usd: '1', price_source: 's', totals: { principal_usd: 1, accrued_sats: 1, value_usd: 0 } });
   assert.ok(!r.includes('<img'));
   assert.ok(!certTable({ certificates: [] }).includes('issued'), 'no count of certificates issued');
+});
+
+test('on-chain ownership read: testnet GraphQL query shape and serial parse', async () => {
+  let sent;
+  const f = async (url, init) => { sent = { url, body: JSON.parse(init.body) }; return { json: async () => ({ data: { address: { objects: { nodes: [{ contents: { json: { serial: '2' } } }] } } } }) }; };
+  assert.deepEqual(await ownedSerials({ SPICE_CERT_TYPE: '0x1::certificate::SpiceCertificate' }, ADDR, f), [2]);
+  assert.equal(sent.url, 'https://graphql.testnet.sui.io/graphql'); assert.ok(!sent.body.query.includes('asMoveObject'));
+  assert.equal(await ownedSerials({}, ADDR, f), null);
 });

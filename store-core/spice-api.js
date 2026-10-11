@@ -16,12 +16,12 @@ export function gate(env) {
 /** The master block. Preview: the bundled FAKE sample. (Prod would read Hwi's ledger/master.json block; gate 2.) */
 export function masterBlock(env) { return SAMPLE.spice_certificates; }
 
-async function ownedSerials(env, address, fetchImpl = fetch) {
+export async function ownedSerials(env, address, fetchImpl = fetch) {
   if (!env.SPICE_CERT_TYPE) return null; // testnet package not published yet -> private map (preview)
-  const q = 'query($a:SuiAddress!,$t:String!){ address(address:$a){ objects(filter:{type:$t}, first:50){ nodes{ asMoveObject{ contents{ json } } } } } }';
+  const q = 'query($a:SuiAddress!,$t:String!){ address(address:$a){ objects(filter:{type:$t}, first:50){ nodes{ contents{ json } } } } }';
   const r = await fetchImpl(GQL_TESTNET, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ query: q, variables: { a: address, t: env.SPICE_CERT_TYPE } }) });
   const d = (await r.json()).data;
-  return (d?.address?.objects?.nodes || []).map((n) => Number(n.asMoveObject?.contents?.json?.serial)).filter(Number.isFinite);
+  return (d?.address?.objects?.nodes || []).map((n) => Number(n.contents?.json?.serial)).filter(Number.isFinite);
 }
 const bearer = (req) => (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
 
