@@ -1,0 +1,27 @@
+---
+// Stripped-down shell for wallet-signing pages on thespicemelange.org (Sajan/Siona 10:28-10:30 PM PT): brand mark, purpose,
+// action. No site nav, footer, analytics/utm script, OG tags or canonical. Always noindex. Headers (per-route CSP, no-store,
+// X-Robots-Tag) come from scripts/csp-headers.mjs; Cloudflare Access must cover the path before WALLET_PAGES_LIVE=1.
+import '../styles/global.css';
+import Sigil from '../components/Sigil.astro';
+interface Props { title: string }
+const { title } = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{title} · The Spice Melange</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="referrer" content="no-referrer" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <meta name="theme-color" content="#070914" />
+</head>
+<body class="min-h-dvh">
+  <header class="container-x max-w-2xl pt-6 flex items-center gap-2.5">
+    <Sigil class="h-8 w-8" /><span class="font-serif text-xl text-sand-50">The Spice Melange</span>
+  </header>
+  <main id="main" class="container-x max-w-2xl pt-8 pb-16"><slot /></main>
+</body>
+</html>

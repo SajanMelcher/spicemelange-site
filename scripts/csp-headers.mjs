@@ -13,13 +13,13 @@ export const CONNECT = ['https://deepbook-indexer.mainnet.mystenlabs.com'];
 // trackers"); the allowance is removed, so an injected beacon is blocked by the CSP. Turn the beacon off in the Pages
 // project too (Workers & Pages > spicemelange-site > Metrics > Web Analytics) so it isn't injected at all.
 export const SCRIPT_HOSTS = [];
-// Wallet-signing pages (/certificates/prove-wallet/, /certificates/admin/). Siona hold, Sajan 10/10 10:15 PM PT: per-route
+// Wallet-signing pages (/sign/ on prod; /certificates/prove-wallet/, /certificates/admin/ preview only). Siona hold, Sajan 10/10 10:15 PM PT: per-route
 // CSP, no wildcard https:/wss:. On these routes the site CSP is detached and replaced by a tighter one: script-src is
 // 'self' plus ONLY the sha256 of the inline scripts those two pages emit (not the site-wide hash list), and connect-src
 // is 'self' + Sui mainnet fullnode + Sui GraphQL mainnet + WALLET_HOSTS. WALLET_HOSTS lists specific hosts that an
 // injected in-app wallet fetches from the page realm; add one only after seeing it in the page's "page blocked:" error
 // text (wallet-errors.js), exact origin, never a wildcard. None observed yet.
-export const WALLET_PATHS = ['/certificates/prove-wallet/', '/certificates/admin/'];
+export const WALLET_PATHS = ['/sign/', '/certificates/prove-wallet/', '/certificates/admin/'];
 export const SUI_MAINNET = ['https://fullnode.mainnet.sui.io', 'https://graphql.mainnet.sui.io'];
 export const WALLET_HOSTS = [];
 export const WALLET_CONNECT = ["'self'", ...SUI_MAINNET, ...WALLET_HOSTS];

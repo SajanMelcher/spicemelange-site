@@ -44,6 +44,8 @@ export async function handleProof(action, { request, env }, deps = {}) {
     return json(200, { ok: true, address, scheme: v.scheme, network: v.network, id: key, message: msg, signature: rec.signature });
   }
   if (action === 'admin-tx') {
+    // Prod domain (/sign/): only read status and set_paused(true/false). Revoke/mint caps/burn/display stay preview-only.
+    if (live && !['status', 'pause', 'unpause'].includes(b?.action)) return json(403, { ok: false, reason: 'action_not_on_prod' });
     // V3-7: wallet-side pause / unpause / revoke for the AdminCap holder. Build + dry-run only; the wallet signs.
     const r = await (deps.adminTx ?? adminTx)(b); // the whole body: adminTx refuses packageId/package (V4-4)
     return json(r.ok ? 200 : 400, r);

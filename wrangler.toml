@@ -11,6 +11,9 @@ compatibility_date = "2026-10-01"
 # Wallet-signing pages /certificates/prove-wallet/ + /certificates/admin/ on thespicemelange.org: OFF until Siona passes them
 # (build strips them, API answers preview_only). Mainnet only when ON.
 WALLET_PAGES_LIVE = "0"
+# /sign/ upgrade action: serves store-core/upgrade-tx.json only if its sha256 is listed here (Siona-reviewed). Also needs WALLET_PAGES_LIVE.
+UPGRADE_SIGN_ENABLED = "1"
+UPGRADE_REVIEWED_SHA256 = "e000df0ffd6f7cd271a691fffe77dc0eeb324c7df9cc4704c6db2b6799dc6566"
 STORE_ENABLED = "1"
 SUI_NETWORK = "mainnet"
 STORE_ALLOW_MAINNET = "1"
@@ -62,6 +65,8 @@ database_id = "cfe878af-064f-4e0d-81d3-aa08b19e2ceb" # orders, amount_holds, red
 
 [env.preview.vars]
 WALLET_PAGES_LIVE = "1"
+UPGRADE_SIGN_ENABLED = "1"
+UPGRADE_REVIEWED_SHA256 = "e000df0ffd6f7cd271a691fffe77dc0eeb324c7df9cc4704c6db2b6799dc6566"
 SPICE_HOLDER_SOURCE = "d1+sample"
 SPICE_CERT_REDEEM_NETWORK = "testnet"
 STORE_ENABLED = "1"

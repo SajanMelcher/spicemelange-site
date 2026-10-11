@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { Secp256k1Keypair } from '@mysten/sui/keypairs/secp256k1';
+import { readFileSync } from 'node:fs';
 import { handleProof, proofMessage, verifyProofSignature, field } from '../store-core/wallet-proof.js';
 
 const SECRET = 'x'.repeat(40), HOST = 'prove.example.pages.dev';
@@ -82,4 +83,21 @@ test('prod domain: WALLET_PAGES_LIVE off -> preview_only; on -> mainnet only', a
   assert.equal((await call('challenge', { address: addr }, prod({ WALLET_PAGES_LIVE: '1' }))).ok, true);
   const toml = (await import('node:fs')).readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf8');
   assert.match(toml.split('[env.')[0], /\nWALLET_PAGES_LIVE = "0"/);
+});
+
+test('prod domain admin-tx: only status / pause / unpause', async () => {
+  const e = env({ SPICE_CERT_PREVIEW: undefined, WALLET_PAGES_LIVE: '1' });
+  for (const action of ['revoke_mint_cap', 'create_mint_cap', 'burn_redeemed', 'display_edit'])
+    assert.equal((await call('admin-tx', { network: 'mainnet', issuerId: '0x2', sender: '0x3', action }, e, { adminTx: async () => ({ ok: true }) })).reason, 'action_not_on_prod');
+  assert.equal((await call('admin-tx', { network: 'mainnet', issuerId: '0x2', sender: '0x3', action: 'unpause' }, e, { adminTx: async () => ({ ok: true }) })).ok, true);
+});
+test('/sign/ is standalone: brand mark + purpose + action, no site nav/footer; signAndExecute only; mainnet pinned Issuer only', () => {
+  const rd = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
+  const page = rd('../src/pages/sign/index.astro'), lay = rd('../src/layouts/Standalone.astro');
+  assert.match(page, /import Standalone from/); assert.doesNotMatch(page, /layouts\/Base/);
+  assert.doesNotMatch(lay.replace(/^\/\/.*$/gm, ''), /NAV|DISCLAIMER|<footer|<nav|og:|canonical|utm_/); assert.match(lay, /noindex, nofollow/); assert.match(lay, /<Sigil/);
+  assert.match(page, /sui:signAndExecuteTransaction/); assert.doesNotMatch(page, /sui:signTransaction'|upgrade-sign\/execute|testnet/);
+  assert.match(page, /ALL\.mainnet\[0\]/);
+  assert.match(page, /e000df0ffd6f7cd271a691fffe77dc0eeb324c7df9cc4704c6db2b6799dc6566/); assert.match(page, /37bSrXhV5D5bfmtNtLdh9gHjPpNpos3koYJ5JQC9iwLw/);
+  const cfg = rd('../astro.config.mjs'); assert.match(cfg, /'sign\/', 'certificates\/prove-wallet\/', 'certificates\/admin\/'/); assert.match(cfg, /DEPLOY_MODE === 'production'/);
 });

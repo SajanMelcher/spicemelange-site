@@ -1,0 +1,103 @@
+---
+// /sign/: ONE signing page for Sajan on thespicemelange.org (Sajan 10:30 PM PT via Siona: "give me a way to sign"; no computer).
+// (a) the reviewed Seal/collection upgrade bytes, (b) set_paused on the pinned mainnet Issuer with the AdminCap.
+// The wallet signs AND executes (sui:signAndExecuteTransaction); the server never receives a signature or relays anything.
+// Gated: WALLET_PAGES_LIVE (build + API), Cloudflare Access (OTP, one address) must protect /sign/* first. Mainnet only.
+import Standalone from '../../layouts/Standalone.astro';
+import ALL from '../../../store-core/spice-cert-admin-issuers.json';
+const ISSUER = ALL.mainnet[0]; // the one pinned mainnet Issuer (V4-4: server re-checks it)
+const EXPECTED_SHA = 'e000df0ffd6f7cd271a691fffe77dc0eeb324c7df9cc4704c6db2b6799dc6566';
+const EXPECTED_DIGEST = '37bSrXhV5D5bfmtNtLdh9gHjPpNpos3koYJ5JQC9iwLw';
+---
+<Standalone title="Sign">
+  <h1 class="text-3xl mb-3">Sign from your wallet</h1>
+  <p class="muted mb-2">Two actions, each signed and sent by your own wallet. We never ask for a seed phrase or private key, and this site never sends a transaction for you.</p>
+  <div id="wallets" class="flex flex-wrap gap-2 my-4"></div>
+  <p id="status" class="mb-6" role="status" aria-live="polite">Looking for Sui wallets in this browser…</p>
+
+  <section class="border p-4 mb-6">
+    <h2 class="text-xl mb-2">1. Spice License upgrade</h2>
+    <p class="muted text-sm mb-3">Lets The Secret Journals license open every template, including future ones. Uses your UpgradeCap. Gas about 0.045 SUI.</p>
+    <p class="text-sm">Expected SHA-256: <span class="font-mono break-all">{EXPECTED_SHA}</span></p>
+    <p class="text-sm">Expected digest: <span class="font-mono break-all">{EXPECTED_DIGEST}</span></p>
+    <p class="text-sm mb-3">Served now: SHA-256 <span id="usha" class="font-mono break-all">…</span>, digest <span id="udig" class="font-mono break-all">…</span>, simulation <span id="usim">…</span></p>
+    <button id="up" class="border px-3 py-2" disabled>Sign and send the upgrade</button>
+    <p id="uout" class="text-sm mt-2 break-all" role="status"></p>
+  </section>
+
+  <section class="border p-4">
+    <h2 class="text-xl mb-2">2. Certificate sales: pause or unpause</h2>
+    <p class="muted text-sm mb-3">Calls set_paused on the Spice Certificates Issuer <span class="font-mono">{ISSUER.issuerId.slice(0, 10)}…{ISSUER.issuerId.slice(-6)}</span> with your AdminCap. Unpause opens sales; pause stops new sales and never blocks a withdrawal request.</p>
+    <p class="text-sm mb-3">Issuer now: <span id="pstate">…</span></p>
+    <button data-a="unpause" class="border px-3 py-2 mr-2" disabled>Unpause (open sales)</button>
+    <button data-a="pause" class="border px-3 py-2" disabled>Pause</button>
+    <p id="pout" class="text-sm mt-2 break-all" role="status"></p>
+  </section>
+</Standalone>
+<script define:vars={{ ISSUER_ID: ISSUER.issuerId, EXPECTED_SHA, EXPECTED_DIGEST }}>
+  window.__SIGN = { ISSUER_ID, EXPECTED_SHA, EXPECTED_DIGEST };
+</script>
+<script>
+  import { apiCall, failText, blocked } from '../../lib/wallet-errors.js';
+  const { ISSUER_ID, EXPECTED_SHA, EXPECTED_DIGEST } = window.__SIGN;
+  const $ = (id) => document.getElementById(id);
+  const say = (t) => { $('status').textContent = t; };
+  const wallets = []; const st = { w: null, acct: null, tx: null };
+  const reg = { register: (...ws) => { wallets.push(...ws); render(); return () => {}; } };
+  window.addEventListener('wallet-standard:register-wallet', (e) => { try { e.detail(reg); } catch {} });
+  window.dispatchEvent(new CustomEvent('wallet-standard:app-ready', { detail: reg }));
+  const SAE = 'sui:signAndExecuteTransaction';
+  function render() {
+    if (st.w) return;
+    const box = $('wallets'); box.innerHTML = '';
+    for (const w of wallets.filter((w) => w.features?.[SAE])) {
+      const b = document.createElement('button'); b.className = 'border px-3 py-2'; b.textContent = 'Connect ' + w.name; b.onclick = () => connect(w); box.appendChild(b);
+    }
+    say(box.children.length ? 'Connect your wallet.' : 'No Sui wallet that can sign and send was found. Open this page inside your wallet app.');
+  }
+  async function connect(w) {
+    blocked.length = 0;
+    try { const { accounts } = await w.features['standard:connect'].connect(); st.w = w; st.acct = accounts.find((a) => a.chains?.includes('sui:mainnet')) ?? accounts[0]; }
+    catch (e) { say(failText(w.name + ' connect', e)); return; }
+    $('wallets').innerHTML = ''; say('Connected ' + st.acct.address.slice(0, 10) + '…' + st.acct.address.slice(-6));
+    refreshUpgrade(); admin('status');
+  }
+  async function refreshUpgrade() {
+    const r = await apiCall('/api/upgrade-sign/tx', { cache: 'no-store' });
+    if (!r.ok) { $('uout').textContent = 'Upgrade unavailable: ' + r.reason + (r.detail ? ` (${r.detail})` : ''); return; }
+    st.tx = r; $('usha').textContent = r.sha256; $('udig').textContent = r.summary.txDigest; $('usim').textContent = r.simulation.status;
+    const ok = r.sha256 === EXPECTED_SHA && r.summary.txDigest === EXPECTED_DIGEST && r.simulation.status === 'SUCCESS';
+    const mine = st.acct?.address === r.summary.sender;
+    $('up').disabled = !(ok && mine);
+    if (!ok) $('uout').textContent = 'Do not sign: the served bytes are not the reviewed ones, or they no longer simulate. Ask the Ixians for a rebuild.';
+    else if (!mine) $('uout').textContent = 'Switch your wallet to the UpgradeCap account ' + r.summary.sender.slice(0, 10) + '…' + r.summary.sender.slice(-6) + ' and reconnect.';
+    else $('uout').textContent = 'Ready. Your wallet should show an upgrade of package ' + r.summary.package.slice(0, 10) + '… costing about ' + r.simulatedNetSui + ' SUI.';
+  }
+  $('up').onclick = async () => {
+    const r = st.tx; blocked.length = 0; $('up').disabled = true;
+    try {
+      $('uout').textContent = 'Approve the upgrade in ' + st.w.name + '…';
+      // The bytes are fully built (sender, gas coin, budget, price), so a wallet that rebuilds them gets the same bytes and digest.
+      const out = await st.w.features[SAE].signAndExecuteTransaction({ transaction: { toJSON: async () => r.txBytesB64 }, account: st.acct, chain: 'sui:mainnet' });
+      const d = String(out.digest).replace(/[^A-Za-z0-9]/g, '');
+      $('uout').textContent = (d === EXPECTED_DIGEST ? 'Sent. Digest ' + d + ' (matches the reviewed digest). Send it to the Ixians.' : 'Sent, but the digest ' + d + ' is NOT the reviewed one. Tell Siona and the Ixians now.');
+    } catch (e) { $('uout').textContent = 'Not sent. ' + failText(st.w.name + ' signAndExecuteTransaction', e); $('up').disabled = false; }
+  };
+  async function admin(action) {
+    const r = await apiCall('/api/wallet-proof/admin-tx', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ network: 'mainnet', issuerId: ISSUER_ID, sender: st.acct.address, action }) });
+    if (r.status) {
+      $('pstate').textContent = (r.status.paused ? 'PAUSED (sales closed)' : 'UNPAUSED (sales open)') + (r.status.admin_cap ? '; this wallet holds the AdminCap' : '; this wallet does NOT hold the AdminCap');
+      document.querySelectorAll('[data-a]').forEach((b) => { b.disabled = !r.status.admin_cap || (b.dataset.a === 'pause') === !!r.status.paused; });
+    }
+    if (!r.ok) { $('pout').textContent = 'Not available: ' + r.reason + (r.detail ? ` [${r.detail}]` : ''); return; }
+    if (action === 'status') return;
+    if (!r.ready) { $('pout').textContent = 'Dry-run did not pass: ' + (r.dry_run?.error || r.dry_run?.status); return; }
+    blocked.length = 0; $('pout').textContent = 'Dry-run passed. Your wallet should show ' + r.target + '. Approve it…';
+    try {
+      const out = await st.w.features[SAE].signAndExecuteTransaction({ transaction: { toJSON: async () => r.tx_json }, account: st.acct, chain: 'sui:mainnet' });
+      $('pout').textContent = 'Sent: ' + String(out.digest).replace(/[^A-Za-z0-9]/g, ''); setTimeout(() => admin('status'), 3000);
+    } catch (e) { $('pout').textContent = 'Not sent. ' + failText(st.w.name + ' signAndExecuteTransaction', e); }
+  }
+  document.querySelectorAll('[data-a]').forEach((b) => { b.onclick = () => { b.disabled = true; admin(b.dataset.a); }; });
+  setTimeout(render, 1500);
+</script>

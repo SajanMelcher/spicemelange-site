@@ -30,19 +30,19 @@ test('hashes every executable inline script and style, skips src= and JSON data 
 // Siona hold / Sajan 10/10 10:15 PM PT: per-route CSP on the wallet pages, hash-pinned, no wildcard connect-src.
 import { walletBlock, WALLET_PATHS, csp as cspFn, siteBlock as siteFn } from '../scripts/csp-headers.mjs';
 test('wallet-signing routes: own hashes only, connect-src self + Sui mainnet fullnode/GraphQL, no wildcard, noindex', () => {
-  assert.deepEqual(WALLET_PATHS, ['/certificates/prove-wallet/', '/certificates/admin/']);
+  assert.deepEqual(WALLET_PATHS, ['/sign/', '/certificates/prove-wallet/', '/certificates/admin/']);
   const h = { '/certificates/prove-wallet/': { scripts: ["'sha256-p'"], styles: [] }, '/certificates/admin/': { scripts: ["'sha256-a'"], styles: [] } };
   const b = walletBlock(h);
   for (const p of WALLET_PATHS) assert.ok(b.includes(p + '*\n  ! Content-Security-Policy\n'));
   const lines = b.split('\n').filter((l) => l.includes('Content-Security-Policy:'));
-  assert.equal(lines.length, 2);
+  assert.equal(lines.length, 3); lines.shift(); // /sign/ has no hashes in this fixture
   assert.match(lines[0], /script-src 'self' 'sha256-p';/); assert.doesNotMatch(lines[0], /sha256-a/);
   assert.match(lines[1], /script-src 'self' 'sha256-a';/); assert.doesNotMatch(lines[1], /sha256-p/);
   for (const l of lines) {
     assert.match(l, /connect-src 'self' https:\/\/fullnode\.mainnet\.sui\.io https:\/\/graphql\.mainnet\.sui\.io;/);
     assert.doesNotMatch(l, /https: |wss:|\*|unsafe-eval|testnet/); assert.match(l, /frame-ancestors 'none'/);
   }
-  assert.equal((b.match(/X-Robots-Tag: noindex, nofollow/g) || []).length, 2);
+  assert.equal((b.match(/X-Robots-Tag: noindex, nofollow/g) || []).length, 3);
   assert.match(siteFn({ scripts: ["'sha256-x'"], styles: [] }), /connect-src 'self' https:\/\/deepbook-indexer\.mainnet\.mystenlabs\.com;/); // rest of the site unchanged
   assert.equal(cspFn({ scripts: [], styles: [] }).includes('sui.io'), false);
 });
