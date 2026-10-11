@@ -544,7 +544,7 @@ test('withdrawal step 1: redeem-quote builds request_redemption for the signed-i
   else assert.equal(R.redeemTarget({ SPICE_CERT_REDEEM_NETWORK: 'mainnet' }).packageId, IDS.mainnet.packageId);
   const { wranglerVar } = await import('../scripts/wrangler-var.mjs');
   const toml = readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf8');
-  assert.equal(wranglerVar(toml, 'SPICE_CERT_REDEEM_NETWORK', 'production'), 'mainnet'); assert.equal(wranglerVar(toml, 'SPICE_CERT_MAINNET_SALES', 'production'), '0'); assert.equal(wranglerVar(toml, 'SPICE_CERT_REDEEM_NETWORK', 'preview'), 'testnet');
+  assert.equal(wranglerVar(toml, 'SPICE_CERT_REDEEM_NETWORK', 'production'), 'mainnet'); assert.equal(wranglerVar(toml, 'SPICE_CERT_MAINNET_SALES', 'production'), '1'); assert.equal(wranglerVar(toml, 'SPICE_HOLDERS_LIVE', 'production'), '1'); assert.equal(wranglerVar(toml, 'SPICE_HOLDER_SOURCE', 'production'), 'd1'); assert.equal(wranglerVar(toml, 'SPICE_CERT_REDEEM_NETWORK', 'preview'), 'testnet');
   const OWNER = '0x' + 'a'.repeat(64), CERT = '0x' + 'c'.repeat(64);
   let simulated = null;
   const fake = (status = 0) => ({ core: {
@@ -588,7 +588,7 @@ test('mainnet ids (v6) come only from deploy.mainnet.json via the generated file
   assert.equal(q.u, 'https://graphql.mainnet.sui.io/graphql'); assert.equal(q.body.variables.t, IDS.mainnet.certificateType);
   // sales-status endpoint: public, live paused flag, paused message
   const st = await call('cert-sales-status', {}, null, { issuerPaused: async (t) => { assert.equal(t.issuerId, IDS.mainnet.issuerId); return true; }, client: {} }, { ...ENV, SPICE_CERT_REDEEM_NETWORK: 'mainnet' });
-  assert.equal(st.ok, true); assert.equal(st.paused, true); assert.equal(st.sales_open, false); assert.match(st.message, /Sales are paused right now and open shortly/);
+  assert.equal(st.ok, true); assert.equal(st.paused, true); assert.equal(st.sales_open, false); assert.match(st.message, /^Sales are paused. Don't send USDC to any address; payments made while paused get no certificate and are refunded by hand. Pausing never blocks a withdrawal request.$/);
   const st2 = await call('cert-sales-status', {}, null, { issuerPaused: async () => false, client: {} }, { ...ENV, SPICE_CERT_REDEEM_NETWORK: 'mainnet' });
   assert.equal(st2.sales_open, false, 'unpaused on-chain but SPICE_CERT_MAINNET_SALES off');
   // built mainnet pages carry no testnet banner (checked when the build is a mainnet build)
@@ -597,5 +597,90 @@ test('mainnet ids (v6) come only from deploy.mainnet.json via the generated file
     for (const p of ['certificates/index.html', 'certificates/holder/index.html', 'index.html'])
       assert.doesNotMatch(readFileSync(new URL('../dist/' + p, import.meta.url), 'utf8'), /Testnet preview|TESTNET PREVIEW|tUSDC/, p);
     assert.ok(readFileSync(b, 'utf8').includes(IDS.mainnet.packageId.slice(0, 6)) && readFileSync(b, 'utf8').includes(IDS.mainnet.issuerId.slice(-4)));
+  }
+});
+
+// ---------------------------------------------------------------- production holder records (D1, migrations/0012)
+import { ledgerSql, mintRowSql, followOnce } from '../scripts/spice-holder-sync.mjs';
+const prodDb = () => makeD1([new URL('../migrations/0011_spice_nonces.sql', import.meta.url), new URL('../migrations/0012_spice_holder_rows.sql', import.meta.url)]);
+const PRODH = () => ({ SUI_NETWORK: 'mainnet', SPICE_SESSION_SECRET: SECRET, SPICE_HOLDERS_LIVE: '1', SPICE_HOLDER_SOURCE: 'd1', SPICE_CERT_REDEEM_NETWORK: 'mainnet', STORE_DB: prodDb() });
+const runSql = (db, list) => { for (const s of list) db.raw.exec(s); };
+
+test('prod holders: zero certificates renders cleanly (empty D1, empty on-chain read)', async () => {
+  const env = PRODH();
+  assert.equal(gate(env), null, 'holder data on in production with SPICE_HOLDERS_LIVE=1');
+  const r = await signInAs(sk, pk, { ownedSerials: async () => [] }, env);
+  assert.equal(r.ok, true); assert.deepEqual(r.view.certificates, []); assert.equal(r.view.network, 'mainnet'); assert.equal(r.view.preview, false);
+  assert.equal(r.view.totals.principal_usd, 0);
+  // push-ledger with no spice_certificates block yet: meta only, still empty
+  runSql(env.STORE_DB, ledgerSql({ schema_version: 'spice_certificates.v1', network: 'mainnet', rows: [] }, { holders: {} }, 'mainnet'));
+  const me = await call('me', {}, r.session, { ownedSerials: async () => [] }, env);
+  assert.equal(me.ok, true); assert.deepEqual(me.view.certificates, []);
+  for (const a of ['wallet', 'trade-quote']) assert.equal((await call(a, {}, r.session, {}, env)).reason, 'preview_only', `${a} stays testnet-preview only`);
+});
+test('prod holders: a new mint shows at once (on-chain fallback), the watcher row, then Hwi\'s ledger row replaces it', async () => {
+  const env = PRODH();
+  const r = await signInAs(sk, pk, { ownedSerials: async () => [7] }, env);
+  assert.deepEqual(r.view.certificates.map((c) => [c.serial, c.principal_usd, c.accrued_sats, c.status, c.withdrawal_status]), [[7, '100.00', 0, 'active', 'none']], 'minimal row before any write');
+  runSql(env.STORE_DB, [mintRowSql('mainnet', 7, ADDR)]);
+  let row = env.STORE_DB.raw.prepare('SELECT * FROM spice_holder_rows WHERE serial = 7').get();
+  assert.equal(row.source, 'watcher'); assert.equal(row.owner_address, ADDR); assert.equal(row.principal_usd, '100.00'); assert.equal(row.status, 'active');
+  runSql(env.STORE_DB, [mintRowSql('mainnet', 7, '0x' + '9'.repeat(64))]); // replay never overwrites
+  assert.equal(env.STORE_DB.raw.prepare('SELECT owner_address FROM spice_holder_rows WHERE serial = 7').get().owner_address, ADDR);
+  const tok = 'T'.repeat(43);
+  runSql(env.STORE_DB, ledgerSql({ schema_version: 'spice_certificates.v1', network: 'mainnet', as_of: '2026-10-11T16:05:00-07:00', btc_price_usd: '60000.00', price_source: 'fix', rows: [
+    { serial: 7, holder_ref: 'H-MN-0001', principal_usd: '100.00', accrued_sats: 36, value_usd: '0.02', status: 'active', withdrawal_status: 'none', token_hash: await tokenHash(tok) }] },
+    { holders: { 'H-MN-0001': { display_name: 'First Holder' } } }, 'mainnet'));
+  row = env.STORE_DB.raw.prepare('SELECT * FROM spice_holder_rows WHERE serial = 7').get();
+  assert.equal(row.source, 'ledger'); assert.equal(row.accrued_sats, 36);
+  const me = await call('me', {}, r.session, { ownedSerials: async () => [7] }, env);
+  assert.equal(me.view.certificates[0].accrued_sats, 36); assert.equal(me.view.display_name, 'First Holder'); assert.equal(me.view.as_of, '2026-10-11T16:05:00-07:00');
+  const tv = await call('token-view', { serial: 7, token: tok }, null, {}, env);
+  assert.equal(tv.ok, true, 'personal links work from D1'); assert.equal(tv.view.mode, 'token_view_only');
+  assert.equal((await call('me', {}, r.session, { ownedSerials: async () => [] }, env)).view.certificates.length, 0, 'not owned on-chain = not shown');
+});
+test('prod holders: signed withdrawal requests are stored privately in D1', async () => {
+  const env = PRODH();
+  const r = await signInAs(sk, pk, { ownedSerials: async () => [4] }, env);
+  const body = { kind: 'withdraw', serial: 4, asset: 'USDC', payoutAddress: '0x' + 'b'.repeat(64) };
+  const ch = await call('challenge', body, r.session, {}, env);
+  const w = await call('withdraw', { ...body, message: ch.message, signature: signMsg(ch.message) }, r.session, { ownedSerials: async () => [4] }, env);
+  assert.equal(w.ok, true, w.reason); assert.equal(w.queued, true); assert.match(w.note, /reserve@thespicemelange\.org/); assert.doesNotMatch(w.note, /preview/i);
+  const rec = env.STORE_DB.raw.prepare('SELECT * FROM spice_withdraw_requests').get();
+  assert.equal(rec.network, 'mainnet'); assert.equal(rec.serial, 4); assert.equal(JSON.parse(rec.record).request_id, w.request_id);
+});
+test('ledger push validates rows (no PII, schema fields) and the watcher follower writes minimal rows once per mint', async () => {
+  assert.throws(() => ledgerSql({ schema_version: 'spice_certificates.v1', rows: [{ serial: 1, holder_ref: 'H-X-001', principal_usd: '100.00', accrued_sats: 0, value_usd: '0.00', status: 'active', withdrawal_status: 'none', token_hash: null, display_name: 'x' }] }, null, 'mainnet'), /PII/);
+  assert.throws(() => ledgerSql({ schema_version: 'spice_certificates.v1', network: 'testnet', rows: [] }, null, 'mainnet'), /not mainnet/);
+  assert.throws(() => mintRowSql('mainnet', 1, "0x1'; DROP TABLE x;--"), /bad mint row/);
+  const { mkdtempSync, writeFileSync } = await import('node:fs'); const { tmpdir } = await import('node:os');
+  const dir = mkdtempSync(join(tmpdir(), 'fol-')); const log = join(dir, 'payments.jsonl');
+  writeFileSync(log, [{ decision: 'minted', mint_digest: 'D1', serial: 1 }, { decision: 'refused', payment_digest: 'D2' }, { decision: 'skipped_atomic_purchase', payment_digest: 'D3' }].map((x) => JSON.stringify(x)).join('\n') + '\n');
+  const db = prodDb(); const writes = [];
+  const write = (_env, sql) => { writes.push(...sql); runSql(db, sql); };
+  const events = async (_n, d) => (d === 'D1' ? [{ serial: 1, holder: ADDR }] : d === 'D3' ? [{ serial: 2, holder: '0x' + 'c'.repeat(64) }] : []);
+  const w1 = await followOnce({ env: 'preview', network: 'testnet', log, write, events });
+  assert.deepEqual(w1.map((e) => e.serial), [1, 2]);
+  assert.equal((await followOnce({ env: 'preview', network: 'testnet', log, write, events })).length, 0, 'state file: once per mint');
+  assert.deepEqual(db.raw.prepare("SELECT serial, source, principal_usd, accrued_sats, status FROM spice_holder_rows ORDER BY serial").all().map((r) => [r.serial, r.source, r.principal_usd, r.accrued_sats, r.status]),
+    [[1, 'watcher', '100.00', 0, 'active'], [2, 'watcher', '100.00', 0, 'active']]);
+});
+test('Siona 7c7f4a5f follow-ups: privacy mainnet reads + no Coinbase, no preview Seal line, paused warning, no testnet JS in mainnet builds', () => {
+  const pv = readFileSync(new URL('../src/pages/privacy.astro', import.meta.url), 'utf8');
+  assert.doesNotMatch(pv, /Coinbase/i);
+  assert.match(pv, /market price on the exchange we use for payouts, when the payout is made/);
+  assert.match(pv, /CERT_TESTNET \? \(<>/); assert.match(pv, /fullnode\.mainnet\.sui\.io/); assert.match(pv, /graphql\.mainnet\.sui\.io/);
+  const holder = readFileSync(new URL('../src/pages/certificates/holder/index.astro', import.meta.url), 'utf8');
+  assert.doesNotMatch(holder, /not used on this preview/);
+  assert.match(holder, /if \(__CERT_TESTNET__\) \{/);
+  assert.doesNotMatch(readFileSync(new URL('../src/pages/certificates/index.astro', import.meta.url), 'utf8'), /'sui:testnet'/);
+  assert.match(readFileSync(new URL('../astro.config.mjs', import.meta.url), 'utf8'), /__CERT_TESTNET__: JSON\.stringify\(\(process\.env\.SPICE_CERT_REDEEM_NETWORK \?\? 'testnet'\) !== 'mainnet'\)/);
+  const b = new URL('../dist/certificates/index.html', import.meta.url);
+  if (existsSync(b) && readFileSync(b, 'utf8').includes('data-sales-status')) { // a mainnet build
+    const dir = fileURLToPath(new URL('../dist/_astro/', import.meta.url));
+    for (const f of readdirSync(dir).filter((n) => n.endsWith('.js'))) assert.doesNotMatch(readFileSync(join(dir, f), 'utf8'), /sui:testnet/, f);
+    const pd = readFileSync(new URL('../dist/privacy/index.html', import.meta.url), 'utf8');
+    assert.doesNotMatch(pd, /testnet preview today|Coinbase/); assert.match(pd, /fullnode\.mainnet\.sui\.io/);
+    assert.ok(readFileSync(b, 'utf8').includes("Sales are paused. Don&#39;t send USDC to any address; payments made while paused get no certificate and are refunded by hand. Pausing never blocks a withdrawal request."));
   }
 });

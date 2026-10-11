@@ -9,7 +9,6 @@
 // refuses while the Issuer is paused (live) or SPICE_CERT_MAINNET_SALES is not "1".
 import { readJson, sameOrigin } from './http.js';
 import * as H from './spice-holder.js';
-import SAMPLE from './spice-sample/master.sample.json' with { type: 'json' };
 import { walletBalances } from './spice-wallet.js';
 import { tradeQuote, TRADE_LIMITS } from './spice-trade.js';
 import { licenseAccess, CERT_ELIGIBILITY, copy } from './spice-gate.js';
@@ -17,6 +16,7 @@ import { certBuyQuote, TESTNET_CERT, HOLDER_CERT_TYPE, issuerPaused, SALES_PAUSE
 import { certNetwork, certTarget, mainnetSalesOpen } from './spice-cert-net.js';
 import { SuiGrpcClient } from '@mysten/sui/grpc';
 import { certRedeemQuote, redeemTarget } from './spice-cert-redeem.js';
+import { loadBlock, loadPrivate, minimalRow, storeWithdrawal, usesD1 } from './spice-holder-store.js';
 
 const GQL_TESTNET = 'https://graphql.testnet.sui.io/graphql';
 // Function responses get none of the _headers rules (Siona SC14), so set them here. One Referrer-Policy.
@@ -29,13 +29,16 @@ export function signinGate(env) {
   if (!env?.STORE_DB) return 'not_configured';
   return null;
 }
+// Holder data is on where SPICE_HOLDERS_LIVE="1" (production, D1 records) or on the testnet preview.
+export const holdersLive = (env) => env?.SPICE_HOLDERS_LIVE === '1';
+const isPreview = (env) => env?.SUI_NETWORK === 'testnet' && env?.SPICE_CERT_PREVIEW === '1';
 export function gate(env) {
-  if (env?.SUI_NETWORK !== 'testnet' || env?.SPICE_CERT_PREVIEW !== '1') return 'preview_only';
+  if (!isPreview(env) && !holdersLive(env)) return 'preview_only';
   if (!H.requireSecret(env)) return 'not_configured';
   return null;
 }
-/** The master block. Preview: the bundled FAKE sample. (Prod would read Hwi's ledger/master.json block; gate 2.) */
-export function masterBlock(env) { return SAMPLE.spice_certificates; }
+/** The master block: SPICE_HOLDER_SOURCE (sample | d1 | d1+sample), see spice-holder-store.js. */
+export async function masterBlock(env) { return loadBlock(env, certNetwork(env)); }
 
 export async function ownedSerials(env, address, fetchImpl = fetch) {
   // network switch SPICE_CERT_REDEEM_NETWORK: mainnet reads mainnet GraphQL with the mainnet certificate type (generated ids)
@@ -44,12 +47,18 @@ export async function ownedSerials(env, address, fetchImpl = fetch) {
   const type = mt ? mt.certificateType : (env.SPICE_CERT_TYPE || HOLDER_CERT_TYPE); // default: the generated testnet ids (single source of truth)
   if (!type) return null;
   const q = 'query($a:SuiAddress!,$t:String!){ address(address:$a){ objects(filter:{type:$t}, first:50){ nodes{ contents{ json } } } } }';
-  const r = await fetchImpl(mt ? mt.graphql : GQL_TESTNET, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ query: q, variables: { a: address, t: type } }) });
-  const d = (await r.json()).data;
-  return (d?.address?.objects?.nodes || []).map((n) => Number(n.contents?.json?.serial)).filter(Number.isFinite);
+  const url = mt ? mt.graphql : GQL_TESTNET;
+  const get = async (owner) => { const r = await fetchImpl(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ query: q, variables: { a: owner, t: type } }) });
+    return ((await r.json()).data?.address?.objects?.nodes || []).map((n) => n.contents?.json || {}); };
+  const own = (await get(address)).map((j) => Number(j.serial));
+  // After step 1 (request_redemption) the contract holds the certificate at the Issuer's address; it is still this holder's.
+  let held = [];
+  if (mt) { const me = H.normAddr(address); held = (await get(mt.issuerId)).filter((j) => H.normAddr(j.holder) === me).map((j) => Number(j.serial)); }
+  return [...new Set([...own, ...held])].filter(Number.isFinite);
 }
 const bearer = (req) => (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
 const HOLDER_ACTIONS = new Set(['token-view', 'me', 'withdraw', 'wallet', 'trade-quote', 'redeem-quote']);
+const PREVIEW_ONLY_ACTIONS = new Set(['wallet', 'trade-quote']); // testnet wallet + DeepBook testnet trade panel
 
 export async function handle(action, context, deps = {}) {
   const { request, env } = context;
@@ -57,14 +66,22 @@ export async function handle(action, context, deps = {}) {
   const sg = signinGate(env); if (sg) return json(503, { ok: false, reason: sg });
   const holderOk = !gate(env);
   if (HOLDER_ACTIONS.has(action) && !holderOk) return json(503, { ok: false, reason: 'preview_only' });
+  if (PREVIEW_ONLY_ACTIONS.has(action) && !isPreview(env)) return json(503, { ok: false, reason: 'preview_only' });
   if (request.method !== 'POST') return json(405, { ok: false, reason: 'method' });
   if (!sameOrigin(request)) return json(403, { ok: false, reason: 'bad_origin' });
   const secret = H.requireSecret(env), host = new URL(request.url).host, db = env.STORE_DB;
   const b = (await readJson(request)) || {};
   const access = (addr) => (deps.licenseAccess ?? licenseAccess)(addr, { m: CERT_ELIGIBILITY });
-  const block = masterBlock(env), holders = H.parsePrivate(env);
-  if (holderOk) { const bad = H.validateBlock(block); if (bad.length) return json(500, { ok: false, reason: 'ledger_block_invalid' }); }
-  const holderView = async (addr) => (holderOk ? H.viewByAddress(block, holders, addr, await (deps.ownedSerials ?? ownedSerials)(env, addr)) : null);
+  const needBlock = holderOk && (HOLDER_ACTIONS.has(action) || action === 'signin');
+  const block = needBlock ? await masterBlock(env) : null, holders = needBlock ? await loadPrivate(env, H.parsePrivate) : {};
+  if (needBlock) { const bad = H.validateBlock(block); if (bad.length) return json(500, { ok: false, reason: 'ledger_block_invalid' }); }
+  const holderView = async (addr) => {
+    if (!holderOk) return null;
+    const owned = await (deps.ownedSerials ?? ownedSerials)(env, addr);
+    // D1 sources: a certificate owned on-chain without a row yet (minted since Hwi's last run) shows as the minimal row.
+    const b = block.synth && owned ? { ...block, rows: [...block.rows, ...owned.filter((n) => !block.rows.some((r) => Number(r.serial) === n)).map(minimalRow)] } : block;
+    return H.viewByAddress(b, holders, addr, owned);
+  };
 
   if (action === 'challenge') {
     const nonce = await H.makeNonce(secret, now);
@@ -125,8 +142,11 @@ export async function handle(action, context, deps = {}) {
     const locked = await H.lockPending(db, serial, rec.request_id, now); if (locked) return json(409, { ok: false, reason: locked });
     const kv = env.SPICE_WITHDRAW_QUEUE_TESTNET;
     if (kv) await kv.put(`w:${rec.request_id}`, JSON.stringify(rec), { expirationTtl: 30 * 86400 });
-    return json(200, { ok: true, queued: !!kv, request_id: rec.request_id, payout_deadline_pt: rec.payout_deadline_pt,
-      note: kv ? 'Queued on the TESTNET preview queue. Nothing is paid on preview.' : 'Preview: signature verified and the request locked for this certificate, but no queue is bound, so nothing else was stored. Nothing is paid on preview.' });
+    else if (usesD1(env)) await storeWithdrawal(env, certNetwork(env), rec, now);
+    const stored = !!kv || usesD1(env);
+    return json(200, { ok: true, queued: stored, request_id: rec.request_id, payout_deadline_pt: rec.payout_deadline_pt,
+      note: isPreview(env) ? (stored ? 'Queued on the TESTNET preview queue. Nothing is paid on preview.' : 'Preview: signature verified and the request locked for this certificate, but no queue is bound, so nothing else was stored. Nothing is paid on preview.')
+        : 'Request recorded. Now confirm it by email from the address on file to reserve@thespicemelange.org. Nothing is paid automatically.' });
   }
   if (action === 'redeem-quote') {
     // Withdrawal step 1 (terms v2026.10.10.3): on-chain request_redemption for the signed-in wallet's own certificate.

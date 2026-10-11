@@ -37,6 +37,7 @@ export default defineConfig({
   output: 'static',
   trailingSlash: 'ignore',
   build: { inlineStylesheets: 'auto' },
-  vite: { plugins: [tailwindcss()] },
+  // Siona item 6: testnet-only client code (wallet + DeepBook testnet trade panels) is compiled out of mainnet builds.
+  vite: { plugins: [tailwindcss()], define: { __CERT_TESTNET__: JSON.stringify((process.env.SPICE_CERT_REDEEM_NETWORK ?? 'testnet') !== 'mainnet') } },
   integrations: [certsLaunchGate],
 });

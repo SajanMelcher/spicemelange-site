@@ -94,7 +94,7 @@ const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
     const $ = (s: string) => document.querySelector(s) as HTMLElement;
     const say = (t: string) => { $('[data-msg]').textContent = t; };
     const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] as string));
-    let lastTx: unknown = null; let lastChain = 'sui:testnet';
+    let lastTx: unknown = null; let lastChain = ''; // set from the server's quote (q.chain); never defaulted
     // Live sales status (mainnet): the Issuer's paused flag, read by the server on every page load.
     const st = document.querySelector('[data-sales-status]') as HTMLElement | null;
     if (st) api('cert-sales-status').then((r: any) => { if (r?.ok && r.sales_open) st.classList.add('hidden'); else if (r?.message) ($('[data-sales-msg]').textContent = r.message); }).catch(() => {});

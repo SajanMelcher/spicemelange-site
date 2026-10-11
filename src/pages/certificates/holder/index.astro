@@ -33,7 +33,7 @@ const TEST = CERT_TARGET_AT_BUILD?.testnet !== false;
   <section class="container-x py-3" aria-label="Sign in">
     <div class="card flex flex-col gap-3 sm:flex-row sm:items-center" data-signin-card>
       <button type="button" class="btn-primary" data-signin>Sign in with your Sui wallet</button>
-      <p class="text-sm text-sand-200" role="status" aria-live="polite" data-msg>Your statement is shown only after your wallet signature (or your private link). Seal encryption is not used on this preview.</p>
+      <p class="text-sm text-sand-200" role="status" aria-live="polite" data-msg>Your statement is shown only after your wallet signature (or your private link).</p>
     </div>
   </section>
 
@@ -102,11 +102,13 @@ const TEST = CERT_TARGET_AT_BUILD?.testnet !== false;
     $('[data-signin]').addEventListener('click', async () => {
       try {
         const r = await signIn(say); if (!r) return;
-        if (!r.view) return say(document.querySelector('[data-testnet-label]') ? 'Signed in. Holder statements are a testnet preview and are not switched on here.' : 'Signed in. Holder statements are not switched on yet.');
+        if (!r.view) return say(__CERT_TESTNET__ ? 'Signed in. Holder statements are a testnet preview and are not switched on here.' : 'Signed in. Holder statements are not switched on yet.');
         if (!r.view.certificates.length) return say('Signed in. This wallet holds no Spice Certificate.');
         render(r.view); say('Signed in. Session lasts 15 minutes.');
-        const w = document.querySelector('[data-wallet-card]') ? await api('wallet') : { ok: false }; if (w.ok) { $('[data-wallet-card]').classList.remove('hidden'); $('[data-wallet]').innerHTML = walletTable(w); }
-        document.querySelector('[data-trade-card]')?.classList.remove('hidden');
+        if (__CERT_TESTNET__) { // testnet wallet + DeepBook testnet trade panels: compiled out of mainnet builds (Siona item 6)
+          const w = await api('wallet'); if (w.ok) { $('[data-wallet-card]').classList.remove('hidden'); $('[data-wallet]').innerHTML = walletTable(w); }
+          $('[data-trade-card]').classList.remove('hidden');
+        }
       } catch (e) { say('Wallet error: ' + (e?.message ?? e)); }
     });
 
@@ -135,7 +137,8 @@ const TEST = CERT_TARGET_AT_BUILD?.testnet !== false;
       } catch (e) { say('Not signed.', '[data-wd-msg]'); }
     });
 
-    document.querySelector('[data-tr-form]')?.addEventListener('submit', async (e) => {
+    if (__CERT_TESTNET__) {
+    $('[data-tr-form]').addEventListener('submit', async (e) => {
       e.preventDefault(); lastTx = null; $('[data-tr-sign]').classList.add('hidden');
       const slip = Math.round(Number($('[data-tr-slip]').value) * 100);
       if (!(slip >= 1 && slip <= 300)) return ($('[data-tr-out]').textContent = 'Slippage limit must be between 0.01% and 3%.');
@@ -145,7 +148,7 @@ const TEST = CERT_TARGET_AT_BUILD?.testnet !== false;
       $('[data-tr-out]').innerHTML = quoteBlock(q);
       if (q.tx_json) { lastTx = q.tx_json; $('[data-tr-sign]').classList.remove('hidden'); }
     });
-    document.querySelector('[data-tr-sign]')?.addEventListener('click', async () => {
+    $('[data-tr-sign]').addEventListener('click', async () => {
       const f = state.wallet?.features?.['sui:signAndExecuteTransaction'];
       if (!f || !lastTx) return;
       try {
@@ -154,5 +157,6 @@ const TEST = CERT_TARGET_AT_BUILD?.testnet !== false;
       } catch (e) { $('[data-tr-out]').insertAdjacentHTML('beforeend', '<p class="mt-2">Not signed.</p>'); }
       lastTx = null; $('[data-tr-sign]').classList.add('hidden');
     });
+    }
   </script>
 </Base>

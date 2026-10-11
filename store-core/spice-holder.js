@@ -109,7 +109,7 @@ const PUBLIC_ROW = ['serial', 'principal_usd', 'accrued_sats', 'value_usd', 'las
 export function viewOf(block, rows, holders, mode) {
   const ref = rows[0]?.holder_ref;
   return {
-    mode, network: 'testnet', preview: true, as_of: block.as_of, btc_price_usd: block.btc_price_usd, price_source: block.price_source,
+    mode, network: block.network ?? 'testnet', preview: (block.network ?? 'testnet') !== 'mainnet', as_of: block.as_of, btc_price_usd: block.btc_price_usd, price_source: block.price_source,
     display_name: (ref && holders[ref]?.display_name) || 'Holder',
     certificates: rows.map((r) => Object.fromEntries(PUBLIC_ROW.map((k) => [k, r[k] ?? null]))),
     totals: { principal_usd: rows.reduce((t, r) => t + Number(r.principal_usd || 0), 0), accrued_sats: rows.reduce((t, r) => t + Number(r.accrued_sats || 0), 0),

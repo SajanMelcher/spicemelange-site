@@ -33,7 +33,8 @@ export async function issuerPaused(t, c) {
   try { const r = await c.core.getObject({ objectId: t.issuerId, include: { json: true } }); const p = r.object?.json?.paused; return p === false ? false : true; }
   catch { return true; }
 }
-export const SALES_PAUSED = 'Sales are paused right now and open shortly. Pausing never blocks a withdrawal request.';
+// Paused banner (Sajan via parent 10:08 PM PT 10/10 + Siona item 5), verbatim.
+export const SALES_PAUSED = "Sales are paused. Don't send USDC to any address; payments made while paused get no certificate and are refunded by hand. Pausing never blocks a withdrawal request.";
 
 /** Find the wallet's DeskLicense + payment coin for target `t` (testnet default), build purchase, dry-run. Never signs, never submits.
  *  Mainnet: refuses while the Issuer is paused (read live) or the site switch SPICE_CERT_MAINNET_SALES is off. */
