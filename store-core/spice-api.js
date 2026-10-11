@@ -13,6 +13,7 @@ import { walletBalances } from './spice-wallet.js';
 import { tradeQuote, TRADE_LIMITS } from './spice-trade.js';
 import { licenseAccess, CERT_ELIGIBILITY, copy } from './spice-gate.js';
 import { certBuyQuote, TESTNET_CERT, HOLDER_CERT_TYPE } from './spice-cert-buy.js';
+import { certRedeemQuote, redeemTarget } from './spice-cert-redeem.js';
 
 const GQL_TESTNET = 'https://graphql.testnet.sui.io/graphql';
 // Function responses get none of the _headers rules (Siona SC14), so set them here. One Referrer-Policy.
@@ -42,7 +43,7 @@ export async function ownedSerials(env, address, fetchImpl = fetch) {
   return (d?.address?.objects?.nodes || []).map((n) => Number(n.contents?.json?.serial)).filter(Number.isFinite);
 }
 const bearer = (req) => (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
-const HOLDER_ACTIONS = new Set(['token-view', 'me', 'withdraw', 'wallet', 'trade-quote']);
+const HOLDER_ACTIONS = new Set(['token-view', 'me', 'withdraw', 'wallet', 'trade-quote', 'redeem-quote']);
 
 export async function handle(action, context, deps = {}) {
   const { request, env } = context;
@@ -112,6 +113,12 @@ export async function handle(action, context, deps = {}) {
     if (kv) await kv.put(`w:${rec.request_id}`, JSON.stringify(rec), { expirationTtl: 30 * 86400 });
     return json(200, { ok: true, queued: !!kv, request_id: rec.request_id, payout_deadline_pt: rec.payout_deadline_pt,
       note: kv ? 'Queued on the TESTNET preview queue. Nothing is paid on preview.' : 'Preview: signature verified and the request locked for this certificate, but no queue is bound, so nothing else was stored. Nothing is paid on preview.' });
+  }
+  if (action === 'redeem-quote') {
+    // Withdrawal step 1 (terms v2026.10.10.3): on-chain request_redemption for the signed-in wallet's own certificate.
+    const t = redeemTarget(env); if (!t) return json(503, { ok: false, reason: 'not_configured' });
+    try { return json(200, { ok: true, ...(await (deps.certRedeemQuote ?? certRedeemQuote)({ address: s.address, serial: Number(b.serial), asset: b.asset }, t)) }); }
+    catch (e) { return json(400, { ok: false, reason: String(e.message || e).slice(0, 200) }); }
   }
   if (action === 'wallet') return json(200, { ok: true, ...(await (deps.walletBalances ?? walletBalances)(s.address)) });
   if (action === 'trade-quote') {

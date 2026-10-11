@@ -59,7 +59,7 @@ export function withdrawalMessage(host, nonce, { serial, asset, payoutAddress })
   return ['The Spice Melange: Spice Certificate WITHDRAWAL REQUEST (TESTNET PREVIEW)',
     `I hold Spice Certificate No. ${serial} and request redemption of the whole certificate.`,
     `Payout asset: ${asset} on ${ASSETS[asset].network}`, `Payout address: ${payoutAddress}`,
-    'Payout price: the Coinbase market price at the time of withdrawal.',
+    'Payout price: Bitcoin payouts are priced at the market price on the exchange we use for payouts, when the payout is made, and sent by hand after approval.',
     'Each payout is approved by hand by Sajan Melcher. Target: within 6 hours of a verified request (a target, not a promise).',
     'This is a message, not a transaction: no gas, nothing moves now.',
     `Domain: ${host}`, `Nonce: ${nonce}`].join('\n');

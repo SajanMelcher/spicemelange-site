@@ -5,7 +5,7 @@ import { CERT_TERMS_VERSION } from '../../../data/cert-terms';
 import Base from '../../../layouts/Base.astro';
 import Disclaimer from '../../../components/Disclaimer.astro';
 import CertFooterHook from '../../../components/CertFooterHook.astro';
-import { PAYOUT_PRICING } from '../../../data/certificates';
+import { PAYOUT_PRICING, WITHDRAW_STEPS, WITHDRAW_BOX, RATE_IN_PRACTICE } from '../../../data/certificates';
 ---
 <Base title="Spice Certificate holders (TESTNET PREVIEW)" description="Testnet preview of the Spice Certificate holder page. Sample data only." noindex>
   <section class="container-x pt-12 pb-2">
@@ -20,8 +20,8 @@ import { PAYOUT_PRICING } from '../../../data/certificates';
       <ul class="mt-2 list-disc space-y-1 pl-5">
         <li><b>This is not a bank deposit.</b> It is not a savings account and we are not a bank. <b>It is not insured</b> (not FDIC, not SIPC, no insurer). <b>It is not registered</b> with the SEC or any state regulator.</li>
         <li><b>Your money is invested, not set aside:</b> 38% USDC reserve on Sui, 62% STRC on a third-party platform. About $19 per certificate is kept for withdrawals.</li>
-        <li><b>Neither your $100 nor the 8% is assured.</b> The 8% APR in sats is a <b>target</b>, rounded down daily (about 7.9% in practice). Payment depends on our ability to pay; <b>you could lose some or all of your money.</b></li>
-        <li><b>Not available on demand.</b> Every withdrawal needs a verified, signed request and Sajan Melcher's manual approval of that specific payment. We aim to pay within 6 hours of a verified request: a <b>target, not a promise</b>.</li>
+        <li><b>Neither your $100 nor the 8% is assured.</b> The 8% APR in sats is a <b>target</b>, rounded down daily ({RATE_IN_PRACTICE}) Payment depends on our ability to pay; <b>you could lose some or all of your money.</b></li>
+        <li><b>Not available on demand.</b> {WITHDRAW_BOX} We aim to pay within 6 hours of a verified request: a <b>target, not a promise</b>.</li>
         <li>If you choose BTC, you take the BTC price risk. Certificates are non-transferable. Taxes are yours. No investment, tax or legal advice.</li>
       </ul>
       <p class="mt-2 text-xs muted">Terms: <a class="text-ibad-300" href="/certificates/terms/" data-cert-terms-link>Spice Certificate terms</a> (version {CERT_TERMS_VERSION}). Sats accrue as floor(100 × 0.08 / 365 / BTC price × 100,000,000) per certificate per day, using the 4 PM PT price; our ledger is the official record and updates once a day.</p>
@@ -40,16 +40,14 @@ import { PAYOUT_PRICING } from '../../../data/certificates';
 
     <article class="card mt-6" data-withdraw-card>
       <h2 class="font-serif text-2xl text-sand-50">How to withdraw</h2>
-      <ol class="mt-2 list-decimal space-y-1 pl-5 text-sm text-sand-200">
-        <li>Whole certificates only. Choose <b>USDC on Sui</b> or <b>BTC</b>; both are sent by Sajan through Coinbase. <b data-payout-pricing>{PAYOUT_PRICING}</b></li>
-        <li>Sign the request below with the wallet that holds the certificate, <b>or</b> email <a class="link" href="mailto:reserve@thespicemelange.org">reserve@thespicemelange.org</a> from the email you gave at purchase.</li>
-        <li>We confirm by email and confirm your payout address twice. Sajan approves each payout by hand. Target: within 6 hours of a verified request (a target, not a promise).</li>
-      </ol>
+      <p class="mt-2 text-sm text-sand-200" data-withdraw-steps>{WITHDRAW_STEPS}</p>
+      <p class="mt-2 text-sm text-sand-200">Whole certificates only. Choose <b>USDC on Sui</b> or <b>BTC</b>. <b data-payout-pricing>{PAYOUT_PRICING}</b></p>
       <form class="mt-3 grid gap-3 sm:grid-cols-4" data-wd-form>
         <label class="text-sm">Certificate <select class="input" data-wd-serial></select></label>
         <label class="text-sm">Payout <select class="input" data-wd-asset><option value="USDC">USDC on Sui</option><option value="BTC">BTC</option></select></label>
         <label class="text-sm sm:col-span-2">Payout address <input class="input font-mono" data-wd-addr autocomplete="off" spellcheck="false" placeholder="0x… or bc1…" /></label>
-        <button class="btn-primary sm:col-span-4" type="submit" data-wd-btn>Sign withdrawal request (testnet preview: nothing is paid)</button>
+        <button class="btn-ghost sm:col-span-4" type="button" data-rd-btn>1. Send on-chain redemption request (wallet signs; dry-run first)</button>
+        <button class="btn-primary sm:col-span-4" type="submit" data-wd-btn>2. Sign withdrawal request (testnet preview: nothing is paid)</button>
       </form>
       <p class="mt-2 text-xs muted" data-wd-msg>View-only links can't request a withdrawal; sign in with your wallet first.</p>
     </article>
@@ -88,7 +86,7 @@ import { PAYOUT_PRICING } from '../../../data/certificates';
       view = v; $('[data-view]').classList.remove('hidden');
       $('[data-summary]').innerHTML = summary(v); $('[data-certs]').innerHTML = certTable(v);
       $('[data-wd-serial]').innerHTML = v.certificates.filter((c) => c.status === 'active' && c.withdrawal_status === 'none').map((c) => `<option value="${c.serial}">No. ${c.serial}</option>`).join('');
-      $('[data-wd-btn]').disabled = !v.can_withdraw;
+      $('[data-wd-btn]').disabled = !v.can_withdraw; $('[data-rd-btn]').disabled = !v.can_withdraw;
     }
     // Personal view-only link: /certificates/holder/#s=<serial>&t=<token>. The fragment never reaches a server or a log (SC15).
     const frag = new URLSearchParams(location.hash.slice(1));
@@ -116,6 +114,21 @@ import { PAYOUT_PRICING } from '../../../data/certificates';
         const r = await api('withdraw', { ...body, message: ch.message, signature: await sign(ch.message) });
         say(r.ok ? `Request ${r.request_id} signed. Target payout by ${r.payout_deadline_pt} (target, not a promise). ${r.note}` : 'Refused: ' + r.reason, '[data-wd-msg]');
       } catch (err) { say('Wallet error: ' + (err?.message ?? err), '[data-wd-msg]'); }
+    });
+
+    // Withdrawal step 1 (terms v2026.10.10.3): on-chain request_redemption. The server builds + dry-runs it for the signed-in
+    // wallet's own certificate; only a passing dry-run goes to the wallet, which signs and executes (holder pays gas).
+    $('[data-rd-btn]').addEventListener('click', async () => {
+      if (!state.session) return say('Sign in with your wallet first.', '[data-wd-msg]');
+      say('Building the redemption request and running a dry-run…', '[data-wd-msg]');
+      const q = await api('redeem-quote', { serial: Number($('[data-wd-serial]').value), asset: $('[data-wd-asset]').value });
+      if (!q.ok || !q.tx_json) return say('Not ready: ' + (q.explain ?? q.reason ?? q.dry_run?.error ?? 'dry-run failed'), '[data-wd-msg]');
+      const f = state.wallet?.features?.['sui:signAndExecuteTransaction'];
+      if (!f) return say('This wallet cannot sign and send transactions here.', '[data-wd-msg]');
+      try {
+        const r = await f.signAndExecuteTransaction({ transaction: { toJSON: async () => q.tx_json }, account: state.account, chain: q.chain });
+        say(`Redemption request sent on ${q.network}: ${String(r.digest).replace(/[^A-Za-z0-9]/g, '')}. Now sign the request (step 2) and confirm by email.`, '[data-wd-msg]');
+      } catch (e) { say('Not signed.', '[data-wd-msg]'); }
     });
 
     $('[data-tr-form]').addEventListener('submit', async (e) => {

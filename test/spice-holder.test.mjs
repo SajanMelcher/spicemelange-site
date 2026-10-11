@@ -278,8 +278,8 @@ test('copy: buy page, home and nav say holders of The Secret Journals; testnet b
   assert.match(home, /available only to \{cert\.who\}/); assert.match(G.copy().who, /The Secret Journals/);
   for (const t of [buy, home, holder, data]) { assert.doesNotMatch(t, /guarantee/i); }
   assert.match(buy, /target, not a promise/); assert.match(home, /target, not a promise/);
-  assert.match(data, /Coinbase market price at the time of withdrawal/); assert.match(holder, /PAYOUT_PRICING/);
-  assert.match(H.withdrawalMessage('h', 'n', { serial: 1, asset: 'USDC', payoutAddress: ADDR }), /Coinbase market price at the time of withdrawal/);
+  assert.match(holder, /PAYOUT_PRICING/);
+  assert.match(H.withdrawalMessage('h', 'n', { serial: 1, asset: 'USDC', payoutAddress: ADDR }), /Payout price: Bitcoin payouts are priced at the market price on the exchange we use for payouts, when the payout is made, and sent by hand after approval\./);
   // Footer: option A verbatim (Sajan 8:37 PM PT), selected only when certificates are launched; LIVE text otherwise (SJ2).
   const base = readFileSync(new URL('../src/layouts/Base.astro', import.meta.url), 'utf8');
   assert.ok(site.includes('Our agent templates are educational software: they are not financial, investment, legal or tax advice, and they promise no returns.'));
@@ -491,4 +491,72 @@ test('join-the-desk and home lines (Sajan 9:50/9:51 PM PT) follow SPICE_CERTS_LI
     assert.equal(readFileSync(d('join-the-desk/index.html'), 'utf8').includes('The desk holds money only for Spice Certificates'), on);
     assert.equal(readFileSync(d('join-the-desk/index.html'), 'utf8').includes('There is no custody, no pooled account'), !on);
   }
+});
+
+test('v3 restatement lines (Tleilaxu, Sajan 9:55 PM PT) are verbatim and placed; no Coinbase anywhere on the cert pages', async () => {
+  const C = await import('../src/data/certificates.ts').catch(() => null);
+  const data = readFileSync(new URL('../src/data/certificates.ts', import.meta.url), 'utf8');
+  const L = {
+    WITHDRAW_STEPS: 'To withdraw: send the on-chain redemption request from your wallet (a small Sui gas fee), sign the request on this page with the same wallet, and confirm by email from the address on file to reserve@thespicemelange.org. Sajan approves each payout by hand. We aim to pay within 6 hours of a verified request; that is a target, not a promise.',
+    WITHDRAW_BOX: 'Withdrawals need an on-chain request, a signed request, email confirmation and manual approval.',
+    RATE_IN_PRACTICE: 'about 7.3% to 7.9% a year in practice, depending on the bitcoin price.',
+    PAYOUT_PRICING: 'Bitcoin payouts are priced at the market price on the exchange we use for payouts, when the payout is made, and sent by hand after approval.',
+    BUY_NO_CAP: 'There is no cap on how many certificates are issued.',
+    BUY_PAUSE: 'We can pause new sales or stop the automated minting key at any time. Pausing never blocks a withdrawal request.',
+    BUY_WRONG_PAYMENT: 'Payments sent the wrong way (wrong amount, from an exchange, or from a wallet without a qualifying license) get no certificate. We refund them by hand and pay the network fee.',
+  };
+  for (const [k, v] of Object.entries(L)) assert.ok(data.includes(`export const ${k} = ${JSON.stringify(v)};`), k);
+  const holder = readFileSync(new URL('../src/pages/certificates/holder/index.astro', import.meta.url), 'utf8');
+  const buy = readFileSync(new URL('../src/pages/certificates/index.astro', import.meta.url), 'utf8');
+  for (const k of ['WITHDRAW_STEPS', 'WITHDRAW_BOX', 'RATE_IN_PRACTICE', 'PAYOUT_PRICING']) assert.match(holder, new RegExp(`\\{${k}\\}`), 'holder ' + k);
+  for (const k of ['WITHDRAW_BOX', 'BUY_NO_CAP', 'BUY_PAUSE', 'BUY_WRONG_PAYMENT', 'PAYOUT_PRICING']) assert.match(buy, new RegExp(`\\{${k}\\}`), 'buy ' + k);
+  assert.doesNotMatch(holder, /about 7\.9% in practice|<b>or<\/b> email|verified, signed request and Sajan/);
+  // the on-chain step comes BEFORE the signed-message step
+  assert.ok(holder.indexOf('data-rd-btn>1. Send on-chain redemption request') > 0 && holder.indexOf('data-rd-btn>1.') < holder.indexOf('data-wd-btn>2. Sign withdrawal request'));
+  // no Coinbase on any cert page source, the signed message, or the built cert pages
+  const srcs = [data, holder, buy, readFileSync(new URL('../src/pages/certificates/terms/index.astro', import.meta.url), 'utf8'), readFileSync(new URL('../src/content-static/CERT-FOOTER-LINE-v3.txt', import.meta.url), 'utf8'),
+    H.withdrawalMessage('h', 'n', { serial: 1, asset: 'BTC', payoutAddress: 'bc1qxyz' })];
+  for (const t of srcs) assert.doesNotMatch(t, /Coinbase/i);
+  for (const f of ['certificates/index.html', 'certificates/holder/index.html', 'certificates/terms/index.html']) {
+    const u = new URL('../dist/' + f, import.meta.url);
+    if (existsSync(u)) { const h = readFileSync(u, 'utf8'); assert.doesNotMatch(h, /Coinbase/i, f);
+      if (f.includes('holder')) for (const k of ['WITHDRAW_STEPS', 'WITHDRAW_BOX', 'PAYOUT_PRICING']) assert.ok(h.includes(L[k].replace(/'/g, '&#39;')), 'built ' + k);
+      if (f === 'certificates/index.html') for (const k of ['BUY_NO_CAP', 'BUY_PAUSE', 'BUY_WRONG_PAYMENT']) assert.ok(h.includes(L[k]), 'built ' + k); }
+  }
+});
+
+test('withdrawal step 1: redeem-quote builds request_redemption for the signed-in wallet\'s own certificate; one network switch, mainnet refused until its ids land', async () => {
+  const R = await import('../store-core/spice-cert-redeem.js');
+  const IDS = JSON.parse(readFileSync(new URL('../store-core/spice-cert-testnet.json', import.meta.url), 'utf8'));
+  const t = R.redeemTarget({});
+  assert.equal(t.network, 'testnet'); assert.equal(t.packageId, IDS.buy.packageId); assert.equal(t.issuerId, IDS.buy.issuerId);
+  assert.equal(R.redeemTarget({ SPICE_CERT_REDEEM_NETWORK: 'testnet' }).network, 'testnet');
+  assert.equal(R.redeemTarget({ SPICE_CERT_REDEEM_NETWORK: 'devnet' }), null);
+  if (!IDS.mainnet) assert.equal(R.redeemTarget({ SPICE_CERT_REDEEM_NETWORK: 'mainnet' }), null, 'mainnet refused until the generated ids file has it');
+  else assert.equal(R.redeemTarget({ SPICE_CERT_REDEEM_NETWORK: 'mainnet' }).packageId, IDS.mainnet.packageId);
+  const { wranglerVar } = await import('../scripts/wrangler-var.mjs');
+  const toml = readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf8');
+  assert.equal(wranglerVar(toml, 'SPICE_CERT_REDEEM_NETWORK', 'production'), 'testnet'); assert.equal(wranglerVar(toml, 'SPICE_CERT_REDEEM_NETWORK', 'preview'), 'testnet');
+  const OWNER = '0x' + 'a'.repeat(64), CERT = '0x' + 'c'.repeat(64);
+  let simulated = null;
+  const fake = (status = 0) => ({ core: {
+    listOwnedObjects: async ({ owner, type }) => { assert.equal(owner, OWNER); assert.equal(type, t.certificateType); return { objects: [{ objectId: CERT, json: { serial: '7', status } }] }; },
+    simulateTransaction: async ({ transaction }) => { simulated = transaction; return { $kind: 'Transaction' }; },
+  } });
+  // no network: toJSON with a client that can't resolve would fail, so stub toJSON via a minimal client-less check
+  const q0 = await R.certRedeemQuote({ address: OWNER, serial: 8, asset: 'USDC' }, t, fake());
+  assert.equal(q0.ready, false); assert.equal(q0.reason, 'certificate_not_in_this_wallet');
+  const q1 = await R.certRedeemQuote({ address: OWNER, serial: 7, asset: 'USDC' }, t, fake(1));
+  assert.equal(q1.reason, 'not_active');
+  assert.equal((await R.certRedeemQuote({ address: OWNER, serial: 7, asset: 'DOGE' }, t, fake())).reason, 'bad_asset');
+  const q2 = await R.certRedeemQuote({ address: OWNER, serial: 7, asset: 'BTC' }, t, fake()).catch((e) => ({ err: e }));
+  assert.ok(simulated, 'dry-run happens before anything is handed to the wallet');
+  const d = simulated.getData();
+  const mc = d.commands[0].MoveCall;
+  assert.equal(mc.package, t.packageId); assert.equal(mc.module, 'certificate'); assert.equal(mc.function, 'request_redemption');
+  assert.equal(d.sender, OWNER);
+  // API: preview-only holder action, needs a session
+  const api = readFileSync(new URL('../store-core/spice-api.js', import.meta.url), 'utf8');
+  assert.match(api, /HOLDER_ACTIONS = new Set\(\[[^\]]*'redeem-quote'/);
+  assert.match(api, /if \(action === 'redeem-quote'\) \{[\s\S]*redeemTarget\(env\)[\s\S]*address: s\.address/);
 });

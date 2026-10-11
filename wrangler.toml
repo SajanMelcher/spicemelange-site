@@ -29,6 +29,9 @@ STORE_SINGLES_FOR_SALE = "0"
 # Spice Certificates LAUNCH flag (Siona SJ2): "0" = /certificates/*, the home card, nav link, wallet sign-in, footer option A and
 # the /privacy/ certificates section are not built, and /api/certificates/* + legacy holder links return 404. Flip at launch only.
 SPICE_CERTS_LIVE = "0"
+# Withdrawal step 1 (on-chain request_redemption): which certificate contract the holder page builds against. ONE switch:
+# "testnet" until the mainnet ids land in store-core/spice-cert-testnet.json ("mainnet" refuses until then).
+SPICE_CERT_REDEEM_NETWORK = "testnet"
 # Home "No leverage" card (Siona SJ21): "1" = Sajan's 9:19 PM PT wording ("No leverage, no borrowed money" / "The Spice Melange
 # trading desk trades on Sui with no leverage and no borrowed money."); "0" = the older card. Build time only.
 HOME_FUNDS_LINE_LIVE = "1"
@@ -47,6 +50,7 @@ database_name = "spicemelange-store-prod"
 database_id = "cfe878af-064f-4e0d-81d3-aa08b19e2ceb" # orders, amount_holds, redemptions (migrations/0001_store.sql)
 
 [env.preview.vars]
+SPICE_CERT_REDEEM_NETWORK = "testnet"
 STORE_ENABLED = "1"
 SUI_NETWORK = "testnet"
 # Spice Certificates holder data: TESTNET PREVIEW only. SPICE_CERT_PREVIEW gates the holder API (statements, withdrawals,
