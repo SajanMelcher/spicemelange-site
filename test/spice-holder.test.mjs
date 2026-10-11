@@ -335,6 +335,17 @@ test('use of proceeds: no debt or loan repayment / pay down anywhere (sources, l
     assert.doesNotMatch(ok, REPAY, `pattern must allow "${ok}"`);
   assert.match(readFileSync(new URL('../src/content-static/SPICE-CERT-TERMS.md', import.meta.url), 'utf8'), /held as a USDC reserve on Sui\. It pays withdrawals, and a small portion is used for automated trading/);
 });
+test('cert terms pin: one line to swap; not final for certs=1 (2026.10.10.3 pending Sajan)', async () => {
+  const src = readFileSync(new URL('../src/data/cert-terms.ts', import.meta.url), 'utf8');
+  const pinLines = src.split('\n').filter((l) => /^export const CERT_TERMS_/.test(l));
+  assert.equal(pinLines.length, 1, 'sha, version and status live on ONE line');
+  const status = src.match(/CERT_TERMS_STATUS: 'interim' \| 'final' = '(interim|final)'/)?.[1];
+  assert.ok(status, 'status present');
+  const { wranglerVar } = await import('../scripts/wrangler-var.mjs');
+  const prodCerts = wranglerVar(readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf8'), 'SPICE_CERTS_LIVE', 'production');
+  if (prodCerts === '1') assert.equal(status, 'final', 'SPICE_CERTS_LIVE=1 in production needs the FINAL (Sajan-approved launch) terms pin');
+  assert.equal(status, 'interim', 'today: 93bfbef2 is interim (2026.10.10.3 pending)');
+});
 test('SJ17: a certs-off build serves no certificate content (only _headers config may mention it); gate strips orphan chunks', () => {
   const cfg = readFileSync(new URL('../astro.config.mjs', import.meta.url), 'utf8');
   assert.match(cfg, /SJ17/); assert.match(cfg, /unreferenced _astro chunk/); assert.match(cfg, /certificate content left in a certs-off build/);
@@ -416,22 +427,30 @@ test('Spice Certificate terms (Sajan approved 8:40 PM PT 10/10): sha pinned, ren
     assert.doesNotMatch(readFileSync(new URL(f, import.meta.url), 'utf8'), /Draft terms|DRAFT-2026/);
 });
 
-test('testnet cert ids: one source of truth, matches the Ixians deploy files, v3 ids', (t) => {
+test('testnet cert ids: one source of truth, matches the Ixians deploy files; buy = v4, holders = v3 e2e', () => {
   const dir = '/workspace/ixians/spice-certificates';
-  // The site preview is pinned to the REVIEWED v3 testnet package. A newer package in the deploy file (v4 published 9:16 PM PT
-  // 10/10 by the certificate-package work) is not synced until it is reviewed; report the drift instead of silently following it.
-  if (existsSync(`${dir}/deploy.testnet.json`)) {
-    const d = JSON.parse(readFileSync(`${dir}/deploy.testnet.json`, 'utf8'));
-    if (String(d.design || '').startsWith('v3')) assert.deepEqual(IDS, buildIds(dir));
-    else t.diagnostic(`deploy.testnet.json is ${String(d.design).slice(0, 3)} (${String(d.packageId).slice(0, 10)}…); site stays on reviewed v3 ${IDS.buy?.packageId?.slice?.(0, 10) ?? ''}`);
-  }
-  assert.equal(IDS.design, 'v3'); assert.equal(HOLDER_CERT_TYPE, IDS.holders.certificateType);
+  // Exact match with the deploy files whenever they are present: any later republish fails this test until the ids file is re-synced
+  // (node scripts/sync-spice-cert-ids.mjs) and reviewed.
+  if (existsSync(`${dir}/deploy.testnet.json`)) assert.deepEqual(IDS, buildIds(dir));
+  assert.equal(IDS.design, 'v4'); assert.equal(IDS.buy.design, 'v4'); assert.equal(IDS.holders.design, 'v3');
+  assert.equal(IDS.buy.packageId, '0x1dd210a6592d392d2a44b95f47d6cce1904bafc1c16d191606bd7ab494622328');
+  assert.equal(IDS.buy.issuerId, '0x41e6e589d1caaa8a67ca107048912db8c6bfe19e80b54a529ed7367188c86f4b');
+  assert.equal(IDS.buy.originalPackageId, IDS.buy.packageId);
+  assert.equal(IDS.buy.paymentRefLen, 32, 'v4: canonical payment_ref = raw 32-byte tx digest');
+  assert.equal(TESTNET_CERT.packageId, IDS.buy.packageId); assert.equal(TESTNET_CERT.issuerId, IDS.buy.issuerId);
+  assert.equal(HOLDER_CERT_TYPE, IDS.holders.certificateType);
   assert.equal(IDS.buy.payee, '0x88e8516771e71da54a7449a0a46e6a0c4af71ef71ac4d379847319c7e18a780f');
-  for (const f of ['../store-core/spice-cert-buy.js', '../store-core/spice-api.js', '../wrangler.toml', '../src/pages/certificates/index.astro']) {
+  // The site never builds or passes a payment_ref: the buy page uses purchase<T>(Issuer, DeskLicense, Coin, Clock), where the
+  // contract records ctx.digest() (32 bytes) itself. The watcher path (MintCap + payment_ref) is server-side only, not on the site.
+  const buy = readFileSync(new URL('../store-core/spice-cert-buy.js', import.meta.url), 'utf8');
+  assert.match(buy, /arguments: \[tx\.object\(TESTNET_CERT\.issuerId\), tx\.object\(lic\.objectId \?\? lic\.id\), coinWithBalance\(\{ type: TESTNET_CERT\.coinType, balance: TESTNET_CERT\.price \}\), tx\.object\.clock\(\)\]/);
+  assert.doesNotMatch(buy, /payment_ref|mint_from_payment|MintCap/i);
+  for (const f of ['../store-core/spice-cert-buy.js', '../store-core/spice-api.js', '../wrangler.toml', '../src/pages/certificates/index.astro', '../src/pages/certificates/holder/index.astro']) {
     const t = readFileSync(new URL(f, import.meta.url), 'utf8');
-    assert.doesNotMatch(t, /0x8b5476e5|0x33bf1e62|0x0c6baf07|0x448d2b7c|0x494e20b7/, `stale cert id in ${f}`);
+    assert.doesNotMatch(t, /0x8b5476e5|0x33bf1e62|0x0c6baf07|0x448d2b7c|0x494e20b7|0xc281ac76|0x26887d83/, `stale cert id in ${f}`);
   }
 });
+
 test('SJ3 on the buy path: only a dune-saga-collection, non-test license is used', async () => {
   assert.equal(licenseQualifies({ template_id: 'dune-saga-collection', order_id: 'SM-AB12' }), true);
   assert.equal(licenseQualifies({ template_id: 'moneo', order_id: 'SM-AB12' }), false);
