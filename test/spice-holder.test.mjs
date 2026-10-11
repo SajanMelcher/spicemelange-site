@@ -345,7 +345,7 @@ test('use of proceeds: no debt or loan repayment / pay down anywhere (sources, l
     assert.doesNotMatch(ok, REPAY, `pattern must allow "${ok}"`);
   assert.match(readFileSync(new URL('../src/content-static/SPICE-CERT-TERMS.md', import.meta.url), 'utf8'), /\*\*38%\*\* is held as a USDC reserve on Sui\. [\s\S]*It pays withdrawals\.[\s\S]*We never borrow to pay withdrawals\./); // v2026.10.10.3
 });
-test('cert terms pin: one line to swap; 2026.10.10.3 is final (Sajan 9:50 PM PT)', async () => {
+test('cert terms pin: one line to swap; 2026.10.10.4 is final (Siona passed, 10:31 PM PT)', async () => {
   const src = readFileSync(new URL('../src/data/cert-terms.ts', import.meta.url), 'utf8');
   const pinLines = src.split('\n').filter((l) => /^export const CERT_TERMS_/.test(l));
   assert.equal(pinLines.length, 1, 'sha, version and status live on ONE line');
@@ -354,7 +354,7 @@ test('cert terms pin: one line to swap; 2026.10.10.3 is final (Sajan 9:50 PM PT)
   const { wranglerVar } = await import('../scripts/wrangler-var.mjs');
   const prodCerts = wranglerVar(readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf8'), 'SPICE_CERTS_LIVE', 'production');
   if (prodCerts === '1') assert.equal(status, 'final', 'SPICE_CERTS_LIVE=1 in production needs the FINAL (Sajan-approved launch) terms pin');
-  assert.equal(status, 'final', 'v2026.10.10.3 (2f6f6eab) approved by Sajan 9:50 PM PT as the launch text');
+  assert.equal(status, 'final', 'v2026.10.10.4 (d7a9d0f9) is the launch text');
 });
 test('SJ17: a certs-off build serves no certificate content (only _headers config may mention it); gate strips orphan chunks', () => {
   const cfg = readFileSync(new URL('../astro.config.mjs', import.meta.url), 'utf8');
@@ -420,10 +420,10 @@ test('Spice Certificate terms (Sajan approved 8:40 PM PT 10/10): sha pinned, ren
   const b = readFileSync(new URL('../src/content-static/SPICE-CERT-TERMS.md', import.meta.url));
   const pin = readFileSync(new URL('../src/data/cert-terms.ts', import.meta.url), 'utf8').match(/CERT_TERMS_SHA256 = '([0-9a-f]{64})'/)[1];
   assert.equal(createHash('sha256').update(b).digest('hex'), pin);
-  assert.equal(pin, '2f6f6eaba83c64e7c6dfe6c015bee93d354ede2529d1cf77518d56eaf1e7c3ec', 'TERMS-FINAL-v3.md v2026.10.10.3, Sajan 9:50 PM PT');
-  assert.match(b.toString('utf8'), /^Version 2026\.10\.10\.3 /m);
+  assert.equal(pin, 'd7a9d0f9942add13ff924381cf8f8e79758b3d9216f544af5bbc67f31c41326c', 'TERMS-FINAL-v4.md v2026.10.10.4 (10:31 PM PT)');
+  assert.match(b.toString('utf8'), /^Version 2026\.10\.10\.4 /m);
   // Compare with the shared file only while it still has the approved bytes (it was edited after approval before).
-  const SRC = '/home/box/agent-data/shared/portfolio-desk/spice-certificates/design/TERMS-FINAL-v3.md';
+  const SRC = '/home/box/agent-data/shared/portfolio-desk/spice-certificates/design/TERMS-FINAL-v4.md';
   if (existsSync(SRC) && createHash('sha256').update(readFileSync(SRC)).digest('hex') === pin) assert.ok(readFileSync(SRC).equals(b));
   // superseded terms files / pins are never referenced by the site
   const walk = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(join(d, e.name)) : [join(d, e.name)]));
@@ -683,4 +683,14 @@ test('Siona 7c7f4a5f follow-ups: privacy mainnet reads + no Coinbase, no preview
     assert.doesNotMatch(pd, /testnet preview today|Coinbase/); assert.match(pd, /fullnode\.mainnet\.sui\.io/);
     assert.ok(readFileSync(b, 'utf8').includes("Sales are paused. Don&#39;t send USDC to any address; payments made while paused get no certificate and are refunded by hand. Pausing never blocks a withdrawal request."));
   }
+});
+
+test('v4 (10:31 PM PT): A-1 closed with the terms sentence verbatim; home agents line replaced', () => {
+  const terms = readFileSync(new URL('../src/content-static/SPICE-CERT-TERMS.md', import.meta.url), 'utf8');
+  const holder = readFileSync(new URL('../src/pages/certificates/holder/index.astro', import.meta.url), 'utf8');
+  const S = '38% stays in USDC on Sui and is only traded to rebalance back to 62/38.';
+  assert.ok(terms.includes(S)); assert.ok(holder.includes(S)); assert.doesNotMatch(holder, /\$19/);
+  const home = readFileSync(new URL('../src/pages/index.astro', import.meta.url), 'utf8');
+  assert.ok(home.includes('Software agents help with the grind, and Sajan approves every payout himself.'));
+  assert.doesNotMatch(home, /handful of software agents|makes every decision himself/);
 });
