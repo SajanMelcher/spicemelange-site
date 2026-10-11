@@ -275,9 +275,25 @@ test('copy: buy page, home and nav say holders of The Secret Journals; testnet b
   assert.match(buy, /target, not a promise/); assert.match(home, /target, not a promise/);
   assert.match(data, /Coinbase market price at the time of withdrawal/); assert.match(holder, /PAYOUT_PRICING/);
   assert.match(H.withdrawalMessage('h', 'n', { serial: 1, asset: 'USDC', payoutAddress: ADDR }), /Coinbase market price at the time of withdrawal/);
-  assert.match(data, /TLEILAXU_CERT_FOOTER_LINE: string \| null = null/, 'Tleilaxu hook present, empty until his line lands');
+  // Footer wording option A (Sajan 8:37 PM PT 10/10), verbatim from FOOTER-WORDING-DRAFT.md.
+  const base = readFileSync(new URL('../src/layouts/Base.astro', import.meta.url), 'utf8');
+  assert.ok(site.includes('Our agent templates are educational software: they are not financial, investment, legal or tax advice, and they promise no returns.'));
+  assert.ok(site.includes('Spice Certificates are a separate, holders-only offering with a stated 8% yearly target paid in bitcoin sats. That target is not guaranteed, a certificate is not a bank deposit and is not insured, and you can lose some or all of what you pay; see the Spice Certificate terms. Nothing else on this site is an offer or a solicitation to buy or sell any asset.'));
+  assert.doesNotMatch(site, /No returns are promised or implied|deposits from the public/);
+  assert.equal((site.match(/guarantee/gi) || []).length, 1); assert.match(site, /is not guaranteed/);
+  assert.match(base, /no leveraged trading, no hurry, think in decades\./); assert.doesNotMatch(base, /no leverage, no hurry/);
+  assert.match(home, /title: 'No leveraged trading'/); assert.match(home, /without trading on borrowed spice\./); assert.doesNotMatch(home, /borrowing against tomorrow/);
 });
 test('privacy (SC16): names the server-side Sui reads and the holder data', () => {
   const p = readFileSync(new URL('../src/pages/privacy.astro', import.meta.url), 'utf8');
   for (const s of ['graphql.mainnet.sui.io', 'graphql.testnet.sui.io', 'fullnode.testnet.sui.io', 'payout address', 'signature', '30 days', 'display name', 'wallet address']) assert.ok(p.includes(s), s);
+});
+
+test('Tleilaxu footer line (Sajan 8:36 PM PT) is exact and renders only on the certificate pages', () => {
+  const LINE = 'The Fish Speakers trade with no leverage. To pay certificate withdrawals, the desk may borrow against bitcoin it holds, only as a last resort, and that borrowing carries liquidation risk.';
+  const src = readFileSync(new URL('../src/data/certificates.ts', import.meta.url), 'utf8');
+  assert.ok(src.includes(JSON.stringify(LINE)));
+  for (const f of ['certificates/index.astro', 'certificates/holder/index.astro'])
+    assert.match(readFileSync(new URL('../src/pages/' + f, import.meta.url), 'utf8'), /<CertFooterHook \/>/, f);
+  assert.doesNotMatch(readFileSync(new URL('../src/pages/index.astro', import.meta.url), 'utf8'), /CertFooterHook/);
 });

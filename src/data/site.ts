@@ -34,5 +34,7 @@ export const NAV = [
   { href: 'https://thespicemelange.org/store/', label: 'Store' },
 ];
 
+// Footer wording option A (Tleilaxu FOOTER-WORDING-DRAFT.md §1, Sajan approved 8:37 PM PT 10/10), verbatim. Base.astro appends the
+// draft's last sentence ("Market data on this site comes from public third-party sources and may be delayed or wrong.").
 export const DISCLAIMER =
-  'Education and information only. Nothing on this site is financial, investment, legal or tax advice, an offer, or a solicitation to buy or sell any asset. Bitcoin and digital assets are volatile and you can lose money. No returns are promised or implied.';
+  'Education and information only. Our agent templates are educational software: they are not financial, investment, legal or tax advice, and they promise no returns. Bitcoin and digital assets are volatile and you can lose money. Spice Certificates are a separate, holders-only offering with a stated 8% yearly target paid in bitcoin sats. That target is not guaranteed, a certificate is not a bank deposit and is not insured, and you can lose some or all of what you pay; see the Spice Certificate terms. Nothing else on this site is an offer or a solicitation to buy or sell any asset.';

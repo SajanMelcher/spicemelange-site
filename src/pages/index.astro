@@ -10,13 +10,12 @@ import LearnInvite from '../components/LearnInvite.astro';
 import { SITE, mailto } from '../data/site';
 import { copy } from '../../store-core/spice-gate.js';
 import { TESTNET_BANNER } from '../data/certificates';
-import CertFooterHook from '../components/CertFooterHook.astro';
 const cert = copy();
 
 const pillars = [
   { title: 'Patience', glyph: 'hourglass', text: 'The Golden Path is measured in decades, not candles. We buy on schedule, and we let time do the heavy lifting.' },
   { title: 'Accumulation', glyph: 'grain', text: 'Like the God Emperor’s hoard, the stack only grows. We add steadily, in small and boring amounts, and we sell no spice at a loss.' },
-  { title: 'No leverage', glyph: 'shield', text: 'No margin, no futures, no borrowed spice on the trading desk. Leverage turns a bad week into a lost path.' },
+  { title: 'No leveraged trading', glyph: 'shield', text: 'The Fish Speakers trade with no leverage: no margin, no futures. To pay Spice Certificate withdrawals, the desk may borrow against bitcoin it holds, only as a last resort, and that borrowing carries liquidation risk.' }, // option A, Sajan 8:37 PM PT 10/10
 ];
 const ways = [
   { href: '/join/', eyebrow: 'Learn', title: 'Walk the Golden Path', text: 'Hwi Noree’s gentle letters on bitcoin, self-custody and risk, in plain words.' },
@@ -37,7 +36,7 @@ const ways = [
         </h1>
         <p class="mt-6 max-w-xl text-lg leading-relaxed text-sand-200/90">
           Bitcoin is the spice melange of the cyber economy: scarce, hard to fake, and it rewards those who see far.
-          This desk hoards it the way the God Emperor kept his spice. Quietly, patiently, and without ever borrowing against tomorrow.
+          This desk hoards it the way the God Emperor kept his spice. Quietly, patiently, and without trading on borrowed spice.
         </p>
         <div class="mt-8 flex flex-wrap gap-3">
           <a class="btn-primary" href={mailto(SITE.joinSubject)}>Join the Golden Path</a>
@@ -101,7 +100,6 @@ const ways = [
       <span id="certs" class="mt-2 block font-serif text-2xl text-sand-50 group-hover:text-spice-300">Spice Certificates, for {cert.who} <span aria-hidden="true">→</span></span>
       <span class="mt-2 block text-sand-200/85">Spice Certificates are available only to {cert.who}. Sign in with your Sui wallet (a message, never a transaction or your seed phrase) to check. The 8% APR, credited in sats, is a target, not a promise, and you can lose money. Education only. {TESTNET_BANNER}</span>
     </a>
-    <CertFooterHook />
   </section>
 
   <!-- CTAs -->
