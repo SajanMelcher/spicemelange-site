@@ -1,7 +1,8 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
-import { rmSync } from 'node:fs';
+import { rmSync, existsSync, readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CERTS_LIVE_AT_BUILD } from './store-core/launch.js';
 
@@ -12,6 +13,22 @@ const certsLaunchGate = {
     if (CERTS_LIVE_AT_BUILD) return;
     rmSync(new URL('certificates/', dir), { recursive: true, force: true });
     logger.info(`SPICE_CERTS_LIVE off: removed ${fileURLToPath(new URL('certificates/', dir))}`);
+    // Siona SJ17: drop the now-orphaned scripts (wallet sign-in, holder, buy) from _astro/, so neither Pages nor the Walrus mirror
+    // serves them. A .js chunk is kept only if a remaining HTML page reaches it (directly or through imports). Then fail the build if
+    // any served file other than _headers still mentions certificates.
+    const root = fileURLToPath(dir), astroDir = join(root, '_astro');
+    const walk = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(join(d, e.name)) : [join(d, e.name)]));
+    const js = existsSync(astroDir) ? readdirSync(astroDir).filter((f) => /\.m?js$/.test(f)) : [];
+    const seen = new Set(), queue = walk(root).filter((f) => f.endsWith('.html'));
+    while (queue.length) {
+      const txt = readFileSync(queue.shift(), 'utf8');
+      for (const f of js) if (!seen.has(f) && txt.includes(f)) { seen.add(f); queue.push(join(astroDir, f)); }
+    }
+    const orphans = js.filter((f) => !seen.has(f));
+    for (const o of orphans) rmSync(join(astroDir, o), { force: true });
+    logger.info(`SPICE_CERTS_LIVE off: removed ${orphans.length} unreferenced _astro chunk(s): ${orphans.join(', ')}`);
+    const left = walk(root).filter((f) => !f.endsWith('/_headers') && /certificat/i.test(readFileSync(f, 'latin1')));
+    if (left.length) throw new Error(`SJ17: certificate content left in a certs-off build: ${left.map((f) => f.slice(root.length)).join(', ')}`);
   } },
 };
 
