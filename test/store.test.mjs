@@ -604,3 +604,38 @@ test('SJ1 single-product switch: STORE_SINGLES_FOR_SALE=0 refuses the seven $50 
   for (const n of ['03', '05', '11', '13', '14'])
     assert.doesNotMatch(readFileSync(new URL(`../content/hwi-lessons/cta/day-${n}.buyer.md`, import.meta.url), 'utf8'), /single seat|\$50/);
 });
+
+test('singles OFF (STORE_SINGLES_FOR_SALE=0): no new single orders, but past single orders keep re-downloading', async () => {
+  // A single seat bought while singles were on sale...
+  const { cfg, o } = await setup();
+  const paid = await verifyOrder(cfg, { orderId: o.orderId, token: o.token, digest: D1, nowMs: T0 + 120_000, fetchImpl: mockRpc({ [D1]: pay(o) }) });
+  assert.equal(paid.ok, true, paid.reason); assert.equal(paid.sku, 'moneo');
+  // ...then production switches singles off (same KV + D1).
+  const off = loadConfig(env({ STORE_SINGLES_FOR_SALE: '0', STORE_KV: cfg.kv, STORE_DB: cfg.db }));
+  assert.equal(off.singlesForSale, false);
+  assert.equal((await createOrder(off, { sku: 'moneo', nowMs: T0 + 200_000 })).reason, 'unknown_product', 'no NEW single orders');
+  assert.equal((await createOrder(off, { sku: 'dune-saga-collection', nowMs: T0 + 200_000 })).ok, true, 'the collection still sells');
+  const st = await orderStatus(off, { orderId: o.orderId, token: o.token, nowMs: T0 + 300_000 });
+  assert.equal(st.ok, true, st.reason); assert.equal(st.status, 'paid'); assert.equal(st.sku, 'moneo');
+  const q = Object.fromEntries(new URL(st.downloadUrl, 'https://x').searchParams);
+  assert.equal((await checkLink(off, { ...q, nowMs: T0 + 300_000 })).ok, true, 'fresh signed link verifies with singles off');
+  const dl = await authorizeDownload(off, { orderId: o.orderId, token: o.token, nowMs: T0 + 300_000 });
+  assert.equal(dl.ok, true, dl.reason); assert.equal(dl.sku, 'moneo');
+  // and the link signed BEFORE the switch still verifies until it expires
+  const q0 = Object.fromEntries(new URL(paid.downloadUrl, 'https://x').searchParams);
+  assert.equal((await checkLink(off, { ...q0, nowMs: T0 + 130_000 })).ok, true);
+});
+
+test('SJ30: catalog/gallery summary follows the singles switch, using only the approved sentence', async () => {
+  const src = readFileSync(new URL('../store-core/agent-store.js', import.meta.url), 'utf8');
+  assert.match(src, /\$\{SINGLES_FOR_SALE_AT_BUILD \? 'seven seat packs and ' : ''\}The Secret Journals \(every template, now and later\)\. Agents can order with Sui USDC/);
+  const { WORDING } = await import('../store-core/agent-store.js');
+  const { SINGLES_FOR_SALE_AT_BUILD } = await import('../store-core/catalog.js');
+  assert.equal(/seven seat packs/.test(WORDING.summary), SINGLES_FOR_SALE_AT_BUILD);
+  const catU = new URL('../dist/store/catalog.json', import.meta.url);
+  if (existsSync(catU)) {
+    const singlesOnInBuild = JSON.parse(readFileSync(catU, 'utf8')).products.some((p) => p.sku === 'moneo');
+    for (const f of ['../dist/store/catalog.json', '../dist/store/gallery/index.html'])
+      assert.equal(/seven seat packs/.test(readFileSync(new URL(f, import.meta.url), 'utf8')), singlesOnInBuild, `${f}: summary matches the build's singles state`);
+  }
+});

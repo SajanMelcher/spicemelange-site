@@ -4,9 +4,8 @@
 export const certsLive = (env) => String(env?.SPICE_CERTS_LIVE ?? '0') === '1';
 const BUILD_ENV = typeof process !== 'undefined' && process?.env ? process.env : {};
 export const CERTS_LIVE_AT_BUILD = certsLive(BUILD_ENV);
-// Home "No leverage" card wording (Siona SJ21). HOME_FUNDS_LINE_LIVE="1" shows Sajan's 8:53 PM PT wording ("No leverage, no
-// borrowed money" / "...trades on Sui with no leverage and no borrowed money.", 9:19 PM PT); anything else keeps the old LIVE card. ON in production since
-// Sajan's 9:18 PM PT 10/10 statement (USDC reserve on Sui, small portion for Fish Speakers' automated trading, no leverage). Build time only (deploy.sh and
-// walrus-update.sh export it from wrangler.toml).
+// Home "No leverage" card wording (Siona SJ21). HOME_FUNDS_LINE_LIVE="1" shows Sajan's 9:19 PM PT wording ("No leverage, no
+// borrowed money" / "The Spice Melange trading desk trades on Sui with no leverage and no borrowed money."); "0" = the older card.
+// Build time only (deploy.sh and walrus-update.sh export it from wrangler.toml).
 export const homeFundsLineLive = (env) => String(env?.HOME_FUNDS_LINE_LIVE ?? '0') === '1';
 export const HOME_FUNDS_LINE_AT_BUILD = homeFundsLineLive(BUILD_ENV);

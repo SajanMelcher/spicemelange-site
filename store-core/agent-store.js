@@ -1,6 +1,6 @@
 // Agent-native store descriptor (Sajan 2026-10-10 2:13 AM PT, heavy mode). Built into /store/catalog.json on deploy.
 // Wording lives here in one place (mirrored in portfolio-desk/store/CATALOG-WORDING.md for Tleilaxu).
-import { LISTED } from './catalog.js';
+import { LISTED, SINGLES_FOR_SALE_AT_BUILD } from './catalog.js';
 // Approved wording only (catalog-wording.js). Siona SJ1: the singles switch never changes wording.
 const CARD = (sku) => CARDS[sku];
 const PITCH = (sku) => PITCHES[sku];
@@ -9,7 +9,8 @@ import { STANDARD, CARDS, ORDER, role, PITCHES, PITCH_END } from './catalog-word
 export const ORIGIN = 'https://thespicemelange.org';
 export const WORDING = {
   title: 'The Spice Melange store: Golden Path Desk agent templates',
-  summary: 'Educational agent templates for a guarded trading desk: seven seat packs and The Secret Journals (every template, now and later). Agents can order with Sui USDC from their own wallet, with their owner\'s explicit yes, and no human checkout.',
+  // Siona SJ30: with singles off the approved sentence simply drops "seven seat packs and" (no new wording).
+  summary: `Educational agent templates for a guarded trading desk: ${SINGLES_FOR_SALE_AT_BUILD ? 'seven seat packs and ' : ''}The Secret Journals (every template, now and later). Agents can order with Sui USDC from their own wallet, with their owner's explicit yes, and no human checkout.`,
   license: STANDARD.license,
   terms: STANDARD.terms,
   disclaimer: STANDARD.disclaimer,

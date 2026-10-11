@@ -28,9 +28,8 @@ STORE_SINGLES_FOR_SALE = "1"
 # Spice Certificates LAUNCH flag (Siona SJ2): "0" = /certificates/*, the home card, nav link, wallet sign-in, footer option A and
 # the /privacy/ certificates section are not built, and /api/certificates/* + legacy holder links return 404. Flip at launch only.
 SPICE_CERTS_LIVE = "0"
-# Home "No leverage" card (Siona SJ21): "0" = live prod card; "1" = Sajan's 8:53 PM PT wording ("...trades on Sui with its own funds
-# only."). ON: Sajan 9:18 PM PT 10/10 (via Siona): "The usdc will be held as a reserve on SUI. ... The usdc on sui will use a small
-# portion for automated trading by the fish speaker agents. No leverage. Go live." Build time only.
+# Home "No leverage" card (Siona SJ21): "1" = Sajan's 9:19 PM PT wording ("No leverage, no borrowed money" / "The Spice Melange
+# trading desk trades on Sui with no leverage and no borrowed money."); "0" = the older card. Build time only.
 HOME_FUNDS_LINE_LIVE = "1"
 
 [[kv_namespaces]]
