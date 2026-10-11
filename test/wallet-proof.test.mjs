@@ -99,5 +99,5 @@ test('/sign/ is standalone: brand mark + purpose + action, no site nav/footer; s
   assert.match(page, /sui:signAndExecuteTransaction/); assert.doesNotMatch(page, /sui:signTransaction'|upgrade-sign\/execute|testnet/);
   assert.match(page, /ALL\.mainnet\[0\]/);
   assert.match(page, /e000df0ffd6f7cd271a691fffe77dc0eeb324c7df9cc4704c6db2b6799dc6566/); assert.match(page, /37bSrXhV5D5bfmtNtLdh9gHjPpNpos3koYJ5JQC9iwLw/);
-  const cfg = rd('../astro.config.mjs'); assert.match(cfg, /'sign\/', 'certificates\/prove-wallet\/', 'certificates\/admin\/'/); assert.match(cfg, /DEPLOY_MODE === 'production'/);
+  const cfg = rd('../astro.config.mjs'); assert.match(cfg, /'sign\/', 'certificates\/prove-wallet\/', 'certificates\/admin\/'/); assert.match(cfg, /DEPLOY_MODE === 'production'/); assert.match(cfg, /if \(strip.length\) pruneOrphans/);
 });
