@@ -1,0 +1,8 @@
+---
+// The approved footer disclaimer (option A) with "Spice Certificate terms" linked to the certificate terms page.
+// Absolute URL so the Walrus mirror (which drops /certificates) keeps a working link.
+import { DISCLAIMER } from '../data/site';
+const K = 'see the Spice Certificate terms';
+const [a, b] = DISCLAIMER.split(K);
+---
+{b === undefined ? DISCLAIMER : <>{a}see the <a class="text-ibad-300" href="https://thespicemelange.org/certificates/terms/" data-cert-terms-link>Spice Certificate terms</a>{b}</>}

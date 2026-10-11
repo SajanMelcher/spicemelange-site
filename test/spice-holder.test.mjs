@@ -1,7 +1,8 @@
 // Spice Certificates holder page (TESTNET PREVIEW): auth, token links, ledger block, withdrawal, wallet, trade, wording.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { ed25519 } from '@noble/curves/ed25519';
 import * as H from '../store-core/spice-holder.js';
 import { handle, gate, signinGate, ownedSerials } from '../store-core/spice-api.js';
@@ -296,4 +297,17 @@ test('Tleilaxu footer line (Sajan 8:36 PM PT) is exact and renders only on the c
   for (const f of ['certificates/index.astro', 'certificates/holder/index.astro'])
     assert.match(readFileSync(new URL('../src/pages/' + f, import.meta.url), 'utf8'), /<CertFooterHook \/>/, f);
   assert.doesNotMatch(readFileSync(new URL('../src/pages/index.astro', import.meta.url), 'utf8'), /CertFooterHook/);
+});
+
+test('Spice Certificate terms (Sajan approved 8:40 PM PT 10/10): sha pinned, rendered at /certificates/terms/, linked from buy, holder and footer', () => {
+  const b = readFileSync(new URL('../src/content-static/SPICE-CERT-TERMS.md', import.meta.url));
+  assert.equal(createHash('sha256').update(b).digest('hex'), '4b19db069bdfd4f4d3b441dfabc06bc217f46ab5033c5af9cef307e2aa664540');
+  const SRC = '/home/box/agent-data/shared/portfolio-desk/spice-certificates/design/TERMS.md';
+  if (existsSync(SRC)) assert.ok(readFileSync(SRC).equals(b), 'site copy must equal Tleilaxu\'s TERMS.md byte for byte');
+  assert.match(readFileSync(new URL('../src/pages/certificates/terms/index.astro', import.meta.url), 'utf8'), /SPICE-CERT-TERMS\.md/);
+  for (const f of ['certificates/index.astro', 'certificates/holder/index.astro'])
+    assert.match(readFileSync(new URL('../src/pages/' + f, import.meta.url), 'utf8'), /href="\/certificates\/terms\/" data-cert-terms-link/, f);
+  assert.match(readFileSync(new URL('../src/components/DisclaimerText.astro', import.meta.url), 'utf8'), /https:\/\/thespicemelange\.org\/certificates\/terms\//);
+  for (const f of ['../src/pages/certificates/index.astro', '../src/pages/certificates/holder/index.astro'])
+    assert.doesNotMatch(readFileSync(new URL(f, import.meta.url), 'utf8'), /Draft terms|DRAFT-2026/);
 });

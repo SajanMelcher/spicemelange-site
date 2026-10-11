@@ -1,0 +1,23 @@
+---
+// /certificates/terms/: Spice Certificate terms (Tleilaxu; Sajan approved 8:40 PM PT 10/10), rendered verbatim from
+// portfolio-desk/spice-certificates/design/TERMS.md (sha256 pinned in test/spice-holder.test.mjs). Edit the .md, never this page.
+import Base from '../../../layouts/Base.astro';
+import { Content } from '../../../content-static/SPICE-CERT-TERMS.md';
+---
+<Base title="Spice Certificate terms" description="Terms for Spice Certificates, a separate holders-only offering of The Spice Melange: not a bank deposit, not insured, not registered; the 8% target is not guaranteed.">
+  <section class="container-x max-w-3xl pt-16 pb-16 terms">
+    <p class="eyebrow mb-4">The Spice Melange · <a class="text-ibad-300" href="/certificates/">Spice Certificates</a> · terms</p>
+    <Content />
+  </section>
+</Base>
+<style is:global>
+  .terms h1 { font-size: 2.25rem; line-height: 1.2; color: rgb(var(--sand-50, 250 246 238)); margin-bottom: .75rem; }
+  .terms h2 { font-size: 1.5rem; margin-top: 2rem; margin-bottom: .5rem; }
+  .terms p, .terms li { line-height: 1.7; opacity: .9; }
+  .terms p { margin-top: .5rem; }
+  .terms ul { list-style: disc; padding-left: 1.5rem; margin-top: .5rem; }
+  .terms ol { list-style: decimal; padding-left: 1.5rem; margin-top: .5rem; }
+  .terms code { font-size: .9em; }
+  .terms table { margin-top: .75rem; font-size: .9rem; }
+  .terms td, .terms th { border: 1px solid rgb(255 255 255 / .15); padding: .35rem .6rem; vertical-align: top; }
+</style>

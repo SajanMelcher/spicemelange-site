@@ -23,7 +23,7 @@ import { PAYOUT_PRICING } from '../../../data/certificates';
         <li><b>Not available on demand.</b> Every withdrawal needs a verified, signed request and Sajan Melcher's manual approval of that specific payment. We aim to pay within 6 hours of a verified request: a <b>target, not a promise</b>.</li>
         <li>If you choose BTC, you take the BTC price risk. Certificates are non-transferable. Taxes are yours. No investment, tax or legal advice.</li>
       </ul>
-      <p class="mt-2 text-xs muted">Draft terms (DRAFT-2026.10.10b, not reviewed by a lawyer). Sats accrue as floor(100 × 0.08 / 365 / BTC price × 100,000,000) per certificate per day, using the 4 PM PT price; our ledger is the official record and updates once a day.</p>
+      <p class="mt-2 text-xs muted">Terms: <a class="text-ibad-300" href="/certificates/terms/" data-cert-terms-link>Spice Certificate terms</a> (version 2026.10.10). Sats accrue as floor(100 × 0.08 / 365 / BTC price × 100,000,000) per certificate per day, using the 4 PM PT price; our ledger is the official record and updates once a day.</p>
     </div>
   </section>
 
@@ -75,7 +75,7 @@ import { PAYOUT_PRICING } from '../../../data/certificates';
     </article>
   </section>
 
-  <section class="container-x py-6"><CertFooterHook /><Disclaimer extra="TESTNET PREVIEW with sample data. Not an offer of any security or deposit. The 8% is a target, not a promise. Draft terms pending securities counsel review." /></section>
+  <section class="container-x py-6"><CertFooterHook /><Disclaimer extra="TESTNET PREVIEW with sample data. Not an offer of any security or deposit. The 8% is a target, not a promise. See the Spice Certificate terms." /></section>
 
   <script>
     import { certTable, summary, walletTable, quoteBlock } from '../../../lib/holder-render.js';
