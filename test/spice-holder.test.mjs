@@ -341,10 +341,10 @@ test('SJ17: a certs-off build serves no certificate content (only _headers confi
   for (const f of walk(root).filter((x) => x.endsWith('.html')))
     for (const [, a] of readFileSync(f, 'utf8').matchAll(/["'(](\/_astro\/[^"' )]+)/g)) assert.ok(existsSync(join(root, a)), `${f.slice(root.length)} -> ${a} missing`);
 });
-test('SJ21: home funds line is behind HOME_FUNDS_LINE_LIVE, OFF in production, built from wrangler.toml by deploy.sh and walrus-update.sh (SJ18)', async () => {
+test('SJ21: home funds line is behind HOME_FUNDS_LINE_LIVE, ON in production (Sajan 9:18 PM PT), built from wrangler.toml by deploy.sh and walrus-update.sh (SJ18)', async () => {
   const { wranglerVar } = await import('../scripts/wrangler-var.mjs');
   const toml = readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf8');
-  assert.equal(wranglerVar(toml, 'HOME_FUNDS_LINE_LIVE', 'production'), '0');
+  assert.equal(wranglerVar(toml, 'HOME_FUNDS_LINE_LIVE', 'production'), '1');
   assert.equal(wranglerVar(toml, 'HOME_FUNDS_LINE_LIVE', 'preview'), '1');
   for (const sh of ['deploy.sh', 'walrus-update.sh']) {
     const t = readFileSync(new URL('../scripts/' + sh, import.meta.url), 'utf8');
@@ -355,9 +355,9 @@ test('SJ21: home funds line is behind HOME_FUNDS_LINE_LIVE, OFF in production, b
   const { homeFundsLineLive } = await import('../store-core/launch.js');
   assert.equal(homeFundsLineLive({}), false); assert.equal(homeFundsLineLive({ HOME_FUNDS_LINE_LIVE: '1' }), true);
   const idx = new URL('../dist/index.html', import.meta.url);
-  if (existsSync(idx) && !existsSync(new URL('../dist/certificates/', import.meta.url)) && !process.env.HOME_FUNDS_LINE_LIVE) {
-    const h = readFileSync(idx, 'utf8'); // a production-like build
-    assert.doesNotMatch(h, /own funds only|no borrowed money/); assert.match(h, /No margin, no futures, no borrowed spice on the trading desk/);
+  if (existsSync(idx) && !existsSync(new URL('../dist/certificates/', import.meta.url)) && process.env.HOME_FUNDS_LINE_LIVE !== '0') {
+    const h = readFileSync(idx, 'utf8'); // a production-like build (flag ON in production)
+    assert.match(h, /No leverage, no borrowed money/); assert.match(h, /trades on Sui with its own funds only\./); assert.doesNotMatch(h, /No margin, no futures/);
   }
 });
 

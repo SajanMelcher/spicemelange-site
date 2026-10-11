@@ -16,7 +16,7 @@ const cert = copy();
 const pillars = [
   { title: 'Patience', glyph: 'hourglass', text: 'The Golden Path is measured in decades, not candles. We buy on schedule, and we let time do the heavy lifting.' },
   { title: 'Accumulation', glyph: 'grain', text: 'Like the God Emperor’s hoard, the stack only grows. We add steadily, in small and boring amounts, and we sell no spice at a loss.' },
-  // SJ21: Sajan's 8:53 PM PT wording is HELD behind HOME_FUNDS_LINE_LIVE (prod "0") until Duncan confirms in writing; prod keeps the LIVE card.
+  // SJ21: Sajan's 8:53 PM PT wording behind HOME_FUNDS_LINE_LIVE (ON in prod and preview since Sajan's 9:18 PM PT statement); fallback = old live card.
   HOME_FUNDS_LINE_AT_BUILD
     ? { title: 'No leverage, no borrowed money', glyph: 'shield', text: 'The Spice Melange trading desk trades on Sui with its own funds only.' }
     : { title: 'No leverage', glyph: 'shield', text: 'No margin, no futures, no borrowed spice on the trading desk. Leverage turns a bad week into a lost path.' },

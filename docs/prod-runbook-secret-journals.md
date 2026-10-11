@@ -6,8 +6,8 @@ Nothing here deploys certificates: production keeps `SPICE_CERTS_LIVE = "0"` (wr
 - `STORE_SINGLES_FOR_SALE = "1"` (wrangler.toml [vars], ONE line): singles still on sale, /terms/ stays on LICENSE 2026.10.10
   (2271d634). PENDING SAJAN: to take singles off, change that one line to `"0"`. Then the build (deploy.sh reads the same line),
   createOrder (Pages runtime) and /terms/ (LICENSE 2026.10.10.1, 9bd55791) all switch together.
-- `HOME_FUNDS_LINE_LIVE = "0"` (SJ21): the home "No leverage" card keeps the LIVE prod wording. Sajan's 8:53 wording ("No leverage,
-  no borrowed money" / "...trades on Sui with its own funds only.") is HELD until Duncan confirms in writing; then flip this one line.
+- `HOME_FUNDS_LINE_LIVE = "1"` (SJ21): the home card shows Sajan's 8:53 wording ("No leverage, no borrowed money" / "The Spice
+  Melange trading desk trades on Sui with its own funds only."). Settled by Sajan 9:18 PM PT. Set to "0" to fall back to the old card.
 - `SPICE_CERTS_LIVE = "0"`: no /certificates/*, no home card, no nav link, no sign-in API (404), live footer text, no
   certificates section on /privacy/. The rename to The Secret Journals and the retired Leto single DO ship.
 
@@ -26,12 +26,12 @@ Nothing here deploys certificates: production keeps `SPICE_CERTS_LIVE = "0"` (wr
    (wrangler reads the value from stdin). With SPICE_CERTS_LIVE=0 it is unused until launch; setting it now means the launch is a
    flag flip only. If code + secret ever land before 0011, sign-in fails closed (503): availability only.
 4. **Deploy**: `npm run deploy` (main only, clean tree; tests run twice; deploy.sh UNSETS any exported STORE_SINGLES_FOR_SALE /
-   SPICE_CERTS_LIVE and reads both from wrangler.toml [vars]; it prints the values it used: check `STORE_SINGLES_FOR_SALE=1 SPICE_CERTS_LIVE=0 HOME_FUNDS_LINE_LIVE=0`; the build log must show
+   SPICE_CERTS_LIVE and reads both from wrangler.toml [vars]; it prints the values it used: check `STORE_SINGLES_FOR_SALE=1 SPICE_CERTS_LIVE=0 HOME_FUNDS_LINE_LIVE=1`; the build log must show
    `certs-launch-gate ... removed 3 unreferenced _astro chunk(s)` and no SJ17 error).
 5. **Verify** (GET only): no certificate chunk is served (SJ17/SJ26):
    `for f in $(curl -s https://thespicemelange.org/ https://thespicemelange.org/store/ | grep -oE '/_astro/[^"]+\.js' | sort -u); do curl -s https://thespicemelange.org$f | grep -il certificat && echo "LEAK $f"; done`
-   and `grep -ril certificat dist --exclude=_headers` printed nothing before upload · home card reads "No leverage" / "No margin, no
-   futures..." · `/certificates/` 404 · `/api/certificates/challenge` 404 · home has no Certificates link/card ·
+   and `grep -ril certificat dist --exclude=_headers` printed nothing before upload · home card reads "No leverage, no borrowed money" /
+   "...trades on Sui with its own funds only." · `/certificates/` 404 · `/api/certificates/challenge` 404 · home has no Certificates link/card ·
    `/store/catalog.json` lists The Secret Journals and no leto-journals · `/store/leto-journals/` 301 · `/terms/` version matches
    the singles switch · footer text unchanged.
 
