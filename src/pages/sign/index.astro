@@ -55,7 +55,7 @@ const EXPECTED_SHA = PIN.upgradeSha256, EXPECTED_DIGEST = PIN.upgradeDigest;
     blocked.length = 0;
     try { const { accounts } = await w.features['standard:connect'].connect(); st.w = w; st.acct = pickAccount(accounts); }
     catch (e) { say(failText(w.name + ' connect', e)); return; }
-    if (!st.acct) { st.w = null; say('This wallet did not share the account ' + PIN.account + '. Switch to it and connect again.'); render(); return; }
+    if (!st.acct) { st.w = null; render(); say('This wallet did not share the account ' + PIN.account + '. Switch to it and connect again.'); return; }
     $('wallets').innerHTML = ''; say('Connected ' + st.acct.address);
     refreshUpgrade(); admin('status');
   }
