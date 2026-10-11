@@ -24,7 +24,8 @@ COURSE_PRODUCTION_SENDING = "1" # ON 2026-10-10 (Sajan 9:31 AM PT "Live"; Siona 
 # ONE store switch (Siona SJ1), read at BUILD time (deploy.sh exports this exact value; scripts/wrangler-var.mjs) and at ORDER
 # time (createOrder). "1" = the seven $50 single seats are on sale; "0" = The Secret Journals only (matches LICENSE 2026.10.10.1 §1).
 # PENDING SAJAN'S CONFIRMATION of singles off: to flip production, change this ONE line to "0" and redeploy.
-STORE_SINGLES_FOR_SALE = "1"
+# PREPARED (separate commit, drop it if Sajan says no): production sells only The Secret Journals; /terms/ = LICENSE 2026.10.10.1.
+STORE_SINGLES_FOR_SALE = "0"
 # Spice Certificates LAUNCH flag (Siona SJ2): "0" = /certificates/*, the home card, nav link, wallet sign-in, footer option A and
 # the /privacy/ certificates section are not built, and /api/certificates/* + legacy holder links return 404. Flip at launch only.
 SPICE_CERTS_LIVE = "0"
