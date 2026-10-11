@@ -42,7 +42,6 @@ const EXPECTED_SHA = PIN.upgradeSha256, EXPECTED_DIGEST = PIN.upgradeDigest;
   const wallets = []; const st = { w: null, acct: null, tx: null };
   const reg = { register: (...ws) => { wallets.push(...ws); render(); return () => {}; } };
   window.addEventListener('wallet-standard:register-wallet', (e) => { try { e.detail(reg); } catch {} });
-  window.dispatchEvent(new CustomEvent('wallet-standard:app-ready', { detail: reg }));
   const SAE = 'sui:signAndExecuteTransaction';
   function render() {
     if (st.w) return;
@@ -102,5 +101,7 @@ const EXPECTED_SHA = PIN.upgradeSha256, EXPECTED_DIGEST = PIN.upgradeDigest;
     } catch (e) { $('pout').textContent = 'Not sent. ' + failText(st.w.name + ' signAndExecuteTransaction', e); }
   }
   document.querySelectorAll('[data-a]').forEach((b) => { b.onclick = () => { b.disabled = true; admin(b.dataset.a); }; });
+  // Announce last, so every const above exists before a wallet's register() calls render() (fixes a TDZ error on load).
+  window.dispatchEvent(new CustomEvent('wallet-standard:app-ready', { detail: reg }));
   setTimeout(render, 1500);
 </script>
