@@ -6,6 +6,7 @@ import { SuiGrpcClient } from '@mysten/sui/grpc';
 import { Transaction, coinWithBalance } from '@mysten/sui/transactions';
 
 import IDS from './spice-cert-testnet.json' with { type: 'json' }; // single source of truth (scripts/sync-spice-cert-ids.mjs)
+import { certTarget, mainnetSalesOpen } from './spice-cert-net.js';
 
 export const TESTNET_CERT = Object.freeze({
   network: 'testnet', chain: 'sui:testnet',
@@ -27,25 +28,43 @@ export const isMainnetTarget = (t) => t.packageId !== TESTNET_CERT.packageId || 
 export function client() { return new SuiGrpcClient({ network: 'testnet', baseUrl: 'https://fullnode.testnet.sui.io:443' }); }
 const big = (_, v) => (typeof v === 'bigint' ? v.toString() : v);
 
-/** Find the wallet's TESTNET DeskLicense + tUSDC, build purchase, dry-run. Never signs, never submits. */
-export async function certBuyQuote({ address }, c = client()) {
-  const base = { network: 'testnet', preview: true, note: BUY_NOTE, price_display: '100 tUSDC (testnet)', package_id: TESTNET_CERT.packageId, issuer_id: TESTNET_CERT.issuerId };
+/** Live read of the Issuer's `paused` flag (true on any read error: fail closed). */
+export async function issuerPaused(t, c) {
+  try { const r = await c.core.getObject({ objectId: t.issuerId, include: { json: true } }); const p = r.object?.json?.paused; return p === false ? false : true; }
+  catch { return true; }
+}
+export const SALES_PAUSED = 'Sales are paused right now and open shortly. Pausing never blocks a withdrawal request.';
+
+/** Find the wallet's DeskLicense + payment coin for target `t` (testnet default), build purchase, dry-run. Never signs, never submits.
+ *  Mainnet: refuses while the Issuer is paused (read live) or the site switch SPICE_CERT_MAINNET_SALES is off. */
+export async function certBuyQuote({ address, env }, c, t = certTarget('testnet')) {
+  t = t ?? certTarget('testnet');
+  c = c ?? new SuiGrpcClient({ network: t.network, baseUrl: t.fullnode });
+  const base = t.testnet
+    ? { network: 'testnet', preview: true, note: BUY_NOTE, price_display: '100 tUSDC (testnet)', package_id: t.packageId, issuer_id: t.issuerId }
+    : { network: 'mainnet', preview: false, note: null, price_display: '100 USDC on Sui', package_id: t.packageId, issuer_id: t.issuerId };
+  if (!t.testnet) {
+    const paused = await issuerPaused(t, c);
+    if (paused || !mainnetSalesOpen(env)) return { ...base, ready: false, reason: 'sales_paused', paused, tx_json: null, explain: SALES_PAUSED };
+  }
+  const qualifies = (json) => !!json && t.allowedTemplates.includes(json.template_id) && !String(json.order_id || '').startsWith(TEST_ORDER_PREFIX);
   let lic, bal;
   try {
-    const o = await c.core.listOwnedObjects({ owner: address, type: TESTNET_CERT.deskLicenseType, limit: 50, include: { json: true } });
+    const o = await c.core.listOwnedObjects({ owner: address, type: t.deskLicenseType, limit: 50, include: { json: true } });
     const all = o.objects || [];
-    lic = all.find((x) => licenseQualifies(x.json ?? x.content?.json));
-    if (!lic && all.length) return { ...base, ready: false, reason: 'testnet_license_not_eligible', tx_json: null,
+    lic = all.find((x) => qualifies(x.json ?? x.content?.json));
+    if (!lic && all.length) return { ...base, ready: false, reason: t.testnet ? 'testnet_license_not_eligible' : 'license_not_eligible', tx_json: null,
       explain: 'The contract only accepts a Secret Journals (dune-saga-collection) license, and never a desk test license.' };
-    const b = await c.core.getBalance({ owner: address, coinType: TESTNET_CERT.coinType });
+    const b = await c.core.getBalance({ owner: address, coinType: t.coinType });
     bal = BigInt(b.balance?.balance ?? b.balance ?? 0);
-  } catch (e) { return { ...base, ready: false, reason: 'testnet_read_failed', tx_json: null }; }
-  if (!lic) return { ...base, ready: false, reason: 'no_testnet_desk_license', tx_json: null,
-    explain: 'The testnet preview contract checks for a TESTNET store license in the same wallet. Your mainnet license is what lets you open this page; testnet licenses are not issued to the public, so the purchase can only be previewed for now.' };
-  if (bal < TESTNET_CERT.price) return { ...base, ready: false, reason: 'not_enough_test_usdc', tx_json: null, explain: 'This wallet has less than 100 tUSDC (the testnet mock coin).' };
+  } catch (e) { return { ...base, ready: false, reason: t.testnet ? 'testnet_read_failed' : 'read_failed', tx_json: null }; }
+  if (!lic) return { ...base, ready: false, reason: t.testnet ? 'no_testnet_desk_license' : 'no_desk_license', tx_json: null,
+    explain: t.testnet ? 'The testnet preview contract checks for a TESTNET store license in the same wallet. Your mainnet license is what lets you open this page; testnet licenses are not issued to the public, so the purchase can only be previewed for now.'
+      : 'No qualifying Secret Journals license was found in this wallet.' };
+  if (bal < t.price) return { ...base, ready: false, reason: t.testnet ? 'not_enough_test_usdc' : 'not_enough_usdc', tx_json: null, explain: t.testnet ? 'This wallet has less than 100 tUSDC (the testnet mock coin).' : 'This wallet has less than 100 USDC on Sui.' };
   const tx = new Transaction(); tx.setSender(address);
-  tx.moveCall({ target: `${TESTNET_CERT.packageId}::certificate::purchase`, typeArguments: [TESTNET_CERT.coinType],
-    arguments: [tx.object(TESTNET_CERT.issuerId), tx.object(lic.objectId ?? lic.id), coinWithBalance({ type: TESTNET_CERT.coinType, balance: TESTNET_CERT.price }), tx.object.clock()] });
+  tx.moveCall({ target: `${t.packageId}::certificate::purchase`, typeArguments: [t.coinType],
+    arguments: [tx.object(t.issuerId), tx.object(lic.objectId ?? lic.id), coinWithBalance({ type: t.coinType, balance: t.price }), tx.object.clock()] });
   let dry;
   try {
     const r = await c.core.simulateTransaction({ transaction: tx, include: { effects: true, balanceChanges: true } });

@@ -5,14 +5,17 @@
 //     and the D1 binding exist (preview and, once the secret is set, production). Reads MAINNET DeskLicenses (spice-gate.js).
 //  2. gate (holder data: statements, view-only links, withdrawal requests, wallet, trade): TESTNET PREVIEW only
 //     (SUI_NETWORK=testnet AND SPICE_CERT_PREVIEW=1). Production answers 503 preview_only for these.
-// There is NO mainnet certificate purchase path: cert-buy-quote always builds against the testnet package.
+// cert-buy-quote builds against the network chosen by SPICE_CERT_REDEEM_NETWORK (store-core/spice-cert-net.js). On mainnet it
+// refuses while the Issuer is paused (live) or SPICE_CERT_MAINNET_SALES is not "1".
 import { readJson, sameOrigin } from './http.js';
 import * as H from './spice-holder.js';
 import SAMPLE from './spice-sample/master.sample.json' with { type: 'json' };
 import { walletBalances } from './spice-wallet.js';
 import { tradeQuote, TRADE_LIMITS } from './spice-trade.js';
 import { licenseAccess, CERT_ELIGIBILITY, copy } from './spice-gate.js';
-import { certBuyQuote, TESTNET_CERT, HOLDER_CERT_TYPE } from './spice-cert-buy.js';
+import { certBuyQuote, TESTNET_CERT, HOLDER_CERT_TYPE, issuerPaused, SALES_PAUSED } from './spice-cert-buy.js';
+import { certNetwork, certTarget, mainnetSalesOpen } from './spice-cert-net.js';
+import { SuiGrpcClient } from '@mysten/sui/grpc';
 import { certRedeemQuote, redeemTarget } from './spice-cert-redeem.js';
 
 const GQL_TESTNET = 'https://graphql.testnet.sui.io/graphql';
@@ -35,10 +38,13 @@ export function gate(env) {
 export function masterBlock(env) { return SAMPLE.spice_certificates; }
 
 export async function ownedSerials(env, address, fetchImpl = fetch) {
-  const type = env.SPICE_CERT_TYPE || HOLDER_CERT_TYPE; // default: the generated testnet ids (single source of truth)
+  // network switch SPICE_CERT_REDEEM_NETWORK: mainnet reads mainnet GraphQL with the mainnet certificate type (generated ids)
+  const mt = certNetwork(env) === 'mainnet' ? certTarget('mainnet') : null;
+  if (certNetwork(env) === 'mainnet' && !mt) return [];
+  const type = mt ? mt.certificateType : (env.SPICE_CERT_TYPE || HOLDER_CERT_TYPE); // default: the generated testnet ids (single source of truth)
   if (!type) return null;
   const q = 'query($a:SuiAddress!,$t:String!){ address(address:$a){ objects(filter:{type:$t}, first:50){ nodes{ contents{ json } } } } }';
-  const r = await fetchImpl(GQL_TESTNET, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ query: q, variables: { a: address, t: type } }) });
+  const r = await fetchImpl(mt ? mt.graphql : GQL_TESTNET, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ query: q, variables: { a: address, t: type } }) });
   const d = (await r.json()).data;
   return (d?.address?.objects?.nodes || []).map((n) => Number(n.contents?.json?.serial)).filter(Number.isFinite);
 }
@@ -79,6 +85,13 @@ export async function handle(action, context, deps = {}) {
     return json(200, { ok: true, session: await H.makeSession(secret, v.address, now), address: v.address, expires_in_s: H.SESSION_TTL_MS / 1000,
       access: await access(v.address), view: await holderView(v.address) });
   }
+  if (action === 'cert-sales-status') {
+    // Public: is buying open? Reads the Issuer's paused flag live (fails closed = paused).
+    const t = certTarget(certNetwork(env)); if (!t) return json(503, { ok: false, reason: 'not_configured' });
+    const paused = await (deps.issuerPaused ?? issuerPaused)(t, deps.client ?? new SuiGrpcClient({ network: t.network, baseUrl: t.fullnode }));
+    const open = t.testnet ? !paused : !paused && mainnetSalesOpen(env);
+    return json(200, { ok: true, network: t.network, paused, sales_open: open, message: open ? null : SALES_PAUSED });
+  }
   if (action === 'token-view') {
     const view = await H.viewByToken(block, holders, b.serial, b.token);
     return view ? json(200, { ok: true, view }) : json(404, { ok: false, reason: 'link_invalid_or_revoked' });
@@ -89,7 +102,8 @@ export async function handle(action, context, deps = {}) {
   if (action === 'cert-buy-quote') {
     const a = await access(s.address);
     if (!a.eligible) return json(403, { ok: false, reason: 'not_eligible', access: a, explain: copy().notEligible });
-    try { return json(200, { ok: true, chain: TESTNET_CERT.chain, ...(await (deps.certBuyQuote ?? certBuyQuote)({ address: s.address })) }); }
+    const t = certTarget(certNetwork(env)); if (!t) return json(503, { ok: false, reason: 'not_configured' });
+    try { return json(200, { ok: true, chain: t.chain, ...(await (deps.certBuyQuote ?? certBuyQuote)({ address: s.address, env }, undefined, t)) }); }
     catch (e) { return json(400, { ok: false, reason: String(e.message || e).slice(0, 200) }); }
   }
   const view = await holderView(s.address);

@@ -16,13 +16,14 @@ else
 fi
 # Siona SJ1/SJ9: build-time switches come ONLY from wrangler.toml for this target (the same values the Pages runtime gets).
 # Any exported shell value is cleared first. To flip production singles off, edit the ONE line in wrangler.toml [vars].
-unset STORE_SINGLES_FOR_SALE SPICE_CERTS_LIVE HOME_FUNDS_LINE_LIVE
+unset STORE_SINGLES_FOR_SALE SPICE_CERTS_LIVE HOME_FUNDS_LINE_LIVE SPICE_CERT_REDEEM_NETWORK
 VT=$([ "$MODE" = "production" ] && echo production || echo preview)
 STORE_SINGLES_FOR_SALE="$(node scripts/wrangler-var.mjs STORE_SINGLES_FOR_SALE "$VT")"
 SPICE_CERTS_LIVE="$(node scripts/wrangler-var.mjs SPICE_CERTS_LIVE "$VT")"
 HOME_FUNDS_LINE_LIVE="$(node scripts/wrangler-var.mjs HOME_FUNDS_LINE_LIVE "$VT")"
-export STORE_SINGLES_FOR_SALE SPICE_CERTS_LIVE HOME_FUNDS_LINE_LIVE
-echo "deploy: $MODE build with STORE_SINGLES_FOR_SALE=$STORE_SINGLES_FOR_SALE SPICE_CERTS_LIVE=$SPICE_CERTS_LIVE HOME_FUNDS_LINE_LIVE=$HOME_FUNDS_LINE_LIVE (from wrangler.toml)"
+SPICE_CERT_REDEEM_NETWORK="$(node scripts/wrangler-var.mjs SPICE_CERT_REDEEM_NETWORK "$VT")"
+export STORE_SINGLES_FOR_SALE SPICE_CERTS_LIVE HOME_FUNDS_LINE_LIVE SPICE_CERT_REDEEM_NETWORK
+echo "deploy: $MODE build with STORE_SINGLES_FOR_SALE=$STORE_SINGLES_FOR_SALE SPICE_CERTS_LIVE=$SPICE_CERTS_LIVE HOME_FUNDS_LINE_LIVE=$HOME_FUNDS_LINE_LIVE SPICE_CERT_REDEEM_NETWORK=$SPICE_CERT_REDEEM_NETWORK (from wrangler.toml)"
 npm run -s test:store
 npm run -s build
 # Siona LOW: run the tests again on the fresh build, so the built-pages checks (email_off, dist/learn, /learn/ copy) see this dist.

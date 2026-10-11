@@ -156,7 +156,7 @@ test('trade: pairs, slippage 1-300 bps (default 100), min-out', () => {
 test('page wording: TESTNET PREVIEW label, targets not promises, no forbidden words, noindex headers', () => {
   const p = readFileSync(new URL('../src/pages/certificates/holder/index.astro', import.meta.url), 'utf8');
   assert.match(p, /TESTNET PREVIEW/); assert.match(p, /target, not a promise/); assert.match(p, / noindex>/);
-  assert.match(p, /reserve@thespicemelange\.org/); assert.match(p, /never holds your funds or your keys/);
+  assert.match(p, /reserve@thespicemelange\.org/); assert.match(p, /This trade panel never touches your certificate money or your keys; coins move only between your wallet and the DeepBook pool\./); assert.doesNotMatch(p, /never holds your funds/); assert.match(p, /is shown only after your wallet signature/); // Siona B-5, B-6
   for (const w of [/guarantee/i, /\bsafe\b/i, /risk-free/i, /backed up/i, /insured\b(?! \()/i]) assert.ok(!w.test(p.replace(/not insured/gi, '').replace(/It is not insured/gi, '')), String(w));
   const hd = readFileSync(new URL('../public/_headers', import.meta.url), 'utf8');
   assert.match(hd, /\/certificates\/\*\n  X-Robots-Tag: noindex[^\n]*\n  Cache-Control: no-store/);
@@ -250,7 +250,7 @@ test('gate: licenseAccess reads mainnet GraphQL with the exact type filter, pagi
   const errs = await G.licenseAccess(ADDR, { fetchImpl: async () => ({ ok: true, json: async () => ({ errors: [{ message: 'x' }] }) }) });
   assert.equal(errs.eligible, false);
 });
-test('buy: needs a session AND an eligible wallet; builds TESTNET only; no mainnet purchase path anywhere', async () => {
+test('buy: needs a session AND an eligible wallet; testnet by default; mainnet only via the one network switch and only while unpaused + site switch on (Sajan 9:59 PM PT)', async () => {
   const env = { ...ENV, STORE_DB: freshDb() };
   assert.equal((await call('cert-buy-quote', {}, null, {}, env)).reason, 'sign_in_again');
   const r = await signInAs(sk, pk, {}, env);
@@ -262,10 +262,18 @@ test('buy: needs a session AND an eligible wallet; builds TESTNET only; no mainn
   assert.equal(TESTNET_CERT.packageId, IDS.buy.packageId); assert.equal(TESTNET_CERT.issuerId, IDS.buy.issuerId);
   const fake = { core: { listOwnedObjects: async (o) => { assert.equal(o.type, TESTNET_CERT.deskLicenseType); return { objects: [] }; }, getBalance: async () => ({ balance: { balance: '0' } }) } };
   assert.equal((await certBuyQuote({ address: ADDR }, fake)).reason, 'no_testnet_desk_license');
-  for (const f of ['../store-core/spice-cert-buy.js', '../store-core/spice-api.js', '../src/pages/certificates/index.astro']) {
-    const t = readFileSync(new URL(f, import.meta.url), 'utf8');
-    assert.doesNotMatch(t, /sui:mainnet|fullnode\.mainnet|network: 'mainnet'/, f);
-  }
+  // mainnet: ids only from the generated file, the network only from certTarget (spice-cert-net.js)
+  for (const f of ['../store-core/spice-cert-buy.js', '../store-core/spice-api.js']) assert.doesNotMatch(readFileSync(new URL(f, import.meta.url), 'utf8'), /sui:mainnet|fullnode\.mainnet/, f);
+  const MT = { network: 'mainnet', chain: 'sui:mainnet', testnet: false, packageId: '0x' + '9'.repeat(64), issuerId: '0x' + '8'.repeat(64), deskLicenseType: '0x1::desk_license::DeskLicense', coinType: '0x2::usdc::USDC', price: 100000000n, allowedTemplates: ['dune-saga-collection'] };
+  let built = false;
+  const mfake = (paused) => ({ core: { getObject: async ({ objectId }) => { assert.equal(objectId, MT.issuerId); return { object: { json: { paused } } }; },
+    listOwnedObjects: async () => { built = true; return { objects: [] }; }, getBalance: async () => ({ balance: { balance: '0' } }) } });
+  assert.equal((await certBuyQuote({ address: ADDR, env: { SPICE_CERT_MAINNET_SALES: '1' } }, mfake(true), MT)).reason, 'sales_paused', 'on-chain paused');
+  assert.equal((await certBuyQuote({ address: ADDR, env: {} }, mfake(false), MT)).reason, 'sales_paused', 'site switch off');
+  assert.equal(built, false, 'nothing is built while paused');
+  const err = { core: { getObject: async () => { throw new Error('down'); } } };
+  assert.equal((await certBuyQuote({ address: ADDR, env: { SPICE_CERT_MAINNET_SALES: '1' } }, err, MT)).reason, 'sales_paused', 'read error = paused');
+  assert.equal((await certBuyQuote({ address: ADDR, env: { SPICE_CERT_MAINNET_SALES: '1' } }, mfake(false), MT)).reason, 'no_desk_license', 'unpaused + switch on reaches the license check');
 });
 test('copy: buy page, home and nav say holders of The Secret Journals; testnet banner; target not promise; no "guaranteed"; payout pricing', () => {
   const buy = readFileSync(new URL('../src/pages/certificates/index.astro', import.meta.url), 'utf8');
@@ -384,7 +392,7 @@ test('SJ21: home funds line is behind HOME_FUNDS_LINE_LIVE, ON in production (Sa
 test('SJ2 launch flag: one value (wrangler.toml), OFF in production, ON in preview; API + legacy route 404 when off; pages removed from the build', async () => {
   const { wranglerVar } = await import('../scripts/wrangler-var.mjs');
   const w = readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf8');
-  assert.equal(wranglerVar(w, 'SPICE_CERTS_LIVE', 'production'), '0'); assert.equal(wranglerVar(w, 'SPICE_CERTS_LIVE', 'preview'), '1');
+  assert.equal(wranglerVar(w, 'SPICE_CERTS_LIVE', 'production'), '1', 'ON: Sajan 9:59 PM PT'); assert.equal(wranglerVar(w, 'SPICE_CERTS_LIVE', 'preview'), '1');
   const { certsLive } = await import('../store-core/launch.js');
   assert.equal(certsLive({}), false); assert.equal(certsLive({ SPICE_CERTS_LIVE: '1' }), true);
   const api = await import('../functions/api/certificates/[action].js');
@@ -455,7 +463,7 @@ test('testnet cert ids: one source of truth, matches the Ixians deploy files; bu
   // The site never builds or passes a payment_ref: the buy page uses purchase<T>(Issuer, DeskLicense, Coin, Clock), where the
   // contract records ctx.digest() (32 bytes) itself. The watcher path (MintCap + payment_ref) is server-side only, not on the site.
   const buy = readFileSync(new URL('../store-core/spice-cert-buy.js', import.meta.url), 'utf8');
-  assert.match(buy, /arguments: \[tx\.object\(TESTNET_CERT\.issuerId\), tx\.object\(lic\.objectId \?\? lic\.id\), coinWithBalance\(\{ type: TESTNET_CERT\.coinType, balance: TESTNET_CERT\.price \}\), tx\.object\.clock\(\)\]/);
+  assert.match(buy, /arguments: \[tx\.object\(t\.issuerId\), tx\.object\(lic\.objectId \?\? lic\.id\), coinWithBalance\(\{ type: t\.coinType, balance: t\.price \}\), tx\.object\.clock\(\)\]/);
   assert.doesNotMatch(buy, /payment_ref|mint_from_payment|MintCap/i);
   for (const f of ['../store-core/spice-cert-buy.js', '../store-core/spice-api.js', '../wrangler.toml', '../src/pages/certificates/index.astro', '../src/pages/certificates/holder/index.astro']) {
     const t = readFileSync(new URL(f, import.meta.url), 'utf8');
@@ -512,7 +520,7 @@ test('v3 restatement lines (Tleilaxu, Sajan 9:55 PM PT) are verbatim and placed;
   for (const k of ['WITHDRAW_BOX', 'BUY_NO_CAP', 'BUY_PAUSE', 'BUY_WRONG_PAYMENT', 'PAYOUT_PRICING']) assert.match(buy, new RegExp(`\\{${k}\\}`), 'buy ' + k);
   assert.doesNotMatch(holder, /about 7\.9% in practice|<b>or<\/b> email|verified, signed request and Sajan/);
   // the on-chain step comes BEFORE the signed-message step
-  assert.ok(holder.indexOf('data-rd-btn>1. Send on-chain redemption request') > 0 && holder.indexOf('data-rd-btn>1.') < holder.indexOf('data-wd-btn>2. Sign withdrawal request'));
+  assert.ok(holder.indexOf('data-rd-btn>1. Send on-chain redemption request') > 0 && holder.indexOf('data-rd-btn>1.') < holder.indexOf('data-wd-btn>{TEST ? \'2. Sign withdrawal request'));
   // no Coinbase on any cert page source, the signed message, or the built cert pages
   const srcs = [data, holder, buy, readFileSync(new URL('../src/pages/certificates/terms/index.astro', import.meta.url), 'utf8'), readFileSync(new URL('../src/content-static/CERT-FOOTER-LINE-v3.txt', import.meta.url), 'utf8'),
     H.withdrawalMessage('h', 'n', { serial: 1, asset: 'BTC', payoutAddress: 'bc1qxyz' })];
@@ -536,7 +544,7 @@ test('withdrawal step 1: redeem-quote builds request_redemption for the signed-i
   else assert.equal(R.redeemTarget({ SPICE_CERT_REDEEM_NETWORK: 'mainnet' }).packageId, IDS.mainnet.packageId);
   const { wranglerVar } = await import('../scripts/wrangler-var.mjs');
   const toml = readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf8');
-  assert.equal(wranglerVar(toml, 'SPICE_CERT_REDEEM_NETWORK', 'production'), 'testnet'); assert.equal(wranglerVar(toml, 'SPICE_CERT_REDEEM_NETWORK', 'preview'), 'testnet');
+  assert.equal(wranglerVar(toml, 'SPICE_CERT_REDEEM_NETWORK', 'production'), 'mainnet'); assert.equal(wranglerVar(toml, 'SPICE_CERT_MAINNET_SALES', 'production'), '0'); assert.equal(wranglerVar(toml, 'SPICE_CERT_REDEEM_NETWORK', 'preview'), 'testnet');
   const OWNER = '0x' + 'a'.repeat(64), CERT = '0x' + 'c'.repeat(64);
   let simulated = null;
   const fake = (status = 0) => ({ core: {
@@ -559,4 +567,35 @@ test('withdrawal step 1: redeem-quote builds request_redemption for the signed-i
   const api = readFileSync(new URL('../store-core/spice-api.js', import.meta.url), 'utf8');
   assert.match(api, /HOLDER_ACTIONS = new Set\(\[[^\]]*'redeem-quote'/);
   assert.match(api, /if \(action === 'redeem-quote'\) \{[\s\S]*redeemTarget\(env\)[\s\S]*address: s\.address/);
+});
+
+test('mainnet ids (v6) come only from deploy.mainnet.json via the generated file; buy page + holder reads + redemption follow the one switch; sales paused', async () => {
+  const IDS = JSON.parse(readFileSync(new URL('../store-core/spice-cert-testnet.json', import.meta.url), 'utf8'));
+  const { pickMainnet } = await import('../scripts/sync-spice-cert-ids.mjs');
+  const F = '/workspace/ixians/spice-certificates/deploy.mainnet.json';
+  if (existsSync(F)) assert.deepEqual(IDS.mainnet, pickMainnet(JSON.parse(readFileSync(F, 'utf8'))));
+  assert.equal(IDS.mainnet.packageId, '0x294b4ff76830aaace850ba390fad5f2bb7692a36cb5b4b4f078590a0bb34e24f');
+  assert.equal(IDS.mainnet.issuerId, '0x7fb5656aa9d4a504361d683fe0183df3e33b56a3e58e8c13714dc19fc5421319');
+  const G = await import('../store-core/spice-gate.js');
+  assert.equal(IDS.mainnet.deskLicenseType, G.MAINNET_DESK_LICENSE_TYPE, 'buy uses the same DeskLicense type the gate checks');
+  const N = await import('../store-core/spice-cert-net.js');
+  const m = N.certTarget('mainnet'); assert.equal(m.chain, 'sui:mainnet'); assert.equal(m.testnet, false); assert.equal(m.price, 100000000n);
+  assert.equal(N.certTarget('devnet'), null);
+  const R = await import('../store-core/spice-cert-redeem.js');
+  assert.equal(R.redeemTarget({ SPICE_CERT_REDEEM_NETWORK: 'mainnet' }).packageId, IDS.mainnet.packageId);
+  let q; const f = async (u, o) => { q = { u, body: JSON.parse(o.body) }; return { json: async () => ({ data: { address: { objects: { nodes: [] } } } }) }; };
+  await ownedSerials({ SPICE_CERT_REDEEM_NETWORK: 'mainnet' }, ADDR, f);
+  assert.equal(q.u, 'https://graphql.mainnet.sui.io/graphql'); assert.equal(q.body.variables.t, IDS.mainnet.certificateType);
+  // sales-status endpoint: public, live paused flag, paused message
+  const st = await call('cert-sales-status', {}, null, { issuerPaused: async (t) => { assert.equal(t.issuerId, IDS.mainnet.issuerId); return true; }, client: {} }, { ...ENV, SPICE_CERT_REDEEM_NETWORK: 'mainnet' });
+  assert.equal(st.ok, true); assert.equal(st.paused, true); assert.equal(st.sales_open, false); assert.match(st.message, /Sales are paused right now and open shortly/);
+  const st2 = await call('cert-sales-status', {}, null, { issuerPaused: async () => false, client: {} }, { ...ENV, SPICE_CERT_REDEEM_NETWORK: 'mainnet' });
+  assert.equal(st2.sales_open, false, 'unpaused on-chain but SPICE_CERT_MAINNET_SALES off');
+  // built mainnet pages carry no testnet banner (checked when the build is a mainnet build)
+  const b = new URL('../dist/certificates/index.html', import.meta.url);
+  if (existsSync(b) && readFileSync(b, 'utf8').includes('data-sales-status')) {
+    for (const p of ['certificates/index.html', 'certificates/holder/index.html', 'index.html'])
+      assert.doesNotMatch(readFileSync(new URL('../dist/' + p, import.meta.url), 'utf8'), /Testnet preview|TESTNET PREVIEW|tUSDC/, p);
+    assert.ok(readFileSync(b, 'utf8').includes(IDS.mainnet.packageId.slice(0, 6)) && readFileSync(b, 'utf8').includes(IDS.mainnet.issuerId.slice(-4)));
+  }
 });

@@ -6,21 +6,11 @@
 // scripts/sync-spice-cert-ids.mjs); until then it refuses (not_configured). Never signs, never submits.
 import { SuiGrpcClient } from '@mysten/sui/grpc';
 import { Transaction } from '@mysten/sui/transactions';
-import IDS from './spice-cert-testnet.json' with { type: 'json' };
+import { certTarget, certNetwork } from './spice-cert-net.js';
 
 export const ASSET_CODE = Object.freeze({ USDC: 0, BTC: 1 }); // certificate.move ASSET_USDC / ASSET_BTC
 const ACTIVE = 0; // certificate.move ACTIVE
-export function redeemTarget(env) {
-  const net = String(env?.SPICE_CERT_REDEEM_NETWORK ?? 'testnet');
-  if (net === 'mainnet') {
-    const m = IDS.mainnet;
-    if (!m?.packageId || !m?.issuerId) return null; // mainnet ids not in the generated file yet
-    return { network: 'mainnet', chain: 'sui:mainnet', packageId: m.packageId, issuerId: m.issuerId, certificateType: m.certificateType, baseUrl: 'https://fullnode.mainnet.sui.io:443' };
-  }
-  if (net !== 'testnet') return null;
-  // testnet: the package the preview buy page mints from, so a certificate bought there can be redeemed here
-  return { network: 'testnet', chain: 'sui:testnet', packageId: IDS.buy.packageId, issuerId: IDS.buy.issuerId, certificateType: IDS.buy.certificateType, baseUrl: 'https://fullnode.testnet.sui.io:443' };
-}
+export const redeemTarget = (env) => { const t = certTarget(certNetwork(env)); return t && { ...t, baseUrl: t.fullnode }; };
 const big = (_, v) => (typeof v === 'bigint' ? v.toString() : v);
 
 export async function certRedeemQuote({ address, serial, asset }, t, c = new SuiGrpcClient({ network: t.network, baseUrl: t.baseUrl })) {

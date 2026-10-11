@@ -2,20 +2,31 @@
 import { CERT_TERMS_VERSION } from '../../data/cert-terms';
 // /certificates/: Spice Certificates buying page (Ixians 10/10/2026 PT). Sign in with a Sui wallet; the SERVER checks the wallet
 // for a mainnet DeskLicense under the single eligibility switch (store-core/spice-gate.js CERT_ELIGIBILITY). Holders get a
-// purchase preview wired to the TESTNET package only. There is no mainnet purchase path (needs Siona SC1 + SC9 and Sajan's yes).
+// purchase wired to the network chosen by SPICE_CERT_REDEEM_NETWORK (store-core/spice-cert-net.js). Mainnet (Sajan 9:59 PM PT 10/10):
+// buying stays closed while the Issuer is paused (read live) or SPICE_CERT_MAINNET_SALES is off.
 import Base from '../../layouts/Base.astro';
 import Disclaimer from '../../components/Disclaimer.astro';
 import CertFooterHook from '../../components/CertFooterHook.astro';
 import { copy, CERT_ELIGIBILITY } from '../../../store-core/spice-gate.js';
-import { TESTNET_CERT } from '../../../store-core/spice-cert-buy.js';
-import { PAYOUT_PRICING, TESTNET_BANNER, WITHDRAW_BOX, BUY_NO_CAP, BUY_PAUSE, BUY_WRONG_PAYMENT } from '../../data/certificates';
+import { CERT_TARGET_AT_BUILD, CERT_NETWORK_AT_BUILD } from '../../../store-core/spice-cert-net.js';
+import { SALES_PAUSED } from '../../../store-core/spice-cert-buy.js';
+import { PAYOUT_PRICING, TESTNET_BANNER, WITHDRAW_BOX, BUY_NO_CAP, BUY_PAUSE, BUY_WRONG_PAYMENT, RATE_IN_PRACTICE } from '../../data/certificates';
+const T = CERT_TARGET_AT_BUILD;
+if (!T) throw new Error(`certificates: no ids for network ${CERT_NETWORK_AT_BUILD} in store-core/spice-cert-testnet.json (run scripts/sync-spice-cert-ids.mjs)`);
+const TEST = T.testnet;
 const c = copy();
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 ---
-<Base title="Spice Certificates (testnet preview)" description={`Spice Certificates: ${c.short}. Sign in with your Sui wallet. Testnet preview: no real purchases yet.`} noindex>
+<Base title={TEST ? 'Spice Certificates (testnet preview)' : 'Spice Certificates'} description={TEST ? `Spice Certificates: ${c.short}. Sign in with your Sui wallet. Testnet preview: no real purchases yet.` : `Spice Certificates: ${c.short}. Sign in with your Sui wallet.`} noindex>
+  {TEST ? (
   <div class="border-b border-spice-500/40 bg-spice-700/25" role="note" data-testnet-banner>
     <p class="container-x py-3 text-sm font-semibold text-spice-200">{TESTNET_BANNER} Certificates on this page are testnet only and have no value.</p>
   </div>
+  ) : (
+  <div class="border-b border-spice-500/40 bg-spice-700/25" role="status" data-sales-status data-network={T.network}>
+    <p class="container-x py-3 text-sm font-semibold text-spice-200" data-sales-msg>{SALES_PAUSED}</p>
+  </div>
+  )}
   <section class="container-x pt-12 pb-2">
     <p class="eyebrow mb-3" data-eligibility={CERT_ELIGIBILITY}>Spice Certificates · {c.short}</p>
     <h1 class="text-4xl leading-tight text-sand-50 sm:text-5xl">Spice Certificates</h1>
@@ -41,17 +52,22 @@ const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 
   <section class="container-x hidden py-3" data-buy>
     <div class="card border-spice-500/40">
+      {TEST ? (<>
       <p class="eyebrow text-spice-300">{TESTNET_BANNER}</p>
       <h2 class="mt-1 font-serif text-2xl text-sand-50">Buy a Spice Certificate (testnet preview)</h2>
-      <p class="mt-2 text-sm text-sand-200">Your wallet holds a qualifying license. On this preview the purchase runs on <b>Sui testnet</b> only, with a mock test coin (100 tUSDC) that has no value. Nothing real is bought or paid. Real purchases stay closed until the contract's admin keys are moved to Sajan's own custody and he approves mainnet.</p>
+      <p class="mt-2 text-sm text-sand-200">Your wallet holds a qualifying license. On this preview the purchase runs on <b>Sui testnet</b> only, with a mock test coin (100 tUSDC) that has no value. Nothing real is bought or paid.</p>
+      </>) : (<>
+      <h2 class="mt-1 font-serif text-2xl text-sand-50">Buy a Spice Certificate</h2>
+      <p class="mt-2 text-sm text-sand-200">Your wallet holds a qualifying license. You pay exactly <b>100 USDC on Sui</b> through our contract, from this wallet. Your license is checked on-chain in the same step, and the certificate is minted to your wallet in that transaction.</p>
+      </>)}
       <ol class="mt-3 list-decimal space-y-1 pl-5 text-sm text-sand-200">
-        <li>We build the testnet transaction for your wallet and dry-run it first.</li>
-        <li>Only if the dry-run passes, your wallet shows it to you (chain: Sui testnet). You decide whether to sign.</li>
+        <li>We build the transaction for your wallet and dry-run it first.</li>
+        <li>Only if the dry-run passes, your wallet shows it to you (chain: Sui {T.network}). You decide whether to sign.</li>
       </ol>
-      <button type="button" class="btn-ghost mt-4" data-quote>Preview the testnet purchase</button>
+      <button type="button" class="btn-ghost mt-4" data-quote>{TEST ? 'Preview the testnet purchase' : 'Prepare my purchase'}</button>
       <div class="mt-3 text-sm text-sand-200" data-out></div>
-      <button type="button" class="btn-primary mt-3 hidden" data-sign>Review and sign in my wallet (testnet)</button>
-      <p class="mt-3 text-xs muted">Testnet contract: package <span class="font-mono">{short(TESTNET_CERT.packageId)}</span> · Issuer <span class="font-mono">{short(TESTNET_CERT.issuerId)}</span>.</p>
+      <button type="button" class="btn-primary mt-3 hidden" data-sign>{TEST ? 'Review and sign in my wallet (testnet)' : 'Review and sign in my wallet'}</button>
+      <p class="mt-3 text-xs muted">{TEST ? 'Testnet contract' : 'Contract (Sui mainnet)'}: package <span class="font-mono">{short(T.packageId)}</span> · Issuer <span class="font-mono">{short(T.issuerId)}</span>.</p>
     </div>
   </section>
 
@@ -59,9 +75,9 @@ const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
     <div class="card text-sm text-sand-200" data-disclosure>
       <h2 class="font-serif text-2xl text-sand-50">Read this first</h2>
       <ul class="mt-2 list-disc space-y-1 pl-5">
-        <li><b>Read the terms first:</b> <a class="text-ibad-300" href="/certificates/terms/" data-cert-terms-link>Spice Certificate terms</a> (version {CERT_TERMS_VERSION}). This page is a testnet preview, so nothing on it is an offer to sell anything yet.</li>
+        <li><b>Read the terms first:</b> <a class="text-ibad-300" href="/certificates/terms/" data-cert-terms-link>Spice Certificate terms</a> (version {CERT_TERMS_VERSION}).{TEST && ' This page is a testnet preview, so nothing on it is an offer to sell anything yet.'}</li>
         <li><b>Not a bank deposit, not insured, not registered.</b> Not FDIC, not SIPC, no insurer; no regulator has reviewed it.</li>
-        <li><b>The 8% APR in sats is a target, not a promise.</b> It is rounded down daily (a little under 8% in practice). You could lose some or all of your money.</li>
+        <li><b>The 8% APR in sats is a target, not a promise.</b> It is rounded down daily ({RATE_IN_PRACTICE}) You could lose some or all of your money.</li>
         <li><b>Not available on demand.</b> {WITHDRAW_BOX} We aim to pay within 6 hours of a verified request: a target, not a promise. {PAYOUT_PRICING}</li>
         <li data-buy-no-cap>{BUY_NO_CAP}</li>
         <li data-buy-pause>{BUY_PAUSE}</li>
@@ -71,14 +87,17 @@ const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
     </div>
   </section>
 
-  <section class="container-x py-6"><CertFooterHook /><Disclaimer extra="Testnet preview: no real purchases yet. The 8% APR in sats is a target, not a promise. See the Spice Certificate terms." /></section>
+  <section class="container-x py-6"><CertFooterHook /><Disclaimer extra={(TEST ? 'Testnet preview: no real purchases yet. ' : '') + 'The 8% APR in sats is a target, not a promise. See the Spice Certificate terms.'} /></section>
 
   <script>
     import { state, api, signIn } from '../../lib/wallet-signin.js';
     const $ = (s: string) => document.querySelector(s) as HTMLElement;
     const say = (t: string) => { $('[data-msg]').textContent = t; };
     const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] as string));
-    let lastTx: unknown = null;
+    let lastTx: unknown = null; let lastChain = 'sui:testnet';
+    // Live sales status (mainnet): the Issuer's paused flag, read by the server on every page load.
+    const st = document.querySelector('[data-sales-status]') as HTMLElement | null;
+    if (st) api('cert-sales-status').then((r: any) => { if (r?.ok && r.sales_open) st.classList.add('hidden'); else if (r?.message) ($('[data-sales-msg]').textContent = r.message); }).catch(() => {});
     $('[data-signin]').addEventListener('click', async () => {
       try {
         const r = await signIn(say); if (!r) return;
@@ -91,21 +110,21 @@ const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
     });
     $('[data-quote]').addEventListener('click', async () => {
       lastTx = null; $('[data-sign]').classList.add('hidden');
-      $('[data-out]').textContent = 'Building and dry-running on Sui testnet…';
+      $('[data-out]').textContent = 'Building and dry-running…';
       const q = await api('cert-buy-quote');
       if (!q.ok) { $('[data-out]').textContent = q.reason === 'not_eligible' ? q.explain : 'Not available: ' + q.reason; return; }
-      const head = `<p><b>${esc(q.note)}</b></p>`;
+      const head = q.note ? `<p><b>${esc(q.note)}</b></p>` : '';
       if (!q.ready) { $('[data-out]').innerHTML = head + `<p class="mt-1">${esc(q.explain || ('Dry-run: ' + (q.dry_run?.status ?? q.reason)))}</p>`; return; }
-      $('[data-out]').innerHTML = head + '<p class="mt-1">Dry-run passed on testnet. Price: 100 tUSDC (testnet mock coin, no value).</p>';
-      lastTx = q.tx_json; $('[data-sign]').classList.remove('hidden');
+      $('[data-out]').innerHTML = head + `<p class="mt-1">Dry-run passed. Price: ${esc(q.price_display)}.</p>`;
+      lastTx = q.tx_json; lastChain = q.chain; $('[data-sign]').classList.remove('hidden');
     });
     $('[data-sign]').addEventListener('click', async () => {
       const f = state.wallet?.features?.['sui:signAndExecuteTransaction'];
       if (!f || !lastTx) return;
       try {
         const tx = lastTx;
-        const r = await f.signAndExecuteTransaction({ transaction: { toJSON: async () => tx }, account: state.account, chain: 'sui:testnet' });
-        $('[data-out]').insertAdjacentHTML('beforeend', `<p class="mt-2">Submitted on testnet by your wallet: <span class="font-mono">${String(r.digest).replace(/[^A-Za-z0-9]/g, '')}</span>.</p>`);
+        const r = await f.signAndExecuteTransaction({ transaction: { toJSON: async () => tx }, account: state.account, chain: lastChain as any });
+        $('[data-out]').insertAdjacentHTML('beforeend', `<p class="mt-2">Submitted by your wallet (${esc(lastChain)}): <span class="font-mono">${String(r.digest).replace(/[^A-Za-z0-9]/g, '')}</span>.</p>`);
       } catch { $('[data-out]').insertAdjacentHTML('beforeend', '<p class="mt-2">Not signed.</p>'); }
       lastTx = null; $('[data-sign]').classList.add('hidden');
     });

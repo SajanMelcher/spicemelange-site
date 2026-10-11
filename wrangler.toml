@@ -27,11 +27,15 @@ COURSE_PRODUCTION_SENDING = "1" # ON 2026-10-10 (Sajan 9:31 AM PT "Live"; Siona 
 # PREPARED (separate commit, drop it if Sajan says no): production sells only The Secret Journals; /terms/ = LICENSE 2026.10.10.1.
 STORE_SINGLES_FOR_SALE = "0"
 # Spice Certificates LAUNCH flag (Siona SJ2): "0" = /certificates/*, the home card, nav link, wallet sign-in, footer option A and
-# the /privacy/ certificates section are not built, and /api/certificates/* + legacy holder links return 404. Flip at launch only.
-SPICE_CERTS_LIVE = "0"
-# Withdrawal step 1 (on-chain request_redemption): which certificate contract the holder page builds against. ONE switch:
-# "testnet" until the mainnet ids land in store-core/spice-cert-testnet.json ("mainnet" refuses until then).
-SPICE_CERT_REDEEM_NETWORK = "testnet"
+# the /privacy/ certificates section are not built, and /api/certificates/* + legacy holder links return 404.
+# ON: Sajan 9:59 PM PT 10/10 ("Approve it anyway and go live").
+SPICE_CERTS_LIVE = "1"
+# ONE network switch for the certificate contract (buy page, holder ownership reads, redemption request), store-core/spice-cert-net.js.
+# "mainnet" = the v6 ids synced from spice-certificates/deploy.mainnet.json into store-core/spice-cert-testnet.json.
+SPICE_CERT_REDEEM_NETWORK = "mainnet"
+# Mainnet buying also needs the Issuer unpaused on-chain (read live). "0" keeps the buy page on "Sales are paused" even after an
+# on-chain unpause; set "1" (one line + deploy) to open the site's buy button.
+SPICE_CERT_MAINNET_SALES = "0"
 # Home "No leverage" card (Siona SJ21): "1" = Sajan's 9:19 PM PT wording ("No leverage, no borrowed money" / "The Spice Melange
 # trading desk trades on Sui with no leverage and no borrowed money."); "0" = the older card. Build time only.
 HOME_FUNDS_LINE_LIVE = "1"

@@ -11,6 +11,7 @@ import { SITE, mailto } from '../data/site';
 import { copy } from '../../store-core/spice-gate.js';
 import { CERTS_LIVE_AT_BUILD, HOME_FUNDS_LINE_AT_BUILD } from '../../store-core/launch.js';
 import { TESTNET_BANNER } from '../data/certificates';
+import { CERT_TARGET_AT_BUILD } from '../../store-core/spice-cert-net.js';
 const cert = copy();
 
 const pillars = [
@@ -105,7 +106,7 @@ const ways = [
     <a href="https://thespicemelange.org/certificates/" class="card group block no-underline transition-colors hover:border-spice-400/40" data-cert-home>
       <span class="eyebrow">Spice Certificates · {cert.short}</span>
       <span id="certs" class="mt-2 block font-serif text-2xl text-sand-50 group-hover:text-spice-300">Spice Certificates, for {cert.who} <span aria-hidden="true">→</span></span>
-      <span class="mt-2 block text-sand-200/85">Spice Certificates are available only to {cert.who}. Sign in with your Sui wallet (a message, never a transaction or your seed phrase) to check. The 8% APR, credited in sats, is a target, not a promise, and you can lose money. Education only. {TESTNET_BANNER}</span>
+      <span class="mt-2 block text-sand-200/85">Spice Certificates are available only to {cert.who}. Sign in with your Sui wallet (a message, never a transaction or your seed phrase) to check. The 8% APR, credited in sats, is a target, not a promise, and you can lose money. Education only.{CERT_TARGET_AT_BUILD?.testnet !== false && ' ' + TESTNET_BANNER}</span>
     </a>
   </section>
   )}
