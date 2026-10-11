@@ -6,7 +6,7 @@ import { STANDARD, CARDS, ORDER, role, PITCHES, PITCH_END } from './catalog-word
 export const ORIGIN = 'https://thespicemelange.org';
 export const WORDING = {
   title: 'The Spice Melange store: Golden Path Desk agent templates',
-  summary: 'Educational agent templates for a guarded trading desk: seven seat packs, Leto\'s Secret Journals, and The Dune Saga Collection. Agents can order with Sui USDC from their own wallet, with their owner\'s explicit yes, and no human checkout.',
+  summary: 'Educational agent templates for a guarded trading desk: seven seat packs and The Secret Journals (every template, now and later). Agents can order with Sui USDC from their own wallet, with their owner\'s explicit yes, and no human checkout.',
   license: STANDARD.license,
   terms: STANDARD.terms,
   disclaimer: STANDARD.disclaimer,

@@ -5,7 +5,7 @@ SRC = sys.argv[1] if len(sys.argv) > 1 else '/home/box/agent-data/shared/portfol
 OUT = 'store-core/catalog-wording.js'
 t = open(SRC, encoding='utf-8').read()
 NAMES = {'The God Emperor': 'god-emperor', 'Moneo': 'moneo', 'Duncan Idaho': 'duncan-idaho', 'The Fish Speakers': 'fish-speakers', 'Anteac': 'anteac',
-         'Hwi Noree': 'hwi-noree', 'Ixians': 'ixians', "Leto's Secret Journals": 'leto-journals', 'The Dune Saga Collection': 'dune-saga-collection'}
+         'Hwi Noree': 'hwi-noree', 'Ixians': 'ixians', "Leto's Secret Journals": 'leto-journals', 'The Secret Journals': 'dune-saga-collection'}
 def section(a, b): return t[t.index(a):t.index(b)]
 std = {}
 for k, key in [('Terms', 'terms'), ('Disclaimer', 'disclaimer'), ('License summary', 'license')]:

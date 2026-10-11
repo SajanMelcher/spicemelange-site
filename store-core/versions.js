@@ -40,7 +40,7 @@ export function versionsDoc(site = 'https://thespicemelange.org') {
     howToUpdate: `Re-download the latest at ${site}/store/download/ with your order ID and token. Always serves the current version.`,
     changelog: `${site}/templates/changelog/`,
     // Every update-checked product is listed under `templates` by slug (the packs' skills look there), seats first,
-    // then the Dune Saga Collection and Leto's Secret Journals. `packs` repeats the non-seat products for older readers.
+    // then The Secret Journals (dune-saga-collection) and Leto's journals (leto-journals, retired from sale 10/10; still in versions.json). `packs` repeats the non-seat products for older readers.
     templates: Object.fromEntries([...T.templates, ...T.packs].map(entry)),
     packs: Object.fromEntries(T.packs.map(entry)),
     // Add-on files delivered with a parent order (status `addons[]`); verify each download against this sha256.

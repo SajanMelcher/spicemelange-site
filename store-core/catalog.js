@@ -2,6 +2,8 @@
 // Grok Bot templates (Sajan, 10/9 8:38 PM PT): $50 USDC each, weekly updates included.
 // STAGED 10/9 10:04 PM PT (branch dune-saga-collection): the $250 Full Desk is retired for new orders and replaced by
 // The Dune Saga Collection at $300 (7 packs + Leto's Journals + all future templates, upgrades free forever, all sales final).
+// RENAMED 10/10 (Sajan 8:11 PM PT): customer-facing name is now 'The Secret Journals'; the SKU id stays 'dune-saga-collection'.
+// RETIRED 10/10 (Sajan 8:14 PM PT): the single $50 'leto-journals' is no longer sold; its contents stay inside The Secret Journals.
 // Retired SKUs stay in CATALOG so past paid orders keep re-downloading their original file (checkLink needs bySku).
 // Re-downloading with the order ID and token always serves the latest version in STORE_FILES.
 // Product files live in private storage (STORE_FILES KV), keyed by `file`. Never under public/.
@@ -40,25 +42,27 @@ export const CATALOG = [
     quote: 'The inventive machine-makers.',
     blurb: "Your technocrat toolmakers. Build and maintain the connectors, scripts, guards and dashboards the desk runs on: read-only first, paper mode before live, testnet before mainnet, code-enforced guards, secret scans before every push.",
     highlights: ['Branch, test, preview, release', 'Paper mode first', 'Secret hygiene'] }),
-  t({ sku: 'leto-journals', name: "Leto's Secret Journals", role: 'System templates for the Golden Path', glyph: 'book', kind: 'System templates', format: 'ZIP (Markdown)',
+  // Retired 10/10 8:14 PM PT: not listed, not orderable, no page (/store/leto-journals/ redirects to The Secret Journals).
+  // Past paid orders keep re-downloading file:leto-journals with their original order ID and token (no upgradeTo).
+  t({ sku: 'leto-journals', retired: true, name: "Leto's Secret Journals", role: 'System templates for the Golden Path', glyph: 'book', kind: 'System templates', format: 'ZIP (Markdown)',
     quote: 'The God Emperor\'s journals, for those who come after.',
     blurb: 'The system around the seats: doctrine and playbook, decisions log, lessons with a "clearly better" promotion process, guardrails config, routine calendar, hand-off and approval protocols, shared memory, archive plan and onboarding.',
     includes: ['Weekly updates included', 'Doctrine and playbook template', 'Decisions log', 'lessons.md + "clearly better" promotion process', 'Guardrails config with editable defaults', 'Routine calendar (guard checks, daily briefs, nightly archive, low-data mode)', 'Hand-off and approval protocols', 'Shared-memory layout', 'Backup and archive plan (the Walrus pattern)', 'New-agent onboarding checklist'],
     highlights: ['Nine journals, one coherent system', 'Works with any or all of the seven archetypes', 'Start with doctrine, decisions, rails and memory'] }),
   // Retired 10/9 (staged): not listed, not orderable, no page (/store/full-desk/ redirects). Past paid orders still download file:full-desk.
-  // Siona T1 (Sajan 2026-10-10 12:27 AM PT): past Full Desk orders are served the current Dune Saga Collection (alias, no row rewrite).
+  // Siona T1 (Sajan 2026-10-10 12:27 AM PT): past Full Desk orders are served the current collection, The Secret Journals (alias, no row rewrite).
   { sku: 'full-desk', name: 'The Full Desk', role: 'All seven Grok Bot templates (retired)', glyph: 'sigil', retired: true, upgradeTo: 'dune-saga-collection',
     priceUsdc: '250', placeholder: false, quote: '', blurb: '', includes: [], highlights: [], format: 'ZIP', file: 'file:full-desk' },
-  { sku: 'dune-saga-collection', name: 'The Dune Saga Collection', role: 'Every template, now and in the future', glyph: 'sigil', bundle: true, kind: 'Grok Bot template collection', version: latestFor('dune-saga-collection')?.version ?? null,
+  { sku: 'dune-saga-collection', name: 'The Secret Journals', role: 'Every template, now and in the future', glyph: 'sigil', bundle: true, kind: 'Grok Bot template collection', version: latestFor('dune-saga-collection')?.version ?? null,
     priceUsdc: '300', placeholder: false, // Sajan 10/9 ~10:00 PM PT (staged): replaces the $250 Full Desk; singles stay $50
     quote: 'Seven seats, one Golden Path, and every seat still to come.',
-    blurb: "All seven Golden Path Desk Grok Bot templates plus Leto's Secret Journals, and every future template at no extra cost. Upgrades are free forever. All sales final.",
-    includes: ['All 7 Grok Bot desk templates', "Leto's Secret Journals", 'Every future template, at no extra cost', 'Upgrades free forever: re-download the latest any time', 'Collection overview and README'],
+    blurb: "The God Emperor's Secret Journals: all seven Golden Path Desk Grok Bot templates plus Leto's nine system journals, and every future template at no extra cost. Upgrades are free forever. All sales final.",
+    includes: ['All 7 Grok Bot desk templates', "Leto's nine system journals (doctrine, decisions, lessons, guardrails and more)", 'Every future template, at no extra cost', 'Upgrades free forever: re-download the latest any time', 'Collection overview and README'],
     highlights: ['$300 for every template, now and in the future', 'Upgrades free forever', 'Start with three seats, grow to seven and beyond'],
     format: 'Grok Bot templates (ZIP, Markdown + JSON)', file: 'file:dune-saga-collection' },
   { sku: 'plumbline-pro', name: 'The Spice Melange Trading Desk Pro', role: 'Coming soon', glyph: 'plumb', comingSoon: true,
     priceUsdc: '—', placeholder: true, quote: '', blurb: 'A supporter tier for The Spice Melange Trading Desk, the read-only DeepBook market data connector. Coming soon.', includes: [], highlights: [], format: '', file: '' },
-  // Add-on file (Sajan 2026-10-10 12:13 AM PT): desk-kit code, delivered with Fish Speakers and Dune Saga Collection orders
+  // Add-on file (Sajan 2026-10-10 12:13 AM PT): desk-kit code, delivered with Fish Speakers and Secret Journals (dune-saga-collection) orders
   // as a second signed link. Never listed, never orderable on its own (createOrder refuses addon SKUs).
   { sku: 'desk-kit', name: 'desk-kit', role: 'Add-on: guarded DeepBook bot (training by default)', glyph: 'blade', hidden: true, addon: true,
     addonFor: ['fish-speakers', 'dune-saga-collection'], priceUsdc: '0', placeholder: false, quote: '', blurb: '', includes: [], highlights: [], format: 'ZIP (TypeScript)', file: 'file:desk-kit' },
@@ -69,7 +73,7 @@ export const CATALOG = [
 ];
 
 export const bySku = (sku) => CATALOG.find((p) => p.sku === sku) ?? null;
-/** The SKU whose file, add-ons and updates an order of `sku` receives (retired Full Desk -> Dune Saga Collection). */
+/** The SKU whose file, add-ons and updates an order of `sku` receives (retired Full Desk -> The Secret Journals). */
 export const servedSku = (sku) => bySku(sku)?.upgradeTo ?? sku;
 export const addonsFor = (sku) => CATALOG.filter((p) => p.addon && p.addonFor?.includes(sku));
 export const ARCHETYPES = CATALOG.filter((p) => !p.bundle && !p.comingSoon && !p.hidden && !p.retired);

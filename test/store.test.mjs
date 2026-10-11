@@ -248,14 +248,27 @@ test('selftest SKU: hidden, needs the secret flag, 0.05 + tag, 3 h expiry, inlin
   assert.match(f.body, /self-test/); assert.equal(f.type.startsWith('text/plain'), true);
 });
 
-test("catalog: Leto's Secret Journals listed at 50, bundle stays 250", async () => {
-  const { bySku, ARCHETYPES } = await import('../store-core/catalog.js');
-  assert.equal(bySku('leto-journals').priceUsdc, '50'); assert.equal(bySku('leto-journals').file, 'file:leto-journals');
-  assert.ok(ARCHETYPES.some((p) => p.sku === 'leto-journals'));
+test("Leto's Secret Journals single retired from sale (Sajan 8:14 PM PT 10/10): not listed or orderable; past paid orders keep their own file; collection renamed The Secret Journals at 300", async () => {
+  const { bySku, ARCHETYPES, LISTED, servedSku } = await import('../store-core/catalog.js');
+  const leto = bySku('leto-journals');
+  assert.equal(leto.retired, true); assert.equal(leto.file, 'file:leto-journals'); assert.equal(leto.upgradeTo, undefined);
+  assert.equal(servedSku('leto-journals'), 'leto-journals', 'past buyers keep their own pack, not the collection');
+  assert.ok(!ARCHETYPES.some((p) => p.sku === 'leto-journals') && !LISTED.some((p) => p.sku === 'leto-journals'));
   assert.equal(bySku('full-desk').priceUsdc, '250');
+  const col = bySku('dune-saga-collection');
+  assert.equal(col.name, 'The Secret Journals'); assert.equal(col.priceUsdc, '300');
+  assert.ok(col.includes.some((i) => /Leto/.test(i)), "Leto's journals stay inside the collection");
   const cfg = loadConfig(env());
-  const r = await createOrder(cfg, { sku: 'leto-journals', nowMs: T0 });
-  assert.ok(BigInt(r.order.amountAtomic) > 50_000_000n && BigInt(r.order.amountAtomic) < 50_010_000n);
+  assert.equal((await createOrder(cfg, { sku: 'leto-journals', nowMs: T0 })).reason, 'unknown_product');
+  const c2 = (await setup()).cfg;
+  const r = await createOrder(c2, { sku: 'moneo', nowMs: T0 });
+  c2.db.raw.prepare("UPDATE orders SET sku = 'leto-journals', status = 'paid', digest = 'x', paid_ms = ? WHERE id = ?").run(T0 + 1000, r.order.orderId);
+  const st = await orderStatus(c2, { orderId: r.order.orderId, token: r.order.token, nowMs: T0 + 5000 });
+  assert.equal(st.status, 'paid'); assert.match(st.downloadUrl, /p=leto-journals/);
+  assert.equal((await authorizeDownload(c2, { orderId: r.order.orderId, token: r.order.token, nowMs: T0 + 7000 })).sku, 'leto-journals');
+  const redirects = readFileSync(new URL('../public/_redirects', import.meta.url), 'utf8');
+  assert.match(redirects, /^\/store\/leto-journals\/ \/store\/dune-saga-collection\/ 301$/m);
+  for (const f of ['../public/llms.txt', '../public/.well-known/agent-join.json']) assert.doesNotMatch(readFileSync(new URL(f, import.meta.url), 'utf8'), /"leto-journals"|plus leto-journals/, f);
 });
 
 test('payee change: each order verifies against the payee recorded on it; new orders use the new payee', async () => {
@@ -292,7 +305,7 @@ test('templates: Grok Bot catalog copy, prices, and a public versions.json with 
   assert.equal(saga.priceUsdc, '300'); assert.equal(saga.bundle, true); assert.equal(saga.file, 'file:dune-saga-collection');
   assert.ok(saga.includes.some((i) => /Leto/.test(i)) && saga.includes.some((i) => /future/i.test(i)) && saga.includes.some((i) => /free forever/i.test(i)));
   assert.equal(bySku('hwi-noree').role, 'Ambassador of the Trading Desk');
-  assert.ok(ARCHETYPES.length === 8);
+  assert.ok(ARCHETYPES.length === 7, 'seven seats; the Leto single is retired');
   const v = versionsDoc();
   assert.deepEqual(Object.keys(v.templates).sort(), [...seven, 'dune-saga-collection', 'leto-journals'].sort());
   assert.equal(v.templates['dune-saga-collection'].version, TEMPLATES.current);
@@ -312,7 +325,7 @@ test('templates: Grok Bot catalog copy, prices, and a public versions.json with 
   assert.match(v.howToUpdate, /\/store\/download\//);
 });
 
-test('retired Full Desk: not orderable or listed; a past paid order is served the current Dune Saga Collection (T1 alias) with add-ons', async () => {
+test('retired Full Desk: not orderable or listed; a past paid order is served the current collection, The Secret Journals (T1 alias) with add-ons', async () => {
   const { bySku, LISTED, ARCHETYPES } = await import('../store-core/catalog.js');
   const { loadFile } = await import('../store-core/files.js');
   assert.equal(bySku('full-desk').retired, true);

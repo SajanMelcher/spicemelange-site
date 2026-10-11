@@ -1,6 +1,6 @@
 // The Golden Path free course: 7 lessons built from blocks (free-course.md §3, Hwi's DRAFT 2026-10-10 ~7:23 AM PT).
 // Free course = Golden Path intro and information only (Sajan 9:36 AM PT): no agent setup tasks; at most one gentle
-// Dune Saga Collection invitation. Agent configuration lives only in the buyers-only 14-day lessons.
+// Secret Journals (collection) invitation. Agent configuration lives only in the buyers-only 14-day lessons.
 // The sender assembles: core + track + goal line + (standard: deeper)
 // + at most one Collection invitation (lessons 6 and 7 only) + risk line (no reply line: Siona LL3).
 // Wording rules (Siona O3-O9, GL8-GL13): "trade beside the desk" ("It can't place trades or touch your funds", per client,
@@ -123,7 +123,7 @@ export const COURSE = [
       evaluate: 'Why it matters for you: ask any vendor how you can check that a download is really theirs.',
     },
     deeper: 'Worked example: open versions.json, find the current version, then compare the sha256 of a download with the value listed. If they differ, don\'t run it.',
-    invite: { door: 'collection', when: () => true, text: "If you'd like every seat, now and later: the Dune Saga Collection. All 8 templates are $400 one by one and $300 together, every future template is included, and upgrades are free forever. USDC on Sui; all sales final, except where the law requires otherwise." },
+    invite: { door: 'collection', when: () => true, text: "If you'd like every seat, now and later: The Secret Journals. The seven seats are $50 each; The Secret Journals has all of them plus Leto's nine system journals for $300, every future template is included, and upgrades are free forever. USDC on Sui; all sales final, except where the law requires otherwise." },
   },
   {
     n: 7, title: 'Choosing your path',
@@ -141,7 +141,7 @@ export const COURSE = [
       evaluate: 'Why it matters for you: use your lesson-3 checklist on us as hard as on anyone else.',
     },
     deeper: 'A last check: if anything you planned during these lessons feels too big now, make it smaller. That instinct is the Golden Path working.',
-    invite: { door: 'collection', when: () => true, text: "If you'd like to keep going, the Dune Saga Collection is on the store page. Or stop here. That's a good ending too." },
+    invite: { door: 'collection', when: () => true, text: "If you'd like to keep going, The Secret Journals is on the store page. Or stop here. That's a good ending too." },
   },
 ];
 

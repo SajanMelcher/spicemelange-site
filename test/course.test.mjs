@@ -237,7 +237,7 @@ test('free course is information only (Sajan 9:36 AM PT): no setup task in any e
       const m = courseEmail(c, { id: 'cs_aaaaaaaaaaaaaaaa', unsub_token: 'cu_x', email: 'a@b.co', track: 'naib', goal, time, agent }, e);
       for (const s of [m.text, m.html]) assert.doesNotMatch(s, /Apply this on the desk|Ask your agent|point your own agent|hosted connector/i);
     }
-  for (const L of COURSE) { assert.equal(L.task, undefined, `lesson ${L.n} task`); if (L.invite) { assert.equal(L.invite.door, 'collection'); assert.match(L.invite.text, /Dune Saga Collection/); } }
+  for (const L of COURSE) { assert.equal(L.task, undefined, `lesson ${L.n} task`); if (L.invite) { assert.equal(L.invite.door, 'collection'); assert.match(L.invite.text, /The Secret Journals/); } }
   const page = readFileSync(new URL('../src/pages/learn/[n].astro', import.meta.url), 'utf8');
   assert.doesNotMatch(page, /Apply this on the desk|L\.task/);
 });

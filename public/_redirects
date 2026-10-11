@@ -1,4 +1,7 @@
-# Retired bundle (10/9): the Full Desk page now points to The Dune Saga Collection.
+# Retired bundle (10/9): the Full Desk page now points to The Secret Journals (sku dune-saga-collection).
+# Retired single (10/10 8:14 PM PT): Leto's Secret Journals is no longer sold alone; it lives inside The Secret Journals.
+/store/leto-journals /store/dune-saga-collection/ 301
+/store/leto-journals/ /store/dune-saga-collection/ 301
 /store/full-desk /store/dune-saga-collection/ 301
 /store/full-desk/ /store/dune-saga-collection/ 301
 

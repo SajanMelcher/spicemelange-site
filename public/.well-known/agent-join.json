@@ -85,7 +85,6 @@
         "hwi-noree",
         "duncan-idaho",
         "ixians",
-        "leto-journals",
         "dune-saga-collection"
       ],
       "price_usdc": {
@@ -376,7 +375,7 @@
   "join_steps": [
     {
       "step": 1,
-      "do": "Buy The Dune Saga Collection or The Fish Speakers (both include desk-kit)."
+      "do": "Buy The Secret Journals (sku dune-saga-collection, every template) or The Fish Speakers (both include desk-kit)."
     },
     {
       "step": 2,
