@@ -1,104 +1,114 @@
 # Spice Certificates: Terms
-Version 2026.10.10 (approved by the issuer 2026-10-10) · Issuer: Sajan Melcher, doing business as The Spice Melange ("we", "us") · Holder: the person who buys a certificate ("you")
+Version 2026.10.10.1 (approved by the issuer 2026-10-10) · Issuer: Sajan Melcher, doing business as The Spice Melange ("we") · Holder: you, the buyer
 
-*In the deep desert, water is promised to no one. Read this before you trade for spice.*
+*In the deep desert, water is promised to no one. Read this first.*
 
-## Read this first (the important part, in plain words)
-- **This is not a bank deposit.** It is not a savings account and we are not a bank.
-- **It is not insured.** Not by the FDIC, not by SIPC, not by any government agency or private insurer.
-- **It is not registered** with the U.S. Securities and Exchange Commission or any state securities regulator, and no regulator has reviewed or approved it or these terms.
-- **Your money is invested, not set aside.** Proceeds from certificates fund STRC (a preferred stock) and a cash reserve. The cash reserve is used for trading and for the desk's other obligations, including debt repayment; part of it is kept for withdrawals. If the reserve runs short, borrowing against BTC is the last resort, used only after other sources run out. The trading agents themselves use no leverage.
-- **Neither your $100 nor the 8% is guaranteed.** Getting paid depends entirely on our ability to pay when you ask. If STRC falls, if our trading loses, if our debts come first, or if we stop operating, **you could lose some or all of your money.**
-- **Your money is not available on demand.** Every withdrawal needs a verified, signed request and Sajan Melcher's manual approval of that specific payment. Nothing is paid automatically. We aim to pay within 6 hours of a verified request, as a target, not a promise.
-- **If you choose BTC, you take the BTC price risk.** Your $100 is converted to BTC at the market price at the time of payout, and your accrued sats move with the BTC price. What you receive can be worth less than $100.
-- **Only holders of The Secret Journals license token from our store can buy** (sold before October 10, 2026 as The Dune Saga Collection; those collection licenses qualify too, see §2). One license can buy any number of certificates. If you sell or transfer your license, you lose desk membership, including the right to buy new certificates.
-- **Certificates you already bought** cannot be transferred, sold or given to anyone else, and stay redeemable (principal and credited sats) even if you later sell or transfer your license and lose membership. Withdrawals are whole-certificate only.
-- **Taxes are yours.** We give no tax, legal or investment advice.
+## The short version
+- This is **not a bank deposit** and we are not a bank.
+- It is **not insured** by any government agency or private insurer.
+- It is **not registered** with any securities regulator. No regulator has reviewed it.
+- **Your $100 and the 8% are not guaranteed.** You can lose some or all of your money.
+- You get paid only if we are able to pay when you ask.
+- Your money is **not available on demand.** Every payout is approved by hand.
+- Taxes are yours. Nothing here is tax, legal or investment advice.
 
-## 1. What a Spice Certificate is
-A Spice Certificate is our promise to pay you, recorded as a non-transferable NFT on the Sui blockchain minted to your wallet as soon as your payment is confirmed, with a unique serial number shown as "No. {serial}". You pay **100 USDC on Sui**. We aim to credit you yield at **8% per year (simple interest, actual days ÷ 365)**, in bitcoin satoshis ("sats"). The principal is recorded as 100 USDC. It is an unsecured obligation of Sajan Melcher dba The Spice Melange. You have no claim on any specific asset, no ownership of STRC, BTC or any of our accounts, and no right to vote or share in profits.
+## What you buy
+- You pay **100 USDC on Sui** for one certificate. One payment, one certificate.
+- The certificate is an NFT minted to your wallet as soon as your payment is confirmed. It has a serial number, "No. {serial}".
+- It is our unsecured promise to pay you. You don't own any of our assets or accounts, and you get no vote or share of profits.
+- **No cap.** We keep issuing certificates, with no set limit.
+- **Perpetual.** There is no end date. A certificate keeps earning until you redeem it.
+- **Redeem any time**, whole certificates only. No partial withdrawals.
 
-**Ongoing and perpetual.** Certificates are issued on an ongoing basis to confirmed buyers, with no set limit on how many we issue. A certificate has no maturity date: it stays outstanding and keeps accruing until you ask to redeem it, and you may ask at any time. Serials are never reissued. Because there is no limit, the total we owe holders can grow over time (see §6).
+## Who can buy
+- **Holders of The Secret Journals** license token from our store.
+- **Old collection licenses** (sold before October 10, 2026 as The Dune Saga Collection) count the same. An older transferable one counts only while it is still in the wallet that first bought it.
+- **Single-template licenses** don't count unless you upgrade to The Secret Journals.
+- **Second-hand older licenses** never count.
+- **No limit per license.** One license can buy as many certificates as you like.
+- You must be an adult, able to agree to these terms, and buying must be legal where you live.
 
-## 2. Who may buy
-- **Holders of The Secret Journals only.** Only a wallet that holds The Secret Journals license token from our store can buy. The Secret Journals is our only template product: every agent template, now and in the future. Its license token is non-transferable. We check this when you buy, and we record your license status again at each withdrawal (see §7b).
-- **No limit per license.** One license can buy any number of certificates.
-- **Earlier licenses.** A collection license bought before October 10, 2026 under the earlier name The Dune Saga Collection qualifies the same as The Secret Journals. An older transferable Dune Saga Collection license qualifies only while it is still in the wallet that originally bought it from our store. A single-template license (an earlier $50 order) does not qualify unless its holder upgrades to The Secret Journals. An older transferable license bought second-hand never qualifies.
-- You must be an adult who can legally enter into this agreement where you live, and buying must be legal where you live.
-- One certificate per 100 USDC payment. There is no limit on how many certificates one license can buy.
+## How your money is used
+- **62%** buys STRC, a preferred stock. Its price and dividend can fall. Its dividends are reinvested and may buy bitcoin.
+- **38%** goes to a cash reserve. It is used only for trading, buying bitcoin and paying withdrawals. About $19 per certificate is kept for withdrawals.
+- Your payment is not set aside in an account for you.
+- **If the reserve runs short**, we cover withdrawals in this order: the cash reserve, then selling STRC, then selling other assets. **Borrowing against bitcoin to pay withdrawals is the last resort only, with the owner's explicit approval.** Borrowing carries liquidation risk.
+- Our trading agents use no leverage.
 
-## 3. How the yield accrues
-- Rate: 8% per year on 100 USDC, simple (no compounding), actual/365, starting the day after issue.
-- **Daily:** each day's dollar amount (about $0.0219) is converted to sats at a once-a-day BTC/USD price from a public market-data source: the price nearest 4:00 PM Pacific, used only if it is within 60 minutes of 4:00 PM, recorded once and never changed. If no price qualifies, that day is credited on a later run with that day's price.
-- **Rounded down:** each day's credit is rounded down to a whole sat, per certificate. That means you receive less than a full 8%: about 7.3% to 7.9% depending on the BTC price (the higher the price, the more is lost to rounding).
-- **Weekly:** once a week we move BTC equal to the sats credited that week into a separate holding that we use only for withdrawals. Between weekly moves, up to a week of credited sats is not yet set aside. That holding is our property, not held in your name, not segregated by law, and not insured; our creditors could reach it.
-- **Our private ledger is the official record of credited sats.** Any number shown on-chain or on a web page is a snapshot and may lag.
-- Credits continue while your withdrawal request is being reviewed and stop when Sajan approves your payout.
-- The 8% is a target we intend to credit, not a promise backed by any insurer. We may be unable to pay it.
+## How the 8% is credited
+- We aim to credit **8% a year** on 100 USDC. Simple interest, actual days out of 365, starting the day after you buy.
+- Each day's amount (about $0.0219) is turned into **whole bitcoin sats, rounded down**.
+- We use a public market price for bitcoin taken near **4:00 PM Pacific** each day, within 60 minutes of it. Each day's price is recorded once and never changed. If no price qualifies, that day is credited later at its own price.
+- Rounding down means you get **a bit less than 8%**, about 7.3% to 7.9%. The higher bitcoin goes, the more rounding takes.
+- **Every week** we move bitcoin equal to that week's credited sats into a separate holding used only for withdrawals. Up to a week of sats may not be set aside yet.
+- That holding is still **ours**. It is not held in your name, not legally separate and not insured. Our creditors could reach it.
+- **Our private ledger is the official record** of your sats. Numbers on-chain or on a web page may lag.
+- Sats keep being credited while your withdrawal is reviewed, and stop once your payout is approved.
+- The 8% is a target, not a promise. We may not be able to pay it.
 
-## 4. Withdrawal
-You may request redemption **at any time**; there is no notice period and no maturity date.
-1. **Request.** Email **reserve@thespicemelange.org** from the email you gave at purchase, with your serial number and your choice of **USDC on Sui** or **BTC**.
-2. **Sign.** We send you a short message to sign with the Sui wallet that holds your certificate (a message signature only: no transaction, no gas, and we will **never** ask for your recovery phrase or private key). It names your serial, payout asset, payout address and network.
-3. **Confirm.** Reply from the email on file to confirm the same request. We also ask you to confirm your payout address and its network **twice**. A changed address needs a new signature.
-4. **Approve and pay.** Once verified, Sajan Melcher reviews and approves that specific payment by hand and sends it through the exchange we use for payouts. We aim to pay within 6 hours of a verified request, but this is a target, not a promise: it can take longer if the cash reserve is short and assets such as STRC must be sold, or if we are unable to pay (see §5).
-5. **What you get.**
-   - **USDC (on the Sui network only):** 100 USDC plus your credited sats converted to USDC at the payout BTC/USD price (below), rounded down to the cent. Because it depends on the BTC price, the yield part can be worth less than 8% in dollars.
-   - **BTC:** 100 USDC converted to BTC at the payout BTC/USD price (below), plus your credited sats.
-   - **Payout BTC/USD price:** the BTC/USD market price on the exchange we use for payouts, at the time of your withdrawal (when the payout is made). The price, its source and its time are recorded with your payout. Because the price is taken at payout, the amount approved is an estimate and the final amount can differ if BTC moves before the payout is made. (The daily price in §3 is used only to credit sats, not for payouts.)
-6. **Whole certificates only.** No partial withdrawals. After payment your certificate is marked redeemed (or burned) and earns nothing more.
-- We send only to the address you confirmed. We pay the network fee on payouts. We are not responsible for an address you confirmed that turns out to be wrong.
+## How to withdraw
+1. **Ask.** Email **reserve@thespicemelange.org** from the email you used to buy. Give your serial number and pick **USDC on Sui** or **BTC**.
+2. **Sign.** We send a short message. Sign it with the Sui wallet that holds your certificate. It names your serial, payout asset, address and network. Signing costs no gas and is not a transaction. **We will never ask for your recovery phrase or private key.**
+3. **Confirm.** Reply from your email on file. Confirm your payout address and network **twice**. A new address needs a new signature.
+4. **Approval.** Sajan Melcher approves each payout by hand and sends it through Coinbase. Nothing is paid automatically.
+5. **Timing.** We aim to pay **within 6 hours** of a verified request. That is a target, not a promise. It can take longer if assets must be sold or if we can't pay.
 
-## 5. Use of proceeds and how payouts are funded
-- **Proceeds fund STRC and a cash reserve.** Of each $100, 62% buys STRC (a preferred stock whose price and dividend can fall); its dividends are reinvested and may buy BTC. 38% goes to a cash reserve used for trading and for the desk's other obligations, including debt repayment and BTC purchases; about $19 per certificate of it is kept for withdrawals.
-- **If the reserve is short** when you withdraw, the plan is to cover it in this order: the cash reserve; selling STRC; selling other assets; and only as the last resort, borrowing against BTC. Each step can take time, can lose money, and may not be enough. Borrowing against BTC carries liquidation risk.
-- We do not hold your payment in a separate account for you. Our other activities, including trading and borrowing against BTC, can lose money and come before or alongside what we owe you.
+**What you get**
+- **USDC (on Sui only):** 100 USDC, plus your sats turned into USDC, rounded down to the cent.
+- **BTC:** 100 USDC turned into bitcoin, plus your sats.
+- Bitcoin is priced at **Coinbase's market price when the payout is made**. The amount we approve is an estimate. If bitcoin moves before we pay, the final amount moves too. (The daily 4 PM price is only for crediting sats.)
+- **We pay the network fee on payouts.**
+- We send only to the address you confirmed. If that address is wrong, we can't get it back.
+- After payment your certificate is marked redeemed (or burned) and earns nothing more.
 
-## 6. Risk factors
-- **Loss of principal.** You can lose some or all of the 100 USDC.
-- **Ability to pay.** Payment depends on one small issuer's finances. There is no insurance, guarantor or collateral pledged to you, and the withdrawal reserve and BTC holding are not legally ring-fenced.
-- **Not on demand.** A verified signed request, email confirmation and manual approval are needed for every payout; you cannot get your money instantly, and payouts can be delayed.
-- **STRC risk.** STRC is a preferred stock whose price and dividend can fall or be suspended; its issuer carries heavy bitcoin and debt exposure. If STRC is below what we paid when it must be sold, the loss reduces what is available to pay you.
-- **Bitcoin price risk.** BTC is volatile. Credited sats and any BTC payout can lose value quickly.
-- **Trading and borrowing risk.** Part of the cash reserve funds trading and loan repayment. The trading agents use no leverage, but the desk has borrowed against BTC, may borrow against BTC as the last resort to fund withdrawals, and those loans can be liquidated.
-- **Rounding.** Daily credits are rounded down to whole sats, so the effective rate is slightly below 8%.
-- **Liquidity risk.** There is no market to sell the certificate, and it cannot be transferred. If many holders withdraw at once, payouts may be delayed or not paid in full.
-- **No limit on issuance; redemption at any time (run risk).** We may keep issuing certificates without a cap, so the total principal and sats we owe can grow beyond what our cash reserve covers. Because every holder may ask to redeem at any time, many requests at once (for example after a BTC or STRC fall, or bad news about us) could exhaust the reserve, force sales of STRC at a loss or borrowing against BTC, miss the 6-hour target by days or longer, and leave later requests unpaid or partly paid. Our 6-hour aim is a target, not a promise.
-- **Perpetual, no maturity.** There is no date on which we must repay you. You get your money back only by requesting redemption and being paid under §4.
-- **Smart-contract and blockchain risk.** Bugs, Sui network problems, wallet loss or stolen keys can cause loss. If you lose the wallet holding your certificate, you may be unable to sign a withdrawal request.
-- **Stablecoin risk.** USDC can lose its peg or be frozen by its issuer.
-- **Operational and key-person risk.** The desk is run by one person with AI agents, and every payout needs that one person's approval; errors, outages or his absence can delay or prevent payment.
-- **Regulatory risk.** A regulator may decide this product needs registration or licensing, which could force it to stop, change or unwind, possibly at a loss to you.
-- **Tax risk.** Yield and BTC payouts may be taxable to you, including on price changes.
+**If we can't pay everyone in full**, requests are paid in the order they were verified. A request may be paid in part, with the rest paid when we have the funds.
+
+## Risks
+- **You can lose money.** Some or all of your 100 USDC.
+- **One small issuer.** Payment depends on our finances. No insurance, no guarantor, no collateral pledged to you. The reserve and the bitcoin holding are not legally walled off.
+- **Not on demand.** Every payout needs a signed request, an email reply and a manual approval. Payouts can be late.
+- **STRC.** Its price and dividend can fall or stop. Its issuer carries heavy bitcoin and debt exposure. A loss on STRC means less to pay you.
+- **Bitcoin.** It swings hard. Your sats and any BTC payout can lose value fast. If you choose BTC, you carry the bitcoin price risk, and what you get can be worth less than $100.
+- **Trading and borrowing.** Part of the reserve funds trading and bitcoin buys. The Spice Melange trading desk trades on Sui with its own funds only: no leverage and no borrowed money. It is separate from the owner's personal brokerage and exchange accounts. The desk may borrow against bitcoin only as a last resort to pay certificate withdrawals, and only with the owner's explicit approval. Any such loan can be liquidated.
+- **Rounding.** Daily rounding keeps your rate a bit under 8%.
+- **No resale.** There is no market for certificates and you can't transfer them.
+- **Run risk.** With no cap and redemption any time, the total we owe can grow past our reserve. If many holders ask at once, for example after a bitcoin or STRC drop or bad news about us, the reserve can run out. We may have to sell STRC at a loss or borrow, miss the 6-hour aim by days or more, and pay later requests late or only in part.
+- **No end date.** We never have to repay you on a set date. You get paid only by asking to redeem.
+- **Tech.** Bugs, network outages, lost wallets or stolen keys can cause loss. If you lose the wallet that holds your certificate, you may not be able to sign a withdrawal.
+- **USDC.** It can lose its dollar peg or be frozen by its issuer.
+- **One person.** One person runs the desk with AI agents and approves every payout. Mistakes, outages or his absence can delay or stop payment.
+- **Regulators.** A regulator could decide this needs registration or a license. That could force us to stop, change or unwind it, maybe at a loss to you.
+- **Taxes.** Sats and BTC payouts may be taxable, including on price changes.
 - **No advice.** Nothing here is investment, tax or legal advice.
 
-## 7. Non-transferable; holders only
-The certificate is bound to the wallet that bought it. It cannot be sold, transferred, pledged or given away. We may refuse or delay a payout if we cannot confirm the request comes from the holder.
+## Can't be transferred
+Your certificate is tied to the wallet that bought it. You can't sell, transfer, pledge or give it away. We may refuse or delay a payout if we can't confirm the request comes from the holder.
 
-## 7a. Shared desk memory
-Holders share the desk's memory through The Secret Journals templates: the doctrine, the rules, the lessons and how the agents work together. The desk's private memory stays sealed and is never shared: balances, addresses, keys, accounts and personal facts. Shared memory is education and practice, not advice, and it doesn't change any risk above.
+## Desk membership
+- Holding a license that qualifies makes you a member of the trading desk.
+- Members get the shared desk memory, signal posts, holder benefits and the right to buy new certificates.
+- **Shared desk memory** means The Secret Journals' doctrine, rules, lessons and how the agents work together. The desk's private memory stays sealed: balances, addresses, keys, accounts and personal facts are never shared. Shared memory is education and practice, not advice, and it doesn't change any risk above.
+- **If you sell or transfer your license, you lose membership**: shared memory, signal posts, holder benefits and buying new certificates.
+- **Certificates you already own stay redeemable.** They aren't cancelled. Principal and sats stay payable on the same terms, and sats keep being credited until your payout is approved. Your withdrawal must still be signed by the wallet holding the certificate.
+- We check your license off-chain when you buy, and record its status again at each withdrawal. Nothing on the blockchain enforces membership after you buy. A withdrawal is never refused because membership ended.
 
-## 7b. Desk membership and what happens if you sell your license
-- Holding The Secret Journals license token (or an earlier license that qualifies under §2) makes you a member of the trading desk. Membership includes the shared desk memory (§7a), signal posts, holder benefits, and the right to buy new Spice Certificates.
-- **If you sell or transfer your license, you lose desk membership.** You can no longer use the shared desk memory or post signals, you lose holder benefits, and you cannot buy new certificates.
-- **Certificates you already own stay redeemable.** If you sell or transfer your license, you lose only desk membership and the right to buy new certificates. Your existing certificates are not cancelled: their 100 USDC principal and credited sats stay payable under §4, on the same terms and with the same risks, and credits continue as for any other certificate until your payout is approved. Your withdrawal request must still be signed by the wallet that holds the certificate.
-- **How membership is checked.** Your license is checked off-chain by our systems when you buy, and its status is recorded again (not enforced) at each withdrawal. After purchase, nothing on the blockchain enforces membership or ties your certificate to your license; loss of membership is tracked off-chain in our records. A withdrawal is never refused because membership has ended.
+## Taxes
+Taxes on what you receive are yours to pay.
 
-## 8. Taxes
-You are responsible for all taxes on what you receive.
+## Your data
+- **Public on the blockchain, forever:** your certificate's serial, the wallet that holds it, the license object, amounts, dates, status and payout transactions. That's how blockchains work. We can't hide it.
+- **Private, never published:** your email, payout address and signed withdrawal messages. We use them only for your certificate and withdrawals, keep them apart from our main ledger, and archive them only encrypted. We don't sell them. We never publish anything linking your wallet to you.
+- To ask about deletion, email hello@thespicemelange.org. On-chain records can't be deleted, and we may need to keep sales and payout records.
 
-## 9. Your data
-- **Public on-chain (permanent, anyone can see):** your certificate's serial, the wallet address that holds it, the license object, amounts, dates, status and payout transactions. That is how blockchains work; we cannot hide it.
-- **Private (never published):** your email, payout address and signed withdrawal messages. They are used only to handle your certificate and withdrawal, kept separately from our main ledger, and archived only in encrypted form. We don't sell them and we never publish anything that links your wallet to your identity.
-- Ask hello@thespicemelange.org about deletion. On-chain records cannot be deleted, and we may need to keep sales and payout records.
+## Changes
+We may change these terms for new certificates. For certificates already sold, we won't lower your rate or principal without your agreement, unless the law requires it.
 
-## 10. Changes and ending
-We may change these terms for new certificates. For certificates already sold, we will not reduce the rate or principal recorded for you without your agreement, except where the law requires. If we cannot pay every withdrawal request in full, requests are paid in the order they were verified, and a request may be paid in part, with the rest paid when funds allow.
+## No Dune affiliation
+The names are a nod to Frank Herbert's Dune novels. We are not affiliated with, sponsored or endorsed by the Herbert estate, any publisher, or any film, TV or game studio.
 
-## 11. No Dune affiliation
-The Dune-flavoured names are a nod to Frank Herbert's novels. We are not affiliated with, sponsored or endorsed by the Herbert estate, any publisher, or any film, TV or game studio.
+## Law and contact
+- Florida law applies. Disputes go to the state or federal courts serving Manatee County, Florida.
+- As far as the law allows, our liability is limited to what we owe you under your certificate.
+- Questions: **hello@thespicemelange.org** · Withdrawals: **reserve@thespicemelange.org**
 
-## 12. Law, venue and contact
-These terms are governed by the laws of the State of Florida, USA. Any dispute goes to the state or federal courts serving Manatee County, Florida. To the extent the law allows, our liability is limited to the amount we owe you under your certificate. Contact: **hello@thespicemelange.org** · Withdrawals: **reserve@thespicemelange.org**.
-
-*The spice can be lost as easily as it is found. Buy only what you can afford to lose.*
+*Spice is lost as easily as it is found. Buy only what you can afford to lose.*

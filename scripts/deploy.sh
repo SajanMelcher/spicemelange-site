@@ -13,9 +13,15 @@ if [ "$MODE" = "production" ]; then
 else
   [ "$BRANCH" != "main" ] || { echo "Refusing: preview deploys must come from a non-main branch." >&2; exit 1; }
   TARGET="$BRANCH"
-  # PREVIEW-ONLY single-product catalog (store-core/catalog.js): singles off sale in the preview build + its tests.
-  export STORE_SINGLES_FOR_SALE=0
 fi
+# Siona SJ1/SJ9: build-time switches come ONLY from wrangler.toml for this target (the same values the Pages runtime gets).
+# Any exported shell value is cleared first. To flip production singles off, edit the ONE line in wrangler.toml [vars].
+unset STORE_SINGLES_FOR_SALE SPICE_CERTS_LIVE
+VT=$([ "$MODE" = "production" ] && echo production || echo preview)
+STORE_SINGLES_FOR_SALE="$(node scripts/wrangler-var.mjs STORE_SINGLES_FOR_SALE "$VT")"
+SPICE_CERTS_LIVE="$(node scripts/wrangler-var.mjs SPICE_CERTS_LIVE "$VT")"
+export STORE_SINGLES_FOR_SALE SPICE_CERTS_LIVE
+echo "deploy: $MODE build with STORE_SINGLES_FOR_SALE=$STORE_SINGLES_FOR_SALE SPICE_CERTS_LIVE=$SPICE_CERTS_LIVE (from wrangler.toml)"
 npm run -s test:store
 npm run -s build
 # Siona LOW: run the tests again on the fresh build, so the built-pages checks (email_off, dist/learn, /learn/ copy) see this dist.

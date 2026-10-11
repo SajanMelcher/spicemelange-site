@@ -2,7 +2,12 @@
 // /terms/: the approved licence (Sajan, 2026-10-10), rendered verbatim from portfolio-desk/store/LICENSE.md
 // plus section 9 (privacy, Sajan 2:45 AM PT; sha256 pinned in test/terms.test.mjs). Edit the .md, never this page.
 import Base from '../layouts/Base.astro';
-import { Content } from '../content-static/LICENSE.md';
+import { Content as LicenseSecretJournals } from '../content-static/LICENSE.md'; // 2026.10.10.1 (9bd55791): singles no longer sold
+import { Content as LicensePrevious } from '../content-static/LICENSE-2026.10.10.md'; // 2026.10.10 (2271d634): singles on sale
+import { SINGLES_FOR_SALE_AT_BUILD } from '../../store-core/catalog.js';
+// Siona SJ1(c): LICENSE .1 §1 says "We no longer sell single templates", so it ships WITH the singles switch: the same
+// STORE_SINGLES_FOR_SALE value picks the terms. "0" -> 2026.10.10.1; "1" -> the previous approved 2026.10.10 text.
+const Content = SINGLES_FOR_SALE_AT_BUILD ? LicensePrevious : LicenseSecretJournals;
 ---
 <Base title="Terms" description="Licence and sales terms for The Spice Melange agent templates: single owner, one desk, no resale, all sales final except where the law requires otherwise, not financial advice.">
   <section class="container-x max-w-3xl pt-16 pb-16 terms">

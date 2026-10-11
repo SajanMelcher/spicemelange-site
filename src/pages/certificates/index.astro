@@ -1,4 +1,5 @@
 ---
+import { CERT_TERMS_VERSION } from '../../data/cert-terms';
 // /certificates/: Spice Certificates buying page (Ixians 10/10/2026 PT). Sign in with a Sui wallet; the SERVER checks the wallet
 // for a mainnet DeskLicense under the single eligibility switch (store-core/spice-gate.js CERT_ELIGIBILITY). Holders get a
 // purchase preview wired to the TESTNET package only. There is no mainnet purchase path (needs Siona SC1 + SC9 and Sajan's yes).
@@ -58,7 +59,7 @@ const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
     <div class="card text-sm text-sand-200" data-disclosure>
       <h2 class="font-serif text-2xl text-sand-50">Read this first</h2>
       <ul class="mt-2 list-disc space-y-1 pl-5">
-        <li><b>Read the terms first:</b> <a class="text-ibad-300" href="/certificates/terms/" data-cert-terms-link>Spice Certificate terms</a> (version 2026.10.10). This page is a testnet preview, so nothing on it is an offer to sell anything yet.</li>
+        <li><b>Read the terms first:</b> <a class="text-ibad-300" href="/certificates/terms/" data-cert-terms-link>Spice Certificate terms</a> (version {CERT_TERMS_VERSION}). This page is a testnet preview, so nothing on it is an offer to sell anything yet.</li>
         <li><b>Not a bank deposit, not insured, not registered.</b> Not FDIC, not SIPC, no insurer; no regulator has reviewed it.</li>
         <li><b>The 8% APR in sats is a target, not a promise.</b> It is rounded down daily (a little under 8% in practice). You could lose some or all of your money.</li>
         <li><b>Not available on demand.</b> Each withdrawal needs a verified, signed request and Sajan Melcher's manual approval. We aim to pay within 6 hours of a verified request: a target, not a promise. {PAYOUT_PRICING}</li>

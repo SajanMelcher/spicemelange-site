@@ -1,4 +1,5 @@
 ---
+import { CERT_TERMS_VERSION } from '../../../data/cert-terms';
 // Spice Certificates holder page: TESTNET PREVIEW. Linked from /certificates/. Holder data (statements, links, withdrawal,
 // wallet, trade) answers only on the testnet preview (SPICE_CERT_PREVIEW=1); production shows sign-in only (gate 2). Sample data only. All holder data comes from /api/certificates/* behind a wallet signature or a view-only link.
 import Base from '../../../layouts/Base.astro';
@@ -23,7 +24,7 @@ import { PAYOUT_PRICING } from '../../../data/certificates';
         <li><b>Not available on demand.</b> Every withdrawal needs a verified, signed request and Sajan Melcher's manual approval of that specific payment. We aim to pay within 6 hours of a verified request: a <b>target, not a promise</b>.</li>
         <li>If you choose BTC, you take the BTC price risk. Certificates are non-transferable. Taxes are yours. No investment, tax or legal advice.</li>
       </ul>
-      <p class="mt-2 text-xs muted">Terms: <a class="text-ibad-300" href="/certificates/terms/" data-cert-terms-link>Spice Certificate terms</a> (version 2026.10.10). Sats accrue as floor(100 × 0.08 / 365 / BTC price × 100,000,000) per certificate per day, using the 4 PM PT price; our ledger is the official record and updates once a day.</p>
+      <p class="mt-2 text-xs muted">Terms: <a class="text-ibad-300" href="/certificates/terms/" data-cert-terms-link>Spice Certificate terms</a> (version {CERT_TERMS_VERSION}). Sats accrue as floor(100 × 0.08 / 365 / BTC price × 100,000,000) per certificate per day, using the 4 PM PT price; our ledger is the official record and updates once a day.</p>
     </div>
   </section>
 

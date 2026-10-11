@@ -48,7 +48,7 @@
         "status": "active",
         "withdrawal_status": "none",
         "withdrawal_request_id": null,
-        "token_hash": "sha256:6724bb57bdccb4fa735143bdc3d6fc5f23c8128aa3367b32ecea623b2e0d9668"
+        "token_hash": "sha256:dbb609bb82b15576d95cbe4bc4b8824628371b515379084227867e9452e9c408"
       }
     ]
   }

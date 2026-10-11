@@ -164,6 +164,15 @@ export async function consumeNonce(db, nonce, kind, now = Date.now()) {
     return null;
   } catch (e) { return /UNIQUE|constraint/i.test(String(e?.message || e)) ? 'nonce_already_used' : 'not_configured'; }
 }
+/** Siona SJ10: clear the per-serial withdrawal lock once the request has an OUTCOME (rejected or paid), so a rejected request
+ *  doesn't block a new one for 7 days. Called automatically when the ledger shows rejected/paid, and by
+ *  scripts/spice-withdraw-release.mjs when the operator records the outcome. Returns true if a lock was removed. */
+export const OUTCOME_STATUSES = ['rejected', 'paid'];
+export async function releasePending(db, serial) {
+  if (!db) return false;
+  try { const r = await db.prepare('DELETE FROM spice_withdraw_pending WHERE serial = ?1').bind(Number(serial)).run(); return (r?.meta?.changes ?? 0) > 0; }
+  catch { return false; }
+}
 export async function lockPending(db, serial, requestId, now = Date.now()) {
   if (!db) return 'not_configured';
   // A lock outlives the daily ledger update by days; after 7 days the ledger's withdrawal_status is the record.

@@ -9,7 +9,7 @@ import { ed25519 } from '@noble/curves/ed25519';
 import { secp256k1 } from '@noble/curves/secp256k1';
 import { sha256 as nsha256 } from '@noble/hashes/sha256';
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 
 const PAYTO = '0x' + 'ab'.repeat(32);
 const OTHER = '0x' + 'cd'.repeat(32);
@@ -581,7 +581,7 @@ test('S2: the mainnet store refuses to open if STORE_PAYTO differs from the sign
   assert.equal(loadConfig({ ...env('0x' + 'ab'.repeat(32)), SUI_NETWORK: 'testnet' }).enabled, true, 'preview/testnet uses its own payee');
 });
 
-test('PREVIEW-ONLY single-product mode: STORE_SINGLES_FOR_SALE=0 refuses the seven $50 singles, keeps The Secret Journals and past downloads', async () => {
+test('SJ1 single-product switch: STORE_SINGLES_FOR_SALE=0 refuses the seven $50 singles, keeps The Secret Journals and past downloads', async () => {
   const { singlesForSale, isSingle, bySku } = await import('../store-core/catalog.js');
   assert.equal(singlesForSale({}), true, 'production default unchanged until Sajan approves');
   assert.equal(singlesForSale({ STORE_SINGLES_FOR_SALE: '0' }), false);
@@ -590,7 +590,17 @@ test('PREVIEW-ONLY single-product mode: STORE_SINGLES_FOR_SALE=0 refuses the sev
   assert.equal((await createOrder(off, { sku: 'moneo', nowMs: T0 })).reason, 'unknown_product');
   const col = await createOrder(off, { sku: 'dune-saga-collection', nowMs: T0 });
   assert.ok(BigInt(col.order.amountAtomic) >= 300_000_000n && BigInt(col.order.amountAtomic) < 300_010_000n);
+  // SJ1: ONE switch in wrangler.toml for each target, read at build (deploy.sh) and order time (Pages env); no proposed wording.
   const w = readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf8');
-  assert.ok(w.indexOf('STORE_SINGLES_FOR_SALE') > w.indexOf('[env.preview.vars]'), 'flag only in preview vars');
-  assert.match(readFileSync(new URL('../scripts/deploy.sh', import.meta.url), 'utf8'), /export STORE_SINGLES_FOR_SALE=0/);
+  const { wranglerVar } = await import('../scripts/wrangler-var.mjs');
+  assert.ok(['0', '1'].includes(wranglerVar(w, 'STORE_SINGLES_FOR_SALE', 'production')), 'production value present ("1" until Sajan confirms; one-line flip)');
+  assert.equal(wranglerVar(w, 'STORE_SINGLES_FOR_SALE', 'preview'), '0');
+  const d = readFileSync(new URL('../scripts/deploy.sh', import.meta.url), 'utf8');
+  assert.match(d, /unset STORE_SINGLES_FOR_SALE SPICE_CERTS_LIVE/);
+  assert.match(d, /STORE_SINGLES_FOR_SALE="\$\(node scripts\/wrangler-var\.mjs STORE_SINGLES_FOR_SALE "\$VT"\)"/);
+  assert.ok(!existsSync(new URL('../store-core/catalog-wording-proposed.js', import.meta.url)), 'proposed wording is not in the build');
+  for (const f of ['../store-core/agent-store.js', '../src/pages/store/gallery.astro', '../src/pages/store/index.astro'])
+    assert.doesNotMatch(readFileSync(new URL(f, import.meta.url), 'utf8'), /PROPOSED|catalog-wording-proposed/, f);
+  for (const n of ['03', '05', '11', '13', '14'])
+    assert.doesNotMatch(readFileSync(new URL(`../content/hwi-lessons/cta/day-${n}.buyer.md`, import.meta.url), 'utf8'), /single seat|\$50/);
 });

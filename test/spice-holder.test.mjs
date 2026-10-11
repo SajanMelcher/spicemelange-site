@@ -7,7 +7,9 @@ import { ed25519 } from '@noble/curves/ed25519';
 import * as H from '../store-core/spice-holder.js';
 import { handle, gate, signinGate, ownedSerials } from '../store-core/spice-api.js';
 import * as G from '../store-core/spice-gate.js';
-import { TESTNET_CERT, certBuyQuote } from '../store-core/spice-cert-buy.js';
+import { TESTNET_CERT, certBuyQuote, licenseQualifies, HOLDER_CERT_TYPE } from '../store-core/spice-cert-buy.js';
+import IDS from '../store-core/spice-cert-testnet.json' with { type: 'json' };
+import { build as buildIds } from '../scripts/sync-spice-cert-ids.mjs';
 import { makeD1 } from './d1-shim.mjs';
 import { personalMessageDigest, suiAddress } from '../store-core/suisig.js';
 import { referencePrices } from '../store-core/spice-wallet.js';
@@ -166,7 +168,7 @@ test('on-chain ownership read: testnet GraphQL query shape and serial parse', as
   const f = async (url, init) => { sent = { url, body: JSON.parse(init.body) }; return { json: async () => ({ data: { address: { objects: { nodes: [{ contents: { json: { serial: '2' } } }] } } } }) }; };
   assert.deepEqual(await ownedSerials({ SPICE_CERT_TYPE: '0x1::certificate::SpiceCertificate' }, ADDR, f), [2]);
   assert.equal(sent.url, 'https://graphql.testnet.sui.io/graphql'); assert.ok(!sent.body.query.includes('asMoveObject'));
-  assert.equal(await ownedSerials({}, ADDR, f), null);
+  await ownedSerials({}, ADDR, f); assert.equal(sent.body.variables.t, HOLDER_CERT_TYPE); // default = generated testnet ids
 });
 
 // ------------------------------------------------------------------ Ixians 10/10 PT: sign-in on prod, SC13/14/15, gate, testnet buy
@@ -204,7 +206,8 @@ test('SC14/SC15: API JSON sends one Referrer-Policy + noindex; cert pages add no
   const page = readFileSync(new URL('../src/pages/certificates/holder/index.astro', import.meta.url), 'utf8');
   assert.match(page, /location\.hash/); assert.doesNotMatch(page, /location\.pathname\.match/);
   const legacy = await import('../functions/certificates/holder/[serial]/[token].js');
-  const lr = await legacy.onRequestGet({});
+  assert.equal((await legacy.onRequestGet({ env: {} })).status, 404, 'not launched: legacy route is 404');
+  const lr = await legacy.onRequestGet({ env: { SPICE_CERTS_LIVE: '1' } });
   assert.equal(lr.status, 302); assert.equal(lr.headers.get('location'), '/certificates/holder/#old-link');
   assert.match(readFileSync(new URL('../scripts/spice-holder-token.mjs', import.meta.url), 'utf8'), /holder\/#s=\$\{serial\}&t=\$\{token\}/);
 });
@@ -254,8 +257,7 @@ test('buy: needs a session AND an eligible wallet; builds TESTNET only; no mainn
   let asked = null;
   const yes = await call('cert-buy-quote', {}, r.session, { licenseAccess: async () => ({ eligible: true }), certBuyQuote: async (x) => { asked = x; return { ready: false, network: 'testnet', note: 'n' }; } }, env);
   assert.equal(yes.ok, true); assert.equal(yes.chain, 'sui:testnet'); assert.equal(asked.address, ADDR);
-  assert.equal(TESTNET_CERT.packageId, '0x8b5476e542f09aec64e0cd3b6239ab521d38bb044b3232b11bbf9b8f0693b75a');
-  assert.equal(TESTNET_CERT.issuerId, '0x33bf1e62fed97b37592dc8b4ba13a2ee5e2c5bc1542803243c7ebaecb1508462');
+  assert.equal(TESTNET_CERT.packageId, IDS.buy.packageId); assert.equal(TESTNET_CERT.issuerId, IDS.buy.issuerId);
   const fake = { core: { listOwnedObjects: async (o) => { assert.equal(o.type, TESTNET_CERT.deskLicenseType); return { objects: [] }; }, getBalance: async () => ({ balance: { balance: '0' } }) } };
   assert.equal((await certBuyQuote({ address: ADDR }, fake)).reason, 'no_testnet_desk_license');
   for (const f of ['../store-core/spice-cert-buy.js', '../store-core/spice-api.js', '../src/pages/certificates/index.astro']) {
@@ -276,38 +278,96 @@ test('copy: buy page, home and nav say holders of The Secret Journals; testnet b
   assert.match(buy, /target, not a promise/); assert.match(home, /target, not a promise/);
   assert.match(data, /Coinbase market price at the time of withdrawal/); assert.match(holder, /PAYOUT_PRICING/);
   assert.match(H.withdrawalMessage('h', 'n', { serial: 1, asset: 'USDC', payoutAddress: ADDR }), /Coinbase market price at the time of withdrawal/);
-  // Footer wording option A (Sajan 8:37 PM PT 10/10), verbatim from FOOTER-WORDING-DRAFT.md.
+  // Footer: option A verbatim (Sajan 8:37 PM PT), selected only when certificates are launched; LIVE text otherwise (SJ2).
   const base = readFileSync(new URL('../src/layouts/Base.astro', import.meta.url), 'utf8');
   assert.ok(site.includes('Our agent templates are educational software: they are not financial, investment, legal or tax advice, and they promise no returns.'));
   assert.ok(site.includes('Spice Certificates are a separate, holders-only offering with a stated 8% yearly target paid in bitcoin sats. That target is not guaranteed, a certificate is not a bank deposit and is not insured, and you can lose some or all of what you pay; see the Spice Certificate terms. Nothing else on this site is an offer or a solicitation to buy or sell any asset.'));
-  assert.doesNotMatch(site, /No returns are promised or implied|deposits from the public/);
-  assert.equal((site.match(/guarantee/gi) || []).length, 1); assert.match(site, /is not guaranteed/);
-  assert.match(base, /no leveraged trading, no hurry, think in decades\./); assert.doesNotMatch(base, /no leverage, no hurry/);
-  assert.match(home, /title: 'No leveraged trading'/); assert.match(home, /without trading on borrowed spice\./); assert.doesNotMatch(home, /borrowing against tomorrow/);
+  assert.match(site, /export const DISCLAIMER = CERTS_LIVE_AT_BUILD \? DISCLAIMER_OPTION_A : DISCLAIMER_LIVE;/);
+  const optA = site.slice(site.indexOf('DISCLAIMER_OPTION_A ='), site.indexOf('export const DISCLAIMER = '));
+  assert.doesNotMatch(optA, /leverage|borrow/i, 'HOLD (Tleilaxu 8:47 PM): no leverage/borrowing claim in option A');
+  // Final leverage wording (Sajan 8:53 PM PT via Tleilaxu), verbatim.
+  assert.match(base, /no leverage, no hurry, think in decades\./);
+  assert.match(home, /\{ title: 'No leverage, no borrowed money', glyph: 'shield', text: 'The Spice Melange trading desk trades on Sui with its own funds only\.' \}/);
+  assert.match(home, /Quietly and patiently\./);
+  assert.doesNotMatch(home + base, /No leveraged trading|borrowed spice|borrowing against tomorrow|no leveraged trading/);
 });
 test('privacy (SC16): names the server-side Sui reads and the holder data', () => {
   const p = readFileSync(new URL('../src/pages/privacy.astro', import.meta.url), 'utf8');
   for (const s of ['graphql.mainnet.sui.io', 'graphql.testnet.sui.io', 'fullnode.testnet.sui.io', 'payout address', 'signature', '30 days', 'display name', 'wallet address']) assert.ok(p.includes(s), s);
 });
 
-test('Tleilaxu footer line (Sajan 8:36 PM PT) is exact and renders only on the certificate pages', () => {
-  const LINE = 'The Fish Speakers trade with no leverage. To pay certificate withdrawals, the desk may borrow against bitcoin it holds, only as a last resort, and that borrowing carries liquidation risk.';
+test('cert footer leverage line (Sajan 8:53 PM PT) is exact and renders only on the certificate pages', () => {
+  const LINE = "The Spice Melange trading desk trades on Sui with its own funds only: no leverage and no borrowed money. It is separate from the owner's personal brokerage and exchange accounts. The desk may borrow against bitcoin only as a last resort to pay certificate withdrawals, and only with the owner's explicit approval.";
   const src = readFileSync(new URL('../src/data/certificates.ts', import.meta.url), 'utf8');
   assert.ok(src.includes(JSON.stringify(LINE)));
+  assert.doesNotMatch(src, /liquidation risk/, 'the 8:36 PM line is gone');
   for (const f of ['certificates/index.astro', 'certificates/holder/index.astro'])
     assert.match(readFileSync(new URL('../src/pages/' + f, import.meta.url), 'utf8'), /<CertFooterHook \/>/, f);
   assert.doesNotMatch(readFileSync(new URL('../src/pages/index.astro', import.meta.url), 'utf8'), /CertFooterHook/);
 });
+test('use of proceeds: no debt or loan repayment anywhere on the certificate pages, home, footer or terms (Sajan 8:53 PM PT)', () => {
+  const files = ['../src/pages/certificates/index.astro', '../src/pages/certificates/holder/index.astro', '../src/pages/index.astro', '../src/data/site.ts', '../src/data/certificates.ts', '../src/content-static/SPICE-CERT-TERMS.md'];
+  for (const f of files) assert.doesNotMatch(readFileSync(new URL(f, import.meta.url), 'utf8'), /(debt|loan)s? repay|repay(ing|ment of)? (the )?(debt|loan)|other obligations/i, f);
+  assert.match(readFileSync(new URL('../src/content-static/SPICE-CERT-TERMS.md', import.meta.url), 'utf8'), /cash reserve\. It is used only for trading, buying bitcoin and paying withdrawals\./);
+});
+
+
+test('SJ2 launch flag: one value (wrangler.toml), OFF in production, ON in preview; API + legacy route 404 when off; pages removed from the build', async () => {
+  const { wranglerVar } = await import('../scripts/wrangler-var.mjs');
+  const w = readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf8');
+  assert.equal(wranglerVar(w, 'SPICE_CERTS_LIVE', 'production'), '0'); assert.equal(wranglerVar(w, 'SPICE_CERTS_LIVE', 'preview'), '1');
+  const { certsLive } = await import('../store-core/launch.js');
+  assert.equal(certsLive({}), false); assert.equal(certsLive({ SPICE_CERTS_LIVE: '1' }), true);
+  const api = await import('../functions/api/certificates/[action].js');
+  assert.equal((await api.onRequest({ params: { action: 'challenge' }, env: {}, request: new Request('https://x/api/certificates/challenge', { method: 'POST' }) })).status, 404);
+  assert.match(readFileSync(new URL('../astro.config.mjs', import.meta.url), 'utf8'), /rmSync\(new URL\('certificates\/', dir\)/);
+  for (const [f, re] of [['../src/data/site.ts', /CERTS_LIVE_AT_BUILD \? \[\{ href: 'https:\/\/thespicemelange\.org\/certificates\/'/], ['../src/pages/index.astro', /\{CERTS_LIVE_AT_BUILD && \(/], ['../src/pages/privacy.astro', /\{CERTS_LIVE_AT_BUILD && \(<>/]])
+    assert.match(readFileSync(new URL(f, import.meta.url), 'utf8'), re, f);
+  assert.doesNotMatch(w, /answers 503 there/, 'SJ: stale 503 comment removed');
+});
+
+test('SJ10: a rejected or paid outcome releases the withdrawal lock; a rejected certificate can request again', async () => {
+  const db = freshDb();
+  assert.equal(await H.lockPending(db, 7, 'r1', Date.now()), null);
+  assert.equal(await H.lockPending(db, 7, 'r2', Date.now()), 'already_requested_or_not_active');
+  assert.equal(await H.releasePending(db, 7), true);
+  assert.equal(await H.lockPending(db, 7, 'r3', Date.now()), null);
+  assert.deepEqual(H.OUTCOME_STATUSES, ['rejected', 'paid']);
+  const api = readFileSync(new URL('../store-core/spice-api.js', import.meta.url), 'utf8');
+  assert.match(api, /OUTCOME_STATUSES\.includes\(cert\.withdrawal_status\)\) await H\.releasePending\(db, serial\)/);
+  assert.match(api, /\['none', 'rejected'\]\.includes\(cert\.withdrawal_status\)/);
+});
+
 
 test('Spice Certificate terms (Sajan approved 8:40 PM PT 10/10): sha pinned, rendered at /certificates/terms/, linked from buy, holder and footer', () => {
   const b = readFileSync(new URL('../src/content-static/SPICE-CERT-TERMS.md', import.meta.url));
-  assert.equal(createHash('sha256').update(b).digest('hex'), '4b19db069bdfd4f4d3b441dfabc06bc217f46ab5033c5af9cef307e2aa664540');
-  const SRC = '/home/box/agent-data/shared/portfolio-desk/spice-certificates/design/TERMS.md';
-  if (existsSync(SRC)) assert.ok(readFileSync(SRC).equals(b), 'site copy must equal Tleilaxu\'s TERMS.md byte for byte');
+  const pin = readFileSync(new URL('../src/data/cert-terms.ts', import.meta.url), 'utf8').match(/CERT_TERMS_SHA256 = '([0-9a-f]{64})'/)[1];
+  assert.equal(createHash('sha256').update(b).digest('hex'), pin);
+  assert.equal(pin, 'f87694b7b267d3ad6ea35567726294b9bca0d04a7fc2879e168cc6a062e5c707', 'TERMS-FINAL.md, Sajan 8:53 PM PT');
+  const SRC = '/home/box/agent-data/shared/portfolio-desk/spice-certificates/design/TERMS-FINAL.md';
+  if (existsSync(SRC)) assert.ok(readFileSync(SRC).equals(b), 'site copy must equal TERMS-FINAL.md byte for byte');
   assert.match(readFileSync(new URL('../src/pages/certificates/terms/index.astro', import.meta.url), 'utf8'), /SPICE-CERT-TERMS\.md/);
   for (const f of ['certificates/index.astro', 'certificates/holder/index.astro'])
     assert.match(readFileSync(new URL('../src/pages/' + f, import.meta.url), 'utf8'), /href="\/certificates\/terms\/" data-cert-terms-link/, f);
   assert.match(readFileSync(new URL('../src/components/DisclaimerText.astro', import.meta.url), 'utf8'), /https:\/\/thespicemelange\.org\/certificates\/terms\//);
   for (const f of ['../src/pages/certificates/index.astro', '../src/pages/certificates/holder/index.astro'])
     assert.doesNotMatch(readFileSync(new URL(f, import.meta.url), 'utf8'), /Draft terms|DRAFT-2026/);
+});
+
+test('testnet cert ids: one source of truth, matches the Ixians deploy files, v3 ids', () => {
+  const dir = '/workspace/ixians/spice-certificates';
+  if (existsSync(`${dir}/deploy.testnet.json`)) assert.deepEqual(IDS, buildIds(dir));
+  assert.equal(IDS.design, 'v3'); assert.equal(HOLDER_CERT_TYPE, IDS.holders.certificateType);
+  assert.equal(IDS.buy.payee, '0x88e8516771e71da54a7449a0a46e6a0c4af71ef71ac4d379847319c7e18a780f');
+  for (const f of ['../store-core/spice-cert-buy.js', '../store-core/spice-api.js', '../wrangler.toml', '../src/pages/certificates/index.astro']) {
+    const t = readFileSync(new URL(f, import.meta.url), 'utf8');
+    assert.doesNotMatch(t, /0x8b5476e5|0x33bf1e62|0x0c6baf07|0x448d2b7c|0x494e20b7/, `stale cert id in ${f}`);
+  }
+});
+test('SJ3 on the buy path: only a dune-saga-collection, non-test license is used', async () => {
+  assert.equal(licenseQualifies({ template_id: 'dune-saga-collection', order_id: 'SM-AB12' }), true);
+  assert.equal(licenseQualifies({ template_id: 'moneo', order_id: 'SM-AB12' }), false);
+  assert.equal(licenseQualifies({ template_id: 'dune-saga-collection', order_id: 'SM-TEST-DESK-1' }), false);
+  const fake = { core: { listOwnedObjects: async () => ({ objects: [{ objectId: '0x1', json: { template_id: 'moneo', order_id: 'SM-1' } }] }), getBalance: async () => ({ balance: { balance: '0' } }) } };
+  assert.equal((await certBuyQuote({ address: ADDR }, fake)).reason, 'testnet_license_not_eligible');
 });

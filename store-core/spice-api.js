@@ -12,7 +12,7 @@ import SAMPLE from './spice-sample/master.sample.json' with { type: 'json' };
 import { walletBalances } from './spice-wallet.js';
 import { tradeQuote, TRADE_LIMITS } from './spice-trade.js';
 import { licenseAccess, CERT_ELIGIBILITY, copy } from './spice-gate.js';
-import { certBuyQuote, TESTNET_CERT } from './spice-cert-buy.js';
+import { certBuyQuote, TESTNET_CERT, HOLDER_CERT_TYPE } from './spice-cert-buy.js';
 
 const GQL_TESTNET = 'https://graphql.testnet.sui.io/graphql';
 // Function responses get none of the _headers rules (Siona SC14), so set them here. One Referrer-Policy.
@@ -34,9 +34,10 @@ export function gate(env) {
 export function masterBlock(env) { return SAMPLE.spice_certificates; }
 
 export async function ownedSerials(env, address, fetchImpl = fetch) {
-  if (!env.SPICE_CERT_TYPE) return null; // testnet package not published yet -> private map (preview)
+  const type = env.SPICE_CERT_TYPE || HOLDER_CERT_TYPE; // default: the generated testnet ids (single source of truth)
+  if (!type) return null;
   const q = 'query($a:SuiAddress!,$t:String!){ address(address:$a){ objects(filter:{type:$t}, first:50){ nodes{ contents{ json } } } } }';
-  const r = await fetchImpl(GQL_TESTNET, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ query: q, variables: { a: address, t: env.SPICE_CERT_TYPE } }) });
+  const r = await fetchImpl(GQL_TESTNET, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ query: q, variables: { a: address, t: type } }) });
   const d = (await r.json()).data;
   return (d?.address?.objects?.nodes || []).map((n) => Number(n.contents?.json?.serial)).filter(Number.isFinite);
 }
@@ -96,7 +97,9 @@ export async function handle(action, context, deps = {}) {
     const serial = Number(b.serial);
     if (!view.certificates.some((c) => c.serial === serial)) return json(403, { ok: false, reason: 'not_your_certificate' });
     const cert = view.certificates.find((c) => c.serial === serial);
-    if (cert.withdrawal_status !== 'none' || cert.status !== 'active') return json(409, { ok: false, reason: 'already_requested_or_not_active' });
+    // SJ10: a recorded outcome (rejected / paid) releases the D1 lock; after a rejection the holder may ask again.
+    if (H.OUTCOME_STATUSES.includes(cert.withdrawal_status)) await H.releasePending(db, serial);
+    if (!['none', 'rejected'].includes(cert.withdrawal_status) || cert.status !== 'active') return json(409, { ok: false, reason: 'already_requested_or_not_active' });
     if (!H.ASSETS[b.asset] || !H.validPayoutAddress(b.asset, b.payoutAddress)) return json(400, { ok: false, reason: 'bad_payout' });
     const v = await H.verifySigned(secret, host, b.message, b.signature, (n) => H.withdrawalMessage(host, n, { serial, asset: b.asset, payoutAddress: b.payoutAddress }), now);
     if (!v.ok) return json(401, { ok: false, reason: v.reason });

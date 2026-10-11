@@ -9,13 +9,15 @@ import Disclaimer from '../components/Disclaimer.astro';
 import LearnInvite from '../components/LearnInvite.astro';
 import { SITE, mailto } from '../data/site';
 import { copy } from '../../store-core/spice-gate.js';
+import { CERTS_LIVE_AT_BUILD } from '../../store-core/launch.js';
 import { TESTNET_BANNER } from '../data/certificates';
 const cert = copy();
 
 const pillars = [
   { title: 'Patience', glyph: 'hourglass', text: 'The Golden Path is measured in decades, not candles. We buy on schedule, and we let time do the heavy lifting.' },
   { title: 'Accumulation', glyph: 'grain', text: 'Like the God Emperor’s hoard, the stack only grows. We add steadily, in small and boring amounts, and we sell no spice at a loss.' },
-  { title: 'No leveraged trading', glyph: 'shield', text: 'The Fish Speakers trade with no leverage: no margin, no futures. To pay Spice Certificate withdrawals, the desk may borrow against bitcoin it holds, only as a last resort, and that borrowing carries liquidation risk.' }, // option A, Sajan 8:37 PM PT 10/10
+  // Final wording (Sajan approved 8:53 PM PT 10/10, via Tleilaxu), verbatim.
+  { title: 'No leverage, no borrowed money', glyph: 'shield', text: 'The Spice Melange trading desk trades on Sui with its own funds only.' },
 ];
 const ways = [
   { href: '/join/', eyebrow: 'Learn', title: 'Walk the Golden Path', text: 'Hwi Noree’s gentle letters on bitcoin, self-custody and risk, in plain words.' },
@@ -36,7 +38,7 @@ const ways = [
         </h1>
         <p class="mt-6 max-w-xl text-lg leading-relaxed text-sand-200/90">
           Bitcoin is the spice melange of the cyber economy: scarce, hard to fake, and it rewards those who see far.
-          This desk hoards it the way the God Emperor kept his spice. Quietly, patiently, and without trading on borrowed spice.
+          This desk hoards it the way the God Emperor kept his spice. Quietly and patiently.{/* 8:53 PM PT final wording: borrowing clause dropped */}
         </p>
         <div class="mt-8 flex flex-wrap gap-3">
           <a class="btn-primary" href={mailto(SITE.joinSubject)}>Join the Golden Path</a>
@@ -93,7 +95,8 @@ const ways = [
     </div>
   </section>
 
-  <!-- SPICE CERTIFICATES (holders only; testnet preview) -->
+  <!-- SPICE CERTIFICATES (holders only; testnet preview). Built only when SPICE_CERTS_LIVE=1 (launch flag, Siona SJ2). -->
+  {CERTS_LIVE_AT_BUILD && (
   <section class="container-x pt-4" aria-labelledby="certs">
     <a href="https://thespicemelange.org/certificates/" class="card group block no-underline transition-colors hover:border-spice-400/40" data-cert-home>
       <span class="eyebrow">Spice Certificates · {cert.short}</span>
@@ -101,6 +104,7 @@ const ways = [
       <span class="mt-2 block text-sand-200/85">Spice Certificates are available only to {cert.who}. Sign in with your Sui wallet (a message, never a transaction or your seed phrase) to check. The 8% APR, credited in sats, is a target, not a promise, and you can lose money. Education only. {TESTNET_BANNER}</span>
     </a>
   </section>
+  )}
 
   <!-- CTAs -->
   <section class="container-x py-20" aria-labelledby="paths">

@@ -14,6 +14,11 @@ test('licence source matches the approved sha256', () => {
   const b = readFileSync(new URL('../src/content-static/LICENSE.md', import.meta.url));
   assert.equal(createHash('sha256').update(b).digest('hex'), APPROVED);
 });
+test('SJ1(c): terms version follows the singles switch; the previous approved text stays byte-identical (2271d634)', () => {
+  const prev = readFileSync(new URL('../src/content-static/LICENSE-2026.10.10.md', import.meta.url));
+  assert.equal(createHash('sha256').update(prev).digest('hex'), '2271d6341d3ca596aafa62b838aa07a684e4eba2febc5c5c989490064e86de00');
+  assert.match(readFileSync(new URL('../src/pages/terms.astro', import.meta.url), 'utf8'), /const Content = SINGLES_FOR_SALE_AT_BUILD \? LicensePrevious : LicenseSecretJournals;/);
+});
 test('terms page has no draft banner or noindex', () => {
   const s = readFileSync(new URL('../src/pages/terms.astro', import.meta.url), 'utf8');
   assert.doesNotMatch(s, /noindex|Draft, waiting/);

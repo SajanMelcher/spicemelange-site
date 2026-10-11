@@ -6,8 +6,7 @@ import Disclaimer from '../../components/Disclaimer.astro';
 import Checkout from '../../components/Checkout.astro';
 import Glyph from '../../components/Glyph.astro';
 import { CATALOG, ARCHETYPES, SINGLES_FOR_SALE_AT_BUILD } from '../../../store-core/catalog.js';
-import { PROPOSED_LABEL, FAQ_EARLIER } from '../../../store-core/catalog-wording-proposed.js';
-const ONE = !SINGLES_FOR_SALE_AT_BUILD; // PREVIEW-ONLY single-product mode (catalog.js)
+const ONE = !SINGLES_FOR_SALE_AT_BUILD; // singles off sale (one switch: STORE_SINGLES_FOR_SALE, see catalog.js)
 import { SITE } from '../../data/site';
 const bundle = CATALOG.find((p) => p.bundle && !p.retired);
 const soon = CATALOG.filter((p) => p.comingSoon);
@@ -57,8 +56,6 @@ const soon = CATALOG.filter((p) => p.comingSoon);
       </div>
     </section>
   )}
-
-  {ONE && <section class="container-x py-2"><p class="max-w-3xl text-sm text-sand-300/80" data-preview-wording>{FAQ_EARLIER} <span class="text-xs">({PROPOSED_LABEL})</span></p></section>}
 
   {soon.length > 0 && (
     <section class="container-x py-4" aria-label="Coming soon">

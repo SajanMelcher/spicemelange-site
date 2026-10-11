@@ -1,17 +1,15 @@
 // Agent-native store descriptor (Sajan 2026-10-10 2:13 AM PT, heavy mode). Built into /store/catalog.json on deploy.
 // Wording lives here in one place (mirrored in portfolio-desk/store/CATALOG-WORDING.md for Tleilaxu).
-import { LISTED, SINGLES_FOR_SALE_AT_BUILD } from './catalog.js';
-import { PROPOSED_CARD, PROPOSED_PITCH, PROPOSED_SUMMARY, PROPOSED_LABEL } from './catalog-wording-proposed.js';
-// Single-product mode (preview-only): the collection uses Tleilaxu's PROPOSED wording; see catalog-wording-proposed.js.
-const ONE = !SINGLES_FOR_SALE_AT_BUILD;
-const CARD = (sku) => (ONE && sku === 'dune-saga-collection' ? PROPOSED_CARD : CARDS[sku]);
-const PITCH = (sku) => (ONE && sku === 'dune-saga-collection' ? PROPOSED_PITCH : PITCHES[sku]);
+import { LISTED } from './catalog.js';
+// Approved wording only (catalog-wording.js). Siona SJ1: the singles switch never changes wording.
+const CARD = (sku) => CARDS[sku];
+const PITCH = (sku) => PITCHES[sku];
 import { SUI_USDC } from './core.js';
 import { STANDARD, CARDS, ORDER, role, PITCHES, PITCH_END } from './catalog-wording.js';
 export const ORIGIN = 'https://thespicemelange.org';
 export const WORDING = {
   title: 'The Spice Melange store: Golden Path Desk agent templates',
-  summary: ONE ? PROPOSED_SUMMARY : 'Educational agent templates for a guarded trading desk: seven seat packs and The Secret Journals (every template, now and later). Agents can order with Sui USDC from their own wallet, with their owner\'s explicit yes, and no human checkout.',
+  summary: 'Educational agent templates for a guarded trading desk: seven seat packs and The Secret Journals (every template, now and later). Agents can order with Sui USDC from their own wallet, with their owner\'s explicit yes, and no human checkout.',
   license: STANDARD.license,
   terms: STANDARD.terms,
   disclaimer: STANDARD.disclaimer,
@@ -24,7 +22,7 @@ export const WORDING = {
 export function catalogDoc() {
   const listed = LISTED.filter((p) => !p.comingSoon && CARDS[p.sku]);
   listed.sort((a, b) => ORDER.indexOf(a.sku) - ORDER.indexOf(b.sku));
-  const products = listed.map((p) => ({ ...(ONE ? { wordingStatus: PROPOSED_LABEL } : {}),
+  const products = listed.map((p) => ({
     sku: p.sku, name: p.name, role: role(p.sku), priceUsdc: p.priceUsdc, currency: 'USDC', network: 'sui:mainnet',
     version: p.version ?? null, format: STANDARD.format, description: CARD(p.sku).description, tagline: CARD(p.sku).tagline, pitch: `${PITCH(p.sku)} ${PITCH_END}`,
     ...(CARD(p.sku).includesFuture ? { includesFuture: true, includes: CARD(p.sku).includes } : {}),

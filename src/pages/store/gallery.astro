@@ -4,10 +4,9 @@ import Base from '../../layouts/Base.astro';
 import Glyph from '../../components/Glyph.astro';
 import Disclaimer from '../../components/Disclaimer.astro';
 import { LISTED, SINGLES_FOR_SALE_AT_BUILD } from '../../../store-core/catalog.js';
-import { PROPOSED_CARD, PROPOSED_PITCH, PROPOSED_LABEL, FAQ_EARLIER } from '../../../store-core/catalog-wording-proposed.js';
-const ONE = !SINGLES_FOR_SALE_AT_BUILD; // PREVIEW-ONLY single-product mode
-const cardOf = (sku: string) => (ONE && sku === 'dune-saga-collection' ? PROPOSED_CARD : CARDS[sku]);
-const pitchOf = (sku: string) => (ONE && sku === 'dune-saga-collection' ? PROPOSED_PITCH : PITCHES[sku]);
+const ONE = !SINGLES_FOR_SALE_AT_BUILD; // singles off sale (one switch: STORE_SINGLES_FOR_SALE, see catalog.js); wording unchanged
+const cardOf = (sku: string) => CARDS[sku];
+const pitchOf = (sku: string) => PITCHES[sku];
 import { CARDS, ORDER, STANDARD, role, PITCHES, PITCH_END } from '../../../store-core/catalog-wording.js';
 import { WORDING } from '../../../store-core/agent-store.js';
 const items = LISTED.filter((p) => CARDS[p.sku]).sort((a, b) => ORDER.indexOf(a.sku) - ORDER.indexOf(b.sku));
@@ -36,7 +35,6 @@ const items = LISTED.filter((p) => CARDS[p.sku]).sort((a, b) => ORDER.indexOf(a.
           </div>
         </li>); })}
     </ul>
-    {ONE && <p class="mt-6 max-w-3xl text-sm text-sand-300/80" data-preview-wording>{FAQ_EARLIER} <span class="text-xs">({PROPOSED_LABEL})</span></p>}
     <div class="mt-10 max-w-3xl space-y-2 text-sm text-sand-300/85">
       <p><strong class="text-sand-100">Hard limits first.</strong> {STANDARD.hardLimits}</p>
       <p><strong class="text-sand-100">Licence.</strong> {STANDARD.license} <a class="text-ibad-300" href="/terms/">Terms</a></p>
