@@ -10,12 +10,13 @@
 //  - finished lesson/course subscriptions ('done'): 30 days after the last lesson                       -> deleted, with send history
 //  - course rows handed off to the 14-day lessons: 7 days after the handoff                             -> deleted
 //  - reply-keyword suggestions: older than 90 days                                                      -> deleted
+//  - signed Spice Certificate withdrawal requests (spice_withdraw_requests): older than 30 days          -> deleted (/privacy/)
 //  Unsubscribes are minimized at once (lessons.js / course.js); only email_suppressions (hash + date) is kept, indefinitely.
 //  - rows still status='unsubscribed' (fallback / pre-GL2): suppression written if missing, then row + history deleted (needs salt)
 // The Worker cron (every 10 min) also calls purge(), so these run even when the site is quiet.
 export const PURGE_EVERY_MS = 10 * 60_000;
 export const RETENTION = { readHashMs: 3_600_000, counterDays: 3, reportHashDays: 90, unpaidOrderDays: 30,
-  courseIpHashMs: 3_600_000, unconfirmedDays: 7, afterLastLessonDays: 30, handoffDays: 7, suggestionDays: 90 };
+  courseIpHashMs: 3_600_000, unconfirmedDays: 7, afterLastLessonDays: 30, handoffDays: 7, suggestionDays: 90, withdrawRequestDays: 30 };
 const DAY = 86_400_000;
 
 import { emailHash } from './suppress.js';
@@ -70,6 +71,7 @@ export async function purge(db, nowMs = Date.now(), { salt = '' } = {}) {
   await run('courseSuggestions', `DELETE FROM course_suggestions WHERE sub_id IN (${courseOld}) OR received_ms < ?4`, pendCut, doneCut, hoCut, nowMs - RETENTION.suggestionDays * DAY);
   await run('courseSends', `DELETE FROM course_sends WHERE sub_id IN (${courseOld})`, pendCut, doneCut, hoCut);
   await run('courseSubs', `DELETE FROM course_subs WHERE id IN (${courseOld})`, pendCut, doneCut, hoCut);
+  await run('withdrawRequests', `DELETE FROM spice_withdraw_requests WHERE created_ms < ?1`, nowMs - RETENTION.withdrawRequestDays * DAY);
   n.unsubscribedMinimized = await minimizeUnsubscribed(db, salt, nowMs);
   await run('expiredHolds', `DELETE FROM amount_holds WHERE hold_until_ms < ?1 AND order_id NOT IN (SELECT id FROM orders WHERE status = 'open')`, nowMs);
   return n;

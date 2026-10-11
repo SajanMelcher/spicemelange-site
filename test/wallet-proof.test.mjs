@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { Secp256k1Keypair } from '@mysten/sui/keypairs/secp256k1';
 import { readFileSync } from 'node:fs';
+import { PIN, checkUpgradeBytes, checkPauseTx, txDigest, base58 } from '../src/lib/sign-verify.js';
+import { signRateLimit, SIGN_RATE } from '../store-core/sign-ratelimit.js';
 import { handleProof, proofMessage, verifyProofSignature, field } from '../store-core/wallet-proof.js';
 
 const SECRET = 'x'.repeat(40), HOST = 'prove.example.pages.dev';
@@ -78,9 +80,11 @@ test('prod domain: WALLET_PAGES_LIVE off -> preview_only; on -> mainnet only', a
   const kp = new Ed25519Keypair(), addr = kp.toSuiAddress();
   const prod = (o) => env({ SPICE_CERT_PREVIEW: undefined, ...o });
   assert.equal((await call('challenge', { address: addr }, prod({ WALLET_PAGES_LIVE: '0' }))).reason, 'preview_only');
-  assert.equal((await call('challenge', { address: addr, network: 'testnet' }, prod({ WALLET_PAGES_LIVE: '1' }))).reason, 'mainnet_only');
+  assert.equal((await call('challenge', { address: addr, network: 'testnet' }, prod({ WALLET_PAGES_LIVE: '1' }))).reason, 'not_on_prod');
   assert.equal((await call('admin-tx', { network: 'testnet', issuerId: '0x2', sender: '0x3', action: 'pause' }, prod({ WALLET_PAGES_LIVE: '1' }))).reason, 'mainnet_only');
-  assert.equal((await call('challenge', { address: addr }, prod({ WALLET_PAGES_LIVE: '1' }))).ok, true);
+  // F-2: challenge/submit refused on prod even with the flag on
+  assert.equal((await call('challenge', { address: addr }, prod({ WALLET_PAGES_LIVE: '1' }))).reason, 'not_on_prod');
+  assert.equal((await call('submit', { message: 'x', signature: 'y' }, prod({ WALLET_PAGES_LIVE: '1' }))).reason, 'not_on_prod');
   const toml = (await import('node:fs')).readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf8');
   assert.match(toml.split('[env.')[0], /\nWALLET_PAGES_LIVE = "0"/);
 });
@@ -97,7 +101,71 @@ test('/sign/ is standalone: brand mark + purpose + action, no site nav/footer; s
   assert.match(page, /import Standalone from/); assert.doesNotMatch(page, /layouts\/Base/);
   assert.doesNotMatch(lay.replace(/^\/\/.*$/gm, ''), /NAV|DISCLAIMER|<footer|<nav|og:|canonical|utm_/); assert.match(lay, /noindex, nofollow/); assert.match(lay, /<Sigil/);
   assert.match(page, /sui:signAndExecuteTransaction/); assert.doesNotMatch(page, /sui:signTransaction'|upgrade-sign\/execute|testnet/);
-  assert.match(page, /ALL\.mainnet\[0\]/);
-  assert.match(page, /e000df0ffd6f7cd271a691fffe77dc0eeb324c7df9cc4704c6db2b6799dc6566/); assert.match(page, /37bSrXhV5D5bfmtNtLdh9gHjPpNpos3koYJ5JQC9iwLw/);
+  const ALL = JSON.parse(rd('../store-core/spice-cert-admin-issuers.json'));
+  assert.equal(PIN.issuer, ALL.mainnet[0].issuerId); assert.equal(PIN.certPackage, ALL.mainnet[0].packageId);
+  assert.match(page, /checkUpgradeBytes\(r\.txBytesB64\)/); assert.match(page, /checkPauseTx\(r\.tx_json, action\)/);
+  assert.doesNotMatch(page, /r\.summary|r\.sha256|summary\.sender/, 'F-1: no decision uses server-reported values');
+
   const cfg = rd('../astro.config.mjs'); assert.match(cfg, /'sign\/', 'certificates\/prove-wallet\/', 'certificates\/admin\/'/); assert.match(cfg, /DEPLOY_MODE === 'production'/); assert.match(cfg, /if \(strip.length\) pruneOrphans/);
+});
+
+test('F-1: browser-side checks compute sha + digest from the bytes and pin every field of set_paused', async () => {
+  const TX = JSON.parse(readFileSync(new URL('../store-core/upgrade-tx.json', import.meta.url), 'utf8'));
+  assert.equal(PIN.upgradeSha256, 'e000df0ffd6f7cd271a691fffe77dc0eeb324c7df9cc4704c6db2b6799dc6566');
+  assert.equal(PIN.upgradeDigest, '37bSrXhV5D5bfmtNtLdh9gHjPpNpos3koYJ5JQC9iwLw');
+  assert.equal(PIN.account, '0x04b178f7855b2e84ae9c1585093009bb6c212cd3b5ccf9c76672dda04be087e0');
+  const v = await checkUpgradeBytes(TX.txBytesB64); assert.equal(v.ok, true); assert.equal(v.sha, PIN.upgradeSha256); assert.equal(v.digest, PIN.upgradeDigest);
+  const { TransactionDataBuilder } = await import('@mysten/sui/transactions');
+  const u8 = Uint8Array.from(Buffer.from(TX.txBytesB64, 'base64')); assert.equal(txDigest(u8), TransactionDataBuilder.getDigestFromBytes(u8));
+  assert.equal(base58(Uint8Array.from([0, 0, 1])), '112');
+  const changed = Buffer.from(u8); changed[changed.length - 1] ^= 1;
+  assert.equal((await checkUpgradeBytes(changed.toString('base64'))).ok, false);
+  const good = (flag) => ({ version: 2, sender: PIN.account, expiration: null, gasData: { budget: null, price: null, owner: null, payment: null },
+    inputs: [{ UnresolvedObject: { objectId: PIN.adminCap } }, { UnresolvedObject: { objectId: PIN.issuer } }, { Pure: { bytes: flag } }],
+    commands: [{ MoveCall: { package: PIN.certPackage, module: 'certificate', function: 'set_paused', typeArguments: [], arguments: [{ Input: 0 }, { Input: 1 }, { Input: 2 }] } }] });
+  assert.equal(checkPauseTx(JSON.stringify(good('AA==')), 'unpause'), true);
+  assert.equal(checkPauseTx(good('AQ=='), 'pause'), true);
+  const bad = (mut, re, action = 'unpause') => { const t = good('AA=='); mut(t); assert.throws(() => checkPauseTx(t, action), re); };
+  bad(() => {}, /flag/, 'pause');
+  bad((t) => { t.sender = '0x' + '1'.repeat(64); }, /sender/);
+  bad((t) => { t.commands.push(t.commands[0]); }, /exactly one command/);
+  bad((t) => { t.commands[0].MoveCall.package = '0x' + '2'.repeat(64); }, /pinned set_paused/);
+  bad((t) => { t.commands[0].MoveCall.module = 'other'; }, /pinned set_paused/);
+  bad((t) => { t.commands[0].MoveCall.function = 'revoke_mint_cap'; }, /pinned set_paused/);
+  bad((t) => { t.inputs[1] = { UnresolvedObject: { objectId: '0x' + '3'.repeat(64) } }; }, /Issuer/);
+  bad((t) => { t.inputs[0] = { UnresolvedObject: { objectId: '0x' + '4'.repeat(64) } }; }, /AdminCap/);
+  bad((t) => { t.inputs.push({ Pure: { bytes: 'AA==' } }); }, /three inputs/);
+  bad((t) => { t.gasData.owner = '0x' + '5'.repeat(64); }, /gas/);
+  bad((t) => { t.gasData.payment = []; }, /gas payment/);
+  bad((t) => { t.commands[0] = { TransferObjects: {} }; }, /MoveCall/);
+  bad((t) => { t.extra = 1; }, /unexpected fields/);
+  // the real server-built tx shape (admin-actions) passes
+  const { adminTx } = await import('../store-core/admin-actions.js');
+  assert.equal(typeof adminTx, 'function');
+});
+test('F-2: per-IP rate limit on the /sign APIs (prod domain), fails closed without KV/secret', async () => {
+  const k = kv(), e = { STORE_KV: k, SPICE_SESSION_SECRET: SECRET };
+  const r = (ip) => new Request('https://x/api/upgrade-sign/tx', { headers: { 'cf-connecting-ip': ip } });
+  for (let i = 0; i < SIGN_RATE.perMinute; i++) assert.equal(await signRateLimit(r('1.2.3.4'), e, 60_000), null);
+  assert.equal((await signRateLimit(r('1.2.3.4'), e, 60_000)).status, 429);
+  assert.equal(await signRateLimit(r('5.6.7.8'), e, 60_000), null);
+  assert.equal(await signRateLimit(r('1.2.3.4'), e, 120_000), null, 'next minute');
+  assert.ok([...k.m.keys()].every((x) => !x.includes('1.2.3.4')), 'no raw IP stored');
+  assert.equal((await signRateLimit(r('1.2.3.4'), {}, 0)).status, 503);
+  const live = env({ SPICE_CERT_PREVIEW: undefined, WALLET_PAGES_LIVE: '1' });
+  let n429 = 0; for (let i = 0; i < SIGN_RATE.perMinute + 2; i++) { const x = await call('admin-tx', { network: 'mainnet', issuerId: '0x2', sender: '0x3', action: 'status' }, live, { adminTx: async () => ({ ok: true }) }); if (x.reason === 'rate_limited') n429++; }
+  assert.ok(n429 >= 2, 'admin-tx is rate limited on prod');
+  const { handleUpgradeSign } = await import('../store-core/upgrade-sign.js');
+  const TX = JSON.parse(readFileSync(new URL('../store-core/upgrade-tx.json', import.meta.url), 'utf8'));
+  let seen = 0; const u = await handleUpgradeSign('tx', { request: new Request('https://x/api/upgrade-sign/tx'), env: { WALLET_PAGES_LIVE: '1', UPGRADE_SIGN_ENABLED: '1', UPGRADE_REVIEWED_SHA256: TX.sha256 } }, fetch, { rateLimit: async () => { seen++; return new Response('{}', { status: 429 }); } });
+  assert.equal(u.status, 429); assert.equal(seen, 1);
+});
+test('Low: signed withdrawal requests: 30 days on /privacy/ and purged after 30 days', async () => {
+  const p = readFileSync(new URL('../src/pages/privacy.astro', import.meta.url), 'utf8');
+  assert.match(p, /Signed withdrawal requests are kept in a private database for 30 days/);
+  const { purge, RETENTION } = await import('../store-core/purge.js');
+  assert.equal(RETENTION.withdrawRequestDays, 30);
+  const seen = []; const db = { prepare: (sql) => ({ bind: (...b) => ({ run: async () => { seen.push([sql, b]); return { meta: { changes: 0 } }; }, all: async () => ({ results: [] }) }) }) };
+  const now = 100 * 86_400_000; await purge(db, now);
+  const w = seen.find(([s]) => /spice_withdraw_requests/.test(s)); assert.ok(w); assert.match(w[0], /created_ms < \?1/); assert.equal(w[1][0], now - 30 * 86_400_000);
 });

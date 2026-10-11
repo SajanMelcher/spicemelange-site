@@ -27,9 +27,11 @@ test('shape check refuses a different sender, package or extra command', () => {
 test('off unless (preview or WALLET_PAGES_LIVE) and UPGRADE_SIGN_ENABLED; prod pins only the reviewed sha', async () => {
   assert.equal((await call('tx', {}))[0], 404);
   assert.equal((await call('tx', { ...ENV, SPICE_CERT_PREVIEW: '0' }))[0], 404);
-  assert.equal((await call('tx', { UPGRADE_SIGN_ENABLED: '1', UPGRADE_REVIEWED_SHA256: TX.sha256, WALLET_PAGES_LIVE: '1' }))[0], 200);
+  const m = new Map(), KV = { get: async (k) => m.get(k) ?? null, put: async (k, v) => { m.set(k, v); } };
+  assert.equal((await call('tx', { UPGRADE_SIGN_ENABLED: '1', UPGRADE_REVIEWED_SHA256: TX.sha256, WALLET_PAGES_LIVE: '1', STORE_KV: KV, SPICE_SESSION_SECRET: 'x'.repeat(40) }))[0], 200);
+  assert.equal((await call('tx', { UPGRADE_SIGN_ENABLED: '1', UPGRADE_REVIEWED_SHA256: TX.sha256, WALLET_PAGES_LIVE: '1' }))[0], 503, 'prod: rate limiter fails closed without KV');
   const toml = readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf8');
-  assert.equal(wranglerVar(toml, 'WALLET_PAGES_LIVE', 'production'), '0', 'prod flag OFF until Siona + Cloudflare Access');
+  assert.equal(wranglerVar(toml, 'WALLET_PAGES_LIVE', 'production'), '0', 'prod flag OFF until Siona passes /sign/');
   for (const e of ['production', 'preview']) assert.equal(wranglerVar(toml, 'UPGRADE_REVIEWED_SHA256', e), TX.sha256);
   assert.equal(TX.sha256, 'e000df0ffd6f7cd271a691fffe77dc0eeb324c7df9cc4704c6db2b6799dc6566');
   assert.equal(checkShape(U8).txDigest, '37bSrXhV5D5bfmtNtLdh9gHjPpNpos3koYJ5JQC9iwLw');
