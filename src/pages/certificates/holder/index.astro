@@ -1,0 +1,145 @@
+---
+// Spice Certificates holder page: TESTNET PREVIEW (branch spice-cert-preview). Not linked from the site; not for production
+// (gate 2). Sample data only. All holder data comes from /api/certificates/* behind a wallet signature or a view-only link.
+import Base from '../../../layouts/Base.astro';
+import Disclaimer from '../../../components/Disclaimer.astro';
+---
+<Base title="Spice Certificate holders (TESTNET PREVIEW)" description="Testnet preview of the Spice Certificate holder page. Sample data only." noindex>
+  <section class="container-x pt-12 pb-2">
+    <p class="eyebrow mb-3" data-testnet-label>TESTNET PREVIEW · sample data · not a real certificate</p>
+    <h1 class="text-4xl leading-tight text-sand-50 sm:text-5xl">Spice Certificate holders</h1>
+    <p class="mt-3 max-w-3xl text-sand-200/90">Only you see your own certificates: sign a short message with the Sui wallet that holds them (no gas, no transaction, never your seed phrase), or open the personal view-only link we sent you.</p>
+  </section>
+
+  <section class="container-x py-3" aria-label="Read this first">
+    <div class="card text-sm text-sand-200" data-disclosure>
+      <h2 class="font-serif text-2xl text-sand-50">Read this first</h2>
+      <ul class="mt-2 list-disc space-y-1 pl-5">
+        <li><b>This is not a bank deposit.</b> It is not a savings account and we are not a bank. <b>It is not insured</b> (not FDIC, not SIPC, no insurer). <b>It is not registered</b> with the SEC or any state regulator.</li>
+        <li><b>Your money is invested, not set aside:</b> 62% STRC and 38% cash reserve, about half of which ($19 per certificate) is held for withdrawals.</li>
+        <li><b>Neither your $100 nor the 8% is assured.</b> The 8% APR in sats is a <b>target</b>, rounded down daily (about 7.9% in practice). Payment depends on our ability to pay; <b>you could lose some or all of your money.</b></li>
+        <li><b>Not available on demand.</b> Every withdrawal needs a verified, signed request and Sajan Melcher's manual approval of that specific payment. We aim to pay within 6 hours of a verified request: a <b>target, not a promise</b>.</li>
+        <li>If you choose BTC, you take the BTC price risk. Certificates are non-transferable. Taxes are yours. No investment, tax or legal advice.</li>
+      </ul>
+      <p class="mt-2 text-xs muted">Draft terms (DRAFT-2026.10.10b, not reviewed by a lawyer). Sats accrue as floor(100 × 0.08 / 365 / BTC price × 100,000,000) per certificate per day, using the 4 PM PT price; our ledger is the official record and updates once a day.</p>
+    </div>
+  </section>
+
+  <section class="container-x py-3" aria-label="Sign in">
+    <div class="card flex flex-col gap-3 sm:flex-row sm:items-center" data-signin-card>
+      <button type="button" class="btn-primary" data-signin>Sign in with your Sui wallet</button>
+      <p class="text-sm text-sand-200" role="status" aria-live="polite" data-msg>Your statement is protected by your wallet signature (or your private link). Seal encryption is not used on this preview.</p>
+    </div>
+  </section>
+
+  <section class="container-x hidden py-3" data-view>
+    <article class="card"><h2 class="font-serif text-2xl text-sand-50">Your certificates</h2><div class="mt-2" data-summary></div><div class="tbl-wrap mt-3" data-certs></div></article>
+
+    <article class="card mt-6" data-withdraw-card>
+      <h2 class="font-serif text-2xl text-sand-50">How to withdraw</h2>
+      <ol class="mt-2 list-decimal space-y-1 pl-5 text-sm text-sand-200">
+        <li>Whole certificates only. Choose <b>USDC on Sui</b> or <b>BTC</b>; both are sent by Sajan through Coinbase.</li>
+        <li>Sign the request below with the wallet that holds the certificate, <b>or</b> email <a class="link" href="mailto:reserve@thespicemelange.org">reserve@thespicemelange.org</a> from the email you gave at purchase.</li>
+        <li>We confirm by email and confirm your payout address twice. Sajan approves each payout by hand. Target: within 6 hours of a verified request (a target, not a promise).</li>
+      </ol>
+      <form class="mt-3 grid gap-3 sm:grid-cols-4" data-wd-form>
+        <label class="text-sm">Certificate <select class="input" data-wd-serial></select></label>
+        <label class="text-sm">Payout <select class="input" data-wd-asset><option value="USDC">USDC on Sui</option><option value="BTC">BTC</option></select></label>
+        <label class="text-sm sm:col-span-2">Payout address <input class="input font-mono" data-wd-addr autocomplete="off" spellcheck="false" placeholder="0x… or bc1…" /></label>
+        <button class="btn-primary sm:col-span-4" type="submit" data-wd-btn>Sign withdrawal request (testnet preview: nothing is paid)</button>
+      </form>
+      <p class="mt-2 text-xs muted" data-wd-msg>View-only links can't request a withdrawal; sign in with your wallet first.</p>
+    </article>
+
+    <article class="card mt-6 hidden" data-wallet-card>
+      <h2 class="font-serif text-2xl text-sand-50">Wallet (your own, read-only)</h2>
+      <p class="mt-1 text-xs muted">Your connected wallet's balances on Sui testnet, read from public Sui GraphQL. No desk data.</p>
+      <div class="tbl-wrap mt-3" data-wallet></div>
+    </article>
+
+    <article class="card mt-6 hidden" data-trade-card>
+      <h2 class="font-serif text-2xl text-sand-50">Trade (your own wallet, DeepBook v3 testnet)</h2>
+      <p class="mt-1 text-sm text-sand-200">Education and self-directed only, not advice. This is <b>your own trade</b>: we build the transaction, your wallet shows it and signs it, and the coins move only between your wallet and the DeepBook pool. The desk never holds your funds or your keys. Testnet tokens have no value; most testnet pools have little or no liquidity.</p>
+      <form class="mt-3 grid gap-3 sm:grid-cols-5" data-tr-form>
+        <label class="text-sm">Side <select class="input" data-tr-side><option value="buy">Buy (pay DBUSDC)</option><option value="sell">Sell (receive DBUSDC)</option></select></label>
+        <label class="text-sm">Token <select class="input" data-tr-pair><option value="SUI_DBUSDC">SUI</option><option value="WAL_DBUSDC">WAL</option><option value="DEEP_DBUSDC">DEEP</option><option value="DBTC_DBUSDC">DBTC</option></select></label>
+        <label class="text-sm">Amount <input class="input" data-tr-amt inputmode="decimal" value="1" /></label>
+        <label class="text-sm">Slippage limit % <input class="input" data-tr-slip inputmode="decimal" value="1" /></label>
+        <button class="btn-ghost" type="submit">Quote + dry-run</button>
+      </form>
+      <div class="mt-3 text-sm text-sand-200" data-tr-out></div>
+      <button class="btn-primary mt-3 hidden" type="button" data-tr-sign>Review and sign in my wallet</button>
+      <p class="mt-2 text-xs muted">NS, IKA, XBTC and USDC pools exist on mainnet only, so they are not offered on this testnet preview.</p>
+    </article>
+  </section>
+
+  <section class="container-x py-6"><Disclaimer extra="TESTNET PREVIEW with sample data. Not an offer of any security or deposit. The 8% is a target, not a promise. Draft terms pending securities counsel review." /></section>
+
+  <script>
+    import { certTable, summary, walletTable, quoteBlock } from '../../../lib/holder-render.js';
+    const $ = (s) => document.querySelector(s);
+    const say = (t, sel = '[data-msg]') => { $(sel).textContent = t; };
+    let session = null, account = null, wallet = null, view = null, lastTx = null;
+    const api = (a, body = {}) => fetch('/api/certificates/' + a, { method: 'POST', headers: { 'content-type': 'application/json', ...(session ? { authorization: 'Bearer ' + session } : {}) }, body: JSON.stringify(body) }).then((r) => r.json()).catch(() => ({ ok: false, reason: 'network_error' }));
+    const wallets = [];
+    const reg = { register: (...ws) => { wallets.push(...ws); return () => {}; } };
+    window.addEventListener('wallet-standard:register-wallet', (e) => { try { e.detail(reg); } catch {} });
+    window.dispatchEvent(new CustomEvent('wallet-standard:app-ready', { detail: reg }));
+    const sign = async (message) => (await wallet.features['sui:signPersonalMessage'].signPersonalMessage({ message: new TextEncoder().encode(message), account })).signature;
+
+    function render(v) {
+      view = v; $('[data-view]').classList.remove('hidden');
+      $('[data-summary]').innerHTML = summary(v); $('[data-certs]').innerHTML = certTable(v);
+      $('[data-wd-serial]').innerHTML = v.certificates.filter((c) => c.status === 'active' && c.withdrawal_status === 'none').map((c) => `<option value="${c.serial}">No. ${c.serial}</option>`).join('');
+      $('[data-wd-btn]').disabled = !v.can_withdraw;
+    }
+    // Personal view-only link: /certificates/holder/<serial>/<token>
+    const m = location.pathname.match(/^\/certificates\/holder\/(\d+)\/([A-Za-z0-9_-]{43,128})\/?$/);
+    if (m) { say('Opening your view-only link…'); api('token-view', { serial: m[1], token: m[2] }).then((r) => r.ok ? (render(r.view), say('View-only link. Sign in with your wallet to request a withdrawal or see your wallet.')) : say('This link is not valid or was replaced. Ask reserve@thespicemelange.org for a new one.')); }
+
+    $('[data-signin]').addEventListener('click', async () => {
+      wallet = wallets.find((w) => w.features?.['sui:signPersonalMessage'] && w.features?.['standard:connect']);
+      if (!wallet) return say('No Sui wallet found in this browser. Install or unlock your wallet, then reload.');
+      try {
+        const { accounts } = await wallet.features['standard:connect'].connect(); account = accounts[0];
+        const ch = await api('challenge'); if (!ch.ok) return say('Sign-in unavailable: ' + ch.reason);
+        say('Sign the message in ' + wallet.name + '. It is not a transaction.');
+        const r = await api('signin', { message: ch.message, signature: await sign(ch.message) });
+        if (!r.ok) return say(r.reason === 'no_certificate_in_this_wallet' ? 'This wallet holds no Spice Certificate.' : 'Sign-in refused: ' + r.reason);
+        session = r.session; render(r.view); say('Signed in. Session lasts 15 minutes.');
+        const w = await api('wallet'); if (w.ok) { $('[data-wallet-card]').classList.remove('hidden'); $('[data-wallet]').innerHTML = walletTable(w); }
+        $('[data-trade-card]').classList.remove('hidden');
+      } catch (e) { say('Wallet error: ' + (e?.message ?? e)); }
+    });
+
+    $('[data-wd-form]').addEventListener('submit', async (e) => {
+      e.preventDefault(); if (!session) return say('Sign in with your wallet first.', '[data-wd-msg]');
+      const body = { kind: 'withdraw', serial: Number($('[data-wd-serial]').value), asset: $('[data-wd-asset]').value, payoutAddress: $('[data-wd-addr]').value.trim() };
+      const ch = await api('challenge', body); if (!ch.ok) return say('Refused: ' + ch.reason, '[data-wd-msg]');
+      try {
+        const r = await api('withdraw', { ...body, message: ch.message, signature: await sign(ch.message) });
+        say(r.ok ? `Request ${r.request_id} signed. Target payout by ${r.payout_deadline_pt} (target, not a promise). ${r.note}` : 'Refused: ' + r.reason, '[data-wd-msg]');
+      } catch (err) { say('Wallet error: ' + (err?.message ?? err), '[data-wd-msg]'); }
+    });
+
+    $('[data-tr-form]').addEventListener('submit', async (e) => {
+      e.preventDefault(); lastTx = null; $('[data-tr-sign]').classList.add('hidden');
+      const slip = Math.round(Number($('[data-tr-slip]').value) * 100);
+      if (!(slip >= 1 && slip <= 300)) return ($('[data-tr-out]').textContent = 'Slippage limit must be between 0.01% and 3%.');
+      $('[data-tr-out]').textContent = 'Quoting on DeepBook testnet and running a dry-run…';
+      const q = await api('trade-quote', { pair: $('[data-tr-pair]').value, side: $('[data-tr-side]').value, amount: Number($('[data-tr-amt]').value), slippageBps: slip });
+      if (!q.ok) return ($('[data-tr-out]').textContent = 'Not available: ' + q.reason);
+      $('[data-tr-out]').innerHTML = quoteBlock(q);
+      if (q.tx_json) { lastTx = q.tx_json; $('[data-tr-sign]').classList.remove('hidden'); }
+    });
+    $('[data-tr-sign]').addEventListener('click', async () => {
+      const f = wallet?.features?.['sui:signAndExecuteTransaction'];
+      if (!f || !lastTx) return;
+      try {
+        const r = await f.signAndExecuteTransaction({ transaction: { toJSON: async () => lastTx }, account, chain: 'sui:testnet' });
+        $('[data-tr-out]').insertAdjacentHTML('beforeend', `<p class="mt-2">Submitted by your wallet: <span class="font-mono">${String(r.digest).replace(/[^A-Za-z0-9]/g, '')}</span> (testnet).</p>`);
+      } catch (e) { $('[data-tr-out]').insertAdjacentHTML('beforeend', '<p class="mt-2">Not signed.</p>'); }
+      lastTx = null; $('[data-tr-sign]').classList.add('hidden');
+    });
+  </script>
+</Base>

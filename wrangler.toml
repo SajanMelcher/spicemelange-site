@@ -38,6 +38,9 @@ database_id = "cfe878af-064f-4e0d-81d3-aa08b19e2ceb" # orders, amount_holds, red
 [env.preview.vars]
 STORE_ENABLED = "1"
 SUI_NETWORK = "testnet"
+# Spice Certificates holder page: TESTNET PREVIEW only (branch spice-cert-preview). Production has no SPICE_CERT_PREVIEW, so
+# /api/certificates/* answers 503 there. Preview secrets: SPICE_SESSION_SECRET (>=32 chars), SPICE_HOLDERS_PRIVATE (FAKE holders).
+SPICE_CERT_PREVIEW = "1"
 # Signal feed on preview (testnet orders only).
 # SIGNALS_ADMIN_KEY is a preview Pages secret; a copy is kept outside the repo.
 SIGNALS_ENABLED = "1"

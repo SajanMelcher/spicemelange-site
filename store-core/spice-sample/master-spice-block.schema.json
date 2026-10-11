@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://thespicemelange.org/schemas/master.spice_certificates.v1.json",
+  "title": "ledger/master.json -> spice_certificates (liability block)",
+  "description": "Written by Hwi after each daily accrual run (after the 16:00 PT fix), one row per certificate, produced from ledger/spice-certificates.csv. master.json rides the nightly archive, so NO personal data: no display_name, email, wallet address or payout address. The holder page/API reads exactly this block. Display names live only in the private, non-archived holder file (holders.private.json).",
+  "type": "object",
+  "required": ["schema_version", "as_of", "accrual_date_pt", "btc_price_usd", "price_source", "price_ts_pt", "rate_bps", "rows"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "spice_certificates.v1" },
+    "network": { "enum": ["testnet", "mainnet"], "description": "testnet on preview; mainnet only after gate 1" },
+    "as_of": { "type": "string", "format": "date-time", "description": "when Hwi wrote the block (ISO 8601 with offset)" },
+    "accrual_date_pt": { "type": "string", "format": "date", "description": "last accrued day (PT)" },
+    "btc_price_usd": { "type": "string", "pattern": "^[0-9]+(\\.[0-9]{1,2})?$", "description": "the daily fix used for value_usd (decimal string)" },
+    "price_source": { "type": "string", "examples": ["coingecko 16:00 PT fix (spice-btc-fix.json)"] },
+    "price_ts_pt": { "type": "string", "format": "date-time" },
+    "rate_bps": { "const": 800, "description": "8% APR TARGET, not a promise" },
+    "accrual_rule": { "type": "string", "default": "floor(100*0.08/365/fix*1e8) sats per cert per day; ACT/365; issue day excluded; stops at payout approval" },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["serial", "holder_ref", "principal_usd", "accrued_sats", "value_usd", "status", "withdrawal_status", "token_hash"],
+        "properties": {
+          "serial": { "type": "integer", "minimum": 1 },
+          "holder_ref": { "type": "string", "pattern": "^H-[A-Z0-9-]{3,32}$", "description": "opaque key into holders.private.json; not derived from any personal data" },
+          "principal_usd": { "type": "string", "pattern": "^[0-9]+\\.[0-9]{2}$" },
+          "accrued_sats": { "type": "integer", "minimum": 0 },
+          "value_usd": { "type": "string", "pattern": "^[0-9]+\\.[0-9]{2}$", "description": "floor_cents(accrued_sats * btc_price_usd / 1e8)" },
+          "last_reserve_credit_pt": { "type": ["string", "null"], "format": "date", "description": "last Friday the week's sats were credited to the withdrawal holding" },
+          "next_reserve_credit_pt": { "type": ["string", "null"], "format": "date" },
+          "status": { "enum": ["active", "withdrawal_requested", "payout_pending", "redeemed", "burned"] },
+          "withdrawal_status": { "enum": ["none", "withdrawal_requested", "payout_pending", "paid", "rejected"] },
+          "withdrawal_request_id": { "type": ["string", "null"] },
+          "token_hash": { "type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$", "description": "sha256 of the holder's tailored-link token (the token itself is never stored); null = no link / revoked" }
+        },
+        "not": { "anyOf": [ { "required": ["display_name"] }, { "required": ["holder_email"] }, { "required": ["holder_sui_wallet"] }, { "required": ["payout_address"] } ] }
+      }
+    }
+  }
+}

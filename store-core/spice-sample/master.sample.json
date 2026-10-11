@@ -1,0 +1,55 @@
+{
+  "spice_certificates": {
+    "schema_version": "spice_certificates.v1",
+    "network": "testnet",
+    "as_of": "2099-01-12T16:20:00-08:00",
+    "accrual_date_pt": "2099-01-12",
+    "btc_price_usd": "100000.00",
+    "price_source": "FAKE SAMPLE (shape of the coingecko 16:00 PT fix)",
+    "price_ts_pt": "2099-01-12T16:00:00-08:00",
+    "rate_bps": 800,
+    "accrual_rule": "floor(100*0.08/365/fix*1e8) sats per cert per day; ACT/365; issue day excluded; stops at payout approval",
+    "_sample": "FAKE DATA for the TESTNET PREVIEW. Year 2099, holder_refs H-TN-*. Not a real certificate, holder or price.",
+    "rows": [
+      {
+        "serial": 1,
+        "holder_ref": "H-TN-0001",
+        "principal_usd": "100.00",
+        "accrued_sats": 630,
+        "value_usd": "0.63",
+        "last_reserve_credit_pt": "2099-01-09",
+        "next_reserve_credit_pt": "2099-01-16",
+        "status": "active",
+        "withdrawal_status": "none",
+        "withdrawal_request_id": null,
+        "token_hash": "sha256:b1560fc032f3aea699614feb197eb374d373a8ebf8d2c9f4a908c98bde3fc14b"
+      },
+      {
+        "serial": 2,
+        "holder_ref": "H-TN-0001",
+        "principal_usd": "100.00",
+        "accrued_sats": 252,
+        "value_usd": "0.25",
+        "last_reserve_credit_pt": "2099-01-09",
+        "next_reserve_credit_pt": "2099-01-16",
+        "status": "withdrawal_requested",
+        "withdrawal_status": "withdrawal_requested",
+        "withdrawal_request_id": "W-TN-SAMPLE",
+        "token_hash": null
+      },
+      {
+        "serial": 3,
+        "holder_ref": "H-TN-0002",
+        "principal_usd": "100.00",
+        "accrued_sats": 105,
+        "value_usd": "0.10",
+        "last_reserve_credit_pt": "2099-01-09",
+        "next_reserve_credit_pt": "2099-01-16",
+        "status": "active",
+        "withdrawal_status": "none",
+        "withdrawal_request_id": null,
+        "token_hash": "sha256:6724bb57bdccb4fa735143bdc3d6fc5f23c8128aa3367b32ecea623b2e0d9668"
+      }
+    ]
+  }
+}

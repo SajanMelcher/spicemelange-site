@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "holders.private.json (PRIVATE, mode 600, NOT archived in clear; age-encrypted at rest or outside archived trees)",
+  "description": "Read by the holder API at render time only (served behind a valid token or wallet signature). On preview it is the SPICE_HOLDERS_PRIVATE Pages secret holding FAKE data.",
+  "type": "object", "required": ["holders"],
+  "properties": { "holders": { "type": "object", "additionalProperties": {
+    "type": "object", "required": ["display_name"], "additionalProperties": false,
+    "properties": { "display_name": { "type": "string", "maxLength": 64, "description": "name/handle as the holder gave it" },
+                    "wallet": { "type": "string", "description": "holder Sui address (needed only until the API reads ownership on-chain)" } } } } }
+}
