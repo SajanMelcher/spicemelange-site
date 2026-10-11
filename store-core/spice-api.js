@@ -71,6 +71,8 @@ export async function handle(action, context, deps = {}) {
     const v = await H.verifySigned(secret, host, b.message, b.signature, (n) => H.withdrawalMessage(host, n, { serial, asset: b.asset, payoutAddress: b.payoutAddress }), now);
     if (!v.ok) return json(401, { ok: false, reason: v.reason });
     if (v.address !== H.normAddr(s.address)) return json(403, { ok: false, reason: 'signer_is_not_the_signed_in_wallet' });
+    const kv0 = env.SPICE_WITHDRAW_QUEUE_TESTNET;
+    if (kv0) { if (await kv0.get(`n:${v.nonce}`)) return json(409, { ok: false, reason: 'request_already_used' }); await kv0.put(`n:${v.nonce}`, '1', { expirationTtl: 900 }); }
     const rec = H.withdrawalRecord({ serial, asset: b.asset, payoutAddress: b.payoutAddress, address: v.address, message: b.message, signature: b.signature, now });
     const kv = env.SPICE_WITHDRAW_QUEUE_TESTNET;
     if (kv) await kv.put(`w:${rec.request_id}`, JSON.stringify(rec), { expirationTtl: 30 * 86400 });

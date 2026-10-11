@@ -105,8 +105,9 @@ test('withdrawal: needs session + fresh signature by the same wallet, whole acti
   assert.equal((await call('challenge', body)).reason, 'sign_in_again');
   const ch = await call('challenge', body, live);
   assert.match(ch.message, /whole certificate/); assert.match(ch.message, /target, not a promise/); assert.match(ch.message, /approved by hand by Sajan/);
-  const put = []; ENV.SPICE_WITHDRAW_QUEUE_TESTNET = { put: async (k, v) => put.push([k, JSON.parse(v)]) };
+  const put = [], kv = new Map(); ENV.SPICE_WITHDRAW_QUEUE_TESTNET = { get: async (k) => kv.get(k) ?? null, put: async (k, v) => { kv.set(k, v); if (k.startsWith('w:')) put.push([k, JSON.parse(v)]); } };
   const ok = await call('withdraw', { ...body, message: ch.message, signature: signMsg(ch.message) }, live);
+  assert.equal((await call('withdraw', { ...body, message: ch.message, signature: signMsg(ch.message) }, live)).reason, 'request_already_used', 'signed request cannot be replayed');
   delete ENV.SPICE_WITHDRAW_QUEUE_TESTNET;
   assert.equal(ok.ok, true); assert.equal(ok.queued, true); assert.match(ok.request_id, /^W-TN-/); assert.match(ok.note, /Nothing is paid/);
   assert.equal(put[0][1].status, 'withdrawal_requested'); assert.equal(put[0][1].network, 'testnet-preview');
