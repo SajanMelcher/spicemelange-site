@@ -6,7 +6,9 @@ import { createHash } from 'node:crypto';
 // LICENSE.md (372a9241…fffb, approved 2026-10-10) + section 9 privacy (Sajan S3 decision 2:45 AM PT; fact-checked: store/PRIVACY-FACTCHECK.md)
 // Final store/LICENSE.md 2271d634 (Tleilaxu Run 10; Sajan approved 10:07 AM PT: no reply lines, Mysten + Sui GraphQL in 'Who helps us'; hello@ for deletion
 // section 9 "Lesson and course emails" bullet naming Resend (Siona GL1). Also templates/LICENSE.md.
-const APPROVED = '2271d6341d3ca596aafa62b838aa07a684e4eba2febc5c5c989490064e86de00';
+// Version 2026.10.10.1 (Tleilaxu; Sajan approved the text 8:25 PM PT 10/10): The Secret Journals, singles no longer sold,
+// earlier licenses stay valid. sha verified against store/LICENSE.md and templates/LICENSE.md (identical) before pinning.
+const APPROVED = '9bd55791834819ae5ee59e6f9f72168320158947074ca5388775f7b9075a0be7';
 const PROPOSAL = '/home/box/agent-data/shared/portfolio-desk/store/LICENSE.md';
 test('licence source matches the approved sha256', () => {
   const b = readFileSync(new URL('../src/content-static/LICENSE.md', import.meta.url));

@@ -3,13 +3,17 @@ import Base from '../../layouts/Base.astro';
 import Disclaimer from '../../components/Disclaimer.astro';
 import Checkout from '../../components/Checkout.astro';
 import Glyph from '../../components/Glyph.astro';
-import { CATALOG, ARCHETYPES } from '../../../store-core/catalog.js';
+import { CATALOG, ARCHETYPES, SINGLES_FOR_SALE_AT_BUILD, isSingle, bySku } from '../../../store-core/catalog.js';
 import { SITE } from '../../data/site';
 export function getStaticPaths() {
   return CATALOG.filter((p) => !p.comingSoon && !p.hidden && !p.retired).map((p) => ({ params: { sku: p.sku }, props: { p } }));
 }
 const { p } = Astro.props;
 const others = ARCHETYPES.filter((a) => a.sku !== p.sku);
+// PREVIEW-ONLY single-product mode: a seat page explains the seat and sells The Secret Journals instead of a $50 single.
+const inside = !SINGLES_FOR_SALE_AT_BUILD && isSingle(p);
+const col = bySku('dune-saga-collection');
+const buy = inside ? col : p;
 ---
 <Base title={`${p.name}: ${p.role} · ${p.kind}`} description={`${p.name} (${p.role}), ${p.kind}: ${p.blurb}`}>
   <section class="container-x pt-14 pb-6">
@@ -34,11 +38,12 @@ const others = ARCHETYPES.filter((a) => a.sku !== p.sku);
         )}
       </div>
       <aside class="card h-fit md:sticky md:top-24">
-        <p><span class="font-serif text-5xl text-spice-300">${p.priceUsdc}</span> <span class="text-sm text-sand-300/70">USDC on Sui</span></p>
+        {inside && <p class="mb-2 text-sm text-sand-200">{p.name} is part of <a class="text-ibad-300" href="/store/dune-saga-collection/">The Secret Journals</a>, our one product: every template, now and later. Single templates are not sold on their own.</p>}
+        <p><span class="font-serif text-5xl text-spice-300">${buy.priceUsdc}</span> <span class="text-sm text-sand-300/70">USDC on Sui</span></p>
         {p.placeholder && <p class="mt-2 rounded bg-spice-700/30 px-2 py-1 text-xs text-spice-300">PLACEHOLDER price for Sajan</p>}
-        <p class="mt-2 text-sm text-sand-200/85">{p.bundle ? "Every template, now and in the future: the seven desk templates, Leto's nine system journals and every new template. Upgrades free forever. All sales final." : '$50 each, or every template in The Secret Journals for $300.'} {!p.bundle && 'Weekly updates included.'}</p>
+        <p class="mt-2 text-sm text-sand-200/85">{buy.bundle ? "Every template, now and in the future: the seven desk templates, Leto's system templates and every new template. Upgrades free forever. All sales final." : '$50 each, or every template in The Secret Journals for $300.'} {!buy.bundle && 'Weekly updates included.'}</p>
         <p class="mt-3 text-sm text-sand-300/80">{p.format} · instant download after on-chain confirmation</p>
-        <button type="button" class="btn-primary buy-btn mt-5 w-full" data-sku={p.sku} data-name={p.name}>Buy with USDC</button>
+        <button type="button" class="btn-primary buy-btn mt-5 w-full" data-sku={buy.sku} data-name={buy.name}>{inside ? 'Buy The Secret Journals' : 'Buy with USDC'}</button>
         <p class="mt-3 text-xs text-sand-300/70">USDC on Sui only. All sales final, except where the law requires otherwise. Help: <a class="text-ibad-300" href={`mailto:${SITE.email}`}>{SITE.email}</a></p>
         <p class="mt-3 text-xs text-sand-300/70">Pay from a Sui wallet in a single transfer of the exact amount; exchange withdrawals may batch or round. Updates: re-download the latest at <a class="text-ibad-300" href="/store/download/">/store/download</a> with your order ID and token.</p>
         <p class="mt-3 text-xs text-sand-300/70">Built for Grok Bot (import by hand with SETUP.md); the Markdown also works on other agent platforms. Hard limits: your yes on every money move, draft-only messages, limit orders only, never below cost, a daily loss cap, no leverage, and a HALT-file kill switch.</p>

@@ -1,15 +1,17 @@
 // Spice Certificates holder page core (TESTNET PREVIEW). Pure functions + Web Crypto; runs in Pages Functions and Node tests.
 // Security model:
-//  - Sign-in = Sui personal-message signature over a server-issued challenge (stateless HMAC nonce, 5-minute expiry,
-//    domain-bound). No gas, no transaction, never a seed phrase. Result = 15-minute HMAC session bound to the address.
-//  - Tailored link /certificates/holder/<serial>/<token>: VIEW-ONLY. Only sha256(token) is stored (master.json row
+//  - Sign-in = Sui personal-message signature over a server-issued challenge (HMAC nonce, 2-minute expiry, domain- and
+//    wallet-bound, SINGLE-USE: consumed in D1 `spice_nonces` (PRIMARY KEY) after the signature verifies; Siona SC13).
+//    No gas, no transaction, never a seed phrase. Result = 15-minute HMAC session bound to the address.
+//  - Tailored link /certificates/holder/#s=<serial>&t=<token> (token in the URL FRAGMENT, never sent to any server or log;
+//    Siona SC15): VIEW-ONLY. Only sha256(token) is stored (master.json row
 //    `token_hash`); compared in constant time. Withdrawal always needs a fresh wallet signature.
 //  - Data = exactly the `spice_certificates` block of ledger/master.json (preview: a FAKE sample). Display names are read
 //    at render time from a separate private holder file (env secret SPICE_HOLDERS_PRIVATE), never from master.json.
 //  - Statements are protected by the signature/token gate on this API. Seal encryption is NOT used (see README).
 import { verifyPersonalMessage } from './suisig.js';
 
-export const NONCE_TTL_MS = 5 * 60_000;
+export const NONCE_TTL_MS = 2 * 60_000;
 export const SESSION_TTL_MS = 15 * 60_000;
 export const ASSETS = { USDC: { network: 'sui' }, BTC: { network: 'bitcoin' } };
 export const WITHDRAW_STATUSES = ['none', 'withdrawal_requested', 'payout_pending', 'paid', 'rejected'];
@@ -46,16 +48,18 @@ export async function checkNonce(secret, nonce, now = Date.now()) {
   if (Number(m[2]) < now) return 'nonce_expired';
   return null;
 }
-export function signInMessage(host, nonce) {
-  return ['The Spice Melange: Spice Certificate holder sign-in (TESTNET PREVIEW)',
-    'Sign to view your own certificates. This is a message, not a transaction: no gas, nothing moves.',
+export function signInMessage(host, nonce, address) {
+  return ['The Spice Melange: sign in with your Sui wallet',
+    'Sign to prove you control this wallet, so we can check which store licenses it holds and show your own Spice Certificates.',
+    'This is a message, not a transaction: no gas, nothing moves.',
     'We will never ask for your seed phrase or private key.',
-    `Domain: ${host}`, `Nonce: ${nonce}`].join('\n');
+    `Wallet: ${normAddr(address)}`, `Domain: ${host}`, `Nonce: ${nonce}`].join('\n');
 }
 export function withdrawalMessage(host, nonce, { serial, asset, payoutAddress }) {
   return ['The Spice Melange: Spice Certificate WITHDRAWAL REQUEST (TESTNET PREVIEW)',
     `I hold Spice Certificate No. ${serial} and request redemption of the whole certificate.`,
     `Payout asset: ${asset} on ${ASSETS[asset].network}`, `Payout address: ${payoutAddress}`,
+    'Payout price: the Coinbase market price at the time of withdrawal.',
     'Each payout is approved by hand by Sajan Melcher. Target: within 6 hours of a verified request (a target, not a promise).',
     'This is a message, not a transaction: no gas, nothing moves now.',
     `Domain: ${host}`, `Nonce: ${nonce}`].join('\n');
@@ -71,6 +75,8 @@ export async function verifySigned(secret, host, message, signature, expected, n
   if (message !== expected(nonce)) return { ok: false, reason: 'message_mismatch' };
   const v = verifyPersonalMessage(message, signature);
   if (!v.ok) return v;
+  const w = field(message, 'Wallet');
+  if (w && normAddr(w) !== normAddr(v.address)) return { ok: false, reason: 'signer_is_not_the_named_wallet' };
   return { ok: true, address: normAddr(v.address), nonce };
 }
 
@@ -145,4 +151,23 @@ export function validPayoutAddress(asset, a) {
   if (asset === 'USDC') return !!normAddr(a) && String(a).length === 66;
   if (asset === 'BTC') return /^(bc1[02-9ac-hj-np-z]{11,71}|[13][1-9A-HJ-NP-Za-km-z]{25,34}|tb1[02-9ac-hj-np-z]{11,71})$/.test(String(a));
   return false;
+}
+
+// ------------------------------------------------------------- single-use nonces + one pending withdrawal per serial (SC13)
+// D1 (migrations/0011_spice_nonces.sql). PRIMARY KEY makes the insert atomic: a replay anywhere fails on the constraint.
+export async function consumeNonce(db, nonce, kind, now = Date.now()) {
+  if (!db) return 'not_configured';
+  const exp = Number(String(nonce).split('.')[1]) || now + NONCE_TTL_MS;
+  try {
+    await db.prepare('DELETE FROM spice_nonces WHERE exp_ms < ?1').bind(now - 60_000).run();
+    await db.prepare('INSERT INTO spice_nonces (nonce, kind, exp_ms, used_ms) VALUES (?1, ?2, ?3, ?4)').bind(String(nonce), kind, exp, now).run();
+    return null;
+  } catch (e) { return /UNIQUE|constraint/i.test(String(e?.message || e)) ? 'nonce_already_used' : 'not_configured'; }
+}
+export async function lockPending(db, serial, requestId, now = Date.now()) {
+  if (!db) return 'not_configured';
+  // A lock outlives the daily ledger update by days; after 7 days the ledger's withdrawal_status is the record.
+  try { await db.prepare('DELETE FROM spice_withdraw_pending WHERE created_ms < ?1').bind(now - 7 * 86_400_000).run(); } catch {}
+  try { await db.prepare('INSERT INTO spice_withdraw_pending (serial, request_id, created_ms) VALUES (?1, ?2, ?3)').bind(Number(serial), requestId, now).run(); return null; }
+  catch (e) { return /UNIQUE|constraint/i.test(String(e?.message || e)) ? 'already_requested_or_not_active' : 'not_configured'; }
 }

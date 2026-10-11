@@ -13,6 +13,8 @@ if [ "$MODE" = "production" ]; then
 else
   [ "$BRANCH" != "main" ] || { echo "Refusing: preview deploys must come from a non-main branch." >&2; exit 1; }
   TARGET="$BRANCH"
+  # PREVIEW-ONLY single-product catalog (store-core/catalog.js): singles off sale in the preview build + its tests.
+  export STORE_SINGLES_FOR_SALE=0
 fi
 npm run -s test:store
 npm run -s build

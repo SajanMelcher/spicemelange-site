@@ -2,12 +2,16 @@
 // Public changelog for the Grok Bot templates. Summaries only; no paid template content.
 import Base from '../../../layouts/Base.astro';
 import { TEMPLATES, latestFor } from '../../../../store-core/versions.js';
+import { bySku } from '../../../../store-core/catalog.js';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 const PUBKEY = readFileSync(`${process.cwd()}/public/templates/release-key.pub`, 'utf8').trim();
 const FPR = createHash('sha256').update(Buffer.from(PUBKEY, 'base64')).digest('hex');
 const all = [...TEMPLATES.templates, ...TEMPLATES.packs];
-const names = Object.fromEntries(all.map((t) => [t.sku, t.name]));
+// Display names come from the live catalog (renamed 10/10: 'The Secret Journals'); templates.json/versions.json are signed and
+// keep their old names until re-signed. Release notes below are history and are shown as written.
+const display = (t) => bySku(t.sku)?.name ?? t.name;
+const names = Object.fromEntries(all.map((t) => [t.sku, display(t)]));
 const site = 'https://thespicemelange.org';
 ---
 <Base title="Template changelog" description="Versions and release notes for The Spice Melange Grok Bot templates. Weekly updates included with every purchase.">
@@ -22,7 +26,7 @@ const site = 'https://thespicemelange.org';
       <table class="w-full max-w-3xl text-left text-sm text-sand-200/85">
         <thead><tr class="border-b border-sand-200/15 text-sand-50"><th class="py-2 pr-4">Template</th><th class="py-2 pr-4">Seat</th><th class="py-2">Version</th></tr></thead>
         <tbody>{all.map((t) => (
-          <tr class="border-b border-sand-200/10"><td class="py-2 pr-4"><a class="text-ibad-300" href={`${site}/store/${t.sku}/`}>{t.name}</a></td><td class="py-2 pr-4">{t.title}</td><td class="py-2 font-mono">{latestFor(t.sku)?.version}</td></tr>
+          <tr class="border-b border-sand-200/10"><td class="py-2 pr-4"><a class="text-ibad-300" href={`${site}/store/${bySku(t.sku)?.retired ? 'dune-saga-collection' : t.sku}/`}>{display(t)}</a>{bySku(t.sku)?.retired && <span class="text-xs text-sand-300/70"> (not sold on its own; inside The Secret Journals)</span>}</td><td class="py-2 pr-4">{t.title}</td><td class="py-2 font-mono">{latestFor(t.sku)?.version}</td></tr>
         ))}</tbody>
       </table>
     </div>

@@ -1,0 +1,108 @@
+---
+// /certificates/: Spice Certificates buying page (Ixians 10/10/2026 PT). Sign in with a Sui wallet; the SERVER checks the wallet
+// for a mainnet DeskLicense under the single eligibility switch (store-core/spice-gate.js CERT_ELIGIBILITY). Holders get a
+// purchase preview wired to the TESTNET package only. There is no mainnet purchase path (needs Siona SC1 + SC9 and Sajan's yes).
+import Base from '../../layouts/Base.astro';
+import Disclaimer from '../../components/Disclaimer.astro';
+import CertFooterHook from '../../components/CertFooterHook.astro';
+import { copy, CERT_ELIGIBILITY } from '../../../store-core/spice-gate.js';
+import { TESTNET_CERT } from '../../../store-core/spice-cert-buy.js';
+import { PAYOUT_PRICING, TESTNET_BANNER } from '../../data/certificates';
+const c = copy();
+const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
+---
+<Base title="Spice Certificates (testnet preview)" description={`Spice Certificates: ${c.short}. Sign in with your Sui wallet. Testnet preview: no real purchases yet.`} noindex>
+  <div class="border-b border-spice-500/40 bg-spice-700/25" role="note" data-testnet-banner>
+    <p class="container-x py-3 text-sm font-semibold text-spice-200">{TESTNET_BANNER} Certificates on this page are testnet only and have no value.</p>
+  </div>
+  <section class="container-x pt-12 pb-2">
+    <p class="eyebrow mb-3" data-eligibility={CERT_ELIGIBILITY}>Spice Certificates · {c.short}</p>
+    <h1 class="text-4xl leading-tight text-sand-50 sm:text-5xl">Spice Certificates</h1>
+    <p class="mt-3 max-w-3xl text-sand-200/90">{c.rule}</p>
+    <p class="mt-3 max-w-3xl text-sand-200/90">Sign in with the Sui wallet that holds your license. You sign a short message: no gas, no transaction, and we never ask for your seed phrase. Our server then reads the public Sui network to see which license your wallet holds.</p>
+    <div class="mt-5 flex flex-wrap gap-3">
+      <button type="button" class="btn-primary" data-signin>Sign in with wallet</button>
+      <a class="btn-ghost" href={c.cta.href}>{c.cta.label}</a>
+      <a class="btn-ghost" href="/certificates/holder/">Holder page</a>
+    </div>
+    <p class="mt-3 text-sm text-sand-200" role="status" aria-live="polite" data-msg>Not signed in.</p>
+  </section>
+
+  <section class="container-x hidden py-3" data-not-eligible>
+    <div class="card">
+      <h2 class="font-serif text-2xl text-sand-50">Not available for this wallet</h2>
+      <p class="mt-2 text-sand-200">{c.notEligible}</p>
+      <p class="mt-3"><a class="btn-primary" href={c.cta.href}>{c.cta.label}</a></p>
+      <p class="mt-2 text-xs muted">Older transferable license tokens and store test licenses do not count. If you bought the collection and see this, email <a class="text-ibad-300" href="mailto:hello@thespicemelange.org">hello@thespicemelange.org</a>.</p>
+    </div>
+  </section>
+
+  <section class="container-x hidden py-3" data-buy>
+    <div class="card border-spice-500/40">
+      <p class="eyebrow text-spice-300">{TESTNET_BANNER}</p>
+      <h2 class="mt-1 font-serif text-2xl text-sand-50">Buy a Spice Certificate (testnet preview)</h2>
+      <p class="mt-2 text-sm text-sand-200">Your wallet holds a qualifying license. On this preview the purchase runs on <b>Sui testnet</b> only, with a mock test coin (100 tUSDC) that has no value. Nothing real is bought or paid. Real purchases stay closed until the contract's admin keys are moved to Sajan's own custody and he approves mainnet.</p>
+      <ol class="mt-3 list-decimal space-y-1 pl-5 text-sm text-sand-200">
+        <li>We build the testnet transaction for your wallet and dry-run it first.</li>
+        <li>Only if the dry-run passes, your wallet shows it to you (chain: Sui testnet). You decide whether to sign.</li>
+      </ol>
+      <button type="button" class="btn-ghost mt-4" data-quote>Preview the testnet purchase</button>
+      <div class="mt-3 text-sm text-sand-200" data-out></div>
+      <button type="button" class="btn-primary mt-3 hidden" data-sign>Review and sign in my wallet (testnet)</button>
+      <p class="mt-3 text-xs muted">Testnet contract: package <span class="font-mono">{short(TESTNET_CERT.packageId)}</span> · Issuer <span class="font-mono">{short(TESTNET_CERT.issuerId)}</span>.</p>
+    </div>
+  </section>
+
+  <section class="container-x py-3" aria-label="Read this first">
+    <div class="card text-sm text-sand-200" data-disclosure>
+      <h2 class="font-serif text-2xl text-sand-50">Read this first</h2>
+      <ul class="mt-2 list-disc space-y-1 pl-5">
+        <li><b>Education only, and a draft.</b> Nothing here is an offer to sell anything. The terms are a draft that a lawyer has not reviewed.</li>
+        <li><b>Not a bank deposit, not insured, not registered.</b> Not FDIC, not SIPC, no insurer; no regulator has reviewed it.</li>
+        <li><b>The 8% APR in sats is a target, not a promise.</b> It is rounded down daily (a little under 8% in practice). You could lose some or all of your money.</li>
+        <li><b>Not available on demand.</b> Each withdrawal needs a verified, signed request and Sajan Melcher's manual approval. We aim to pay within 6 hours of a verified request: a target, not a promise. {PAYOUT_PRICING}</li>
+        <li>Certificates can't be transferred. If you choose a BTC payout, you take the BTC price risk. Taxes are yours. No investment, tax or legal advice.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="container-x py-6"><CertFooterHook /><Disclaimer extra="Testnet preview: no real purchases yet. The 8% APR in sats is a target, not a promise. Draft terms pending legal review." /></section>
+
+  <script>
+    import { state, api, signIn } from '../../lib/wallet-signin.js';
+    const $ = (s: string) => document.querySelector(s) as HTMLElement;
+    const say = (t: string) => { $('[data-msg]').textContent = t; };
+    const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] as string));
+    let lastTx: unknown = null;
+    $('[data-signin]').addEventListener('click', async () => {
+      try {
+        const r = await signIn(say); if (!r) return;
+        const a = r.access;
+        if (a?.error) { say('Signed in, but we could not read your license right now. Try again in a minute.'); return; }
+        say(`Signed in as ${r.address.slice(0, 6)}…${r.address.slice(-4)}. Session lasts 15 minutes.`);
+        $('[data-not-eligible]').classList.toggle('hidden', !!a?.eligible);
+        $('[data-buy]').classList.toggle('hidden', !a?.eligible);
+      } catch (e: any) { say('Wallet error: ' + (e?.message ?? e)); }
+    });
+    $('[data-quote]').addEventListener('click', async () => {
+      lastTx = null; $('[data-sign]').classList.add('hidden');
+      $('[data-out]').textContent = 'Building and dry-running on Sui testnet…';
+      const q = await api('cert-buy-quote');
+      if (!q.ok) { $('[data-out]').textContent = q.reason === 'not_eligible' ? q.explain : 'Not available: ' + q.reason; return; }
+      const head = `<p><b>${esc(q.note)}</b></p>`;
+      if (!q.ready) { $('[data-out]').innerHTML = head + `<p class="mt-1">${esc(q.explain || ('Dry-run: ' + (q.dry_run?.status ?? q.reason)))}</p>`; return; }
+      $('[data-out]').innerHTML = head + '<p class="mt-1">Dry-run passed on testnet. Price: 100 tUSDC (testnet mock coin, no value).</p>';
+      lastTx = q.tx_json; $('[data-sign]').classList.remove('hidden');
+    });
+    $('[data-sign]').addEventListener('click', async () => {
+      const f = state.wallet?.features?.['sui:signAndExecuteTransaction'];
+      if (!f || !lastTx) return;
+      try {
+        const tx = lastTx;
+        const r = await f.signAndExecuteTransaction({ transaction: { toJSON: async () => tx }, account: state.account, chain: 'sui:testnet' });
+        $('[data-out]').insertAdjacentHTML('beforeend', `<p class="mt-2">Submitted on testnet by your wallet: <span class="font-mono">${String(r.digest).replace(/[^A-Za-z0-9]/g, '')}</span>.</p>`);
+      } catch { $('[data-out]').insertAdjacentHTML('beforeend', '<p class="mt-2">Not signed.</p>'); }
+      lastTx = null; $('[data-sign]').classList.add('hidden');
+    });
+  </script>
+</Base>

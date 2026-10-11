@@ -1,13 +1,30 @@
-// Spice Certificates holder API (TESTNET PREVIEW). One dispatcher used by functions/api/certificates/[action].js.
-// Fails closed: refuses unless SUI_NETWORK=testnet AND SPICE_CERT_PREVIEW=1 AND a >=32-char SPICE_SESSION_SECRET exists.
-import { json, readJson, sameOrigin } from './http.js';
+// Spice Certificates API. One dispatcher used by functions/api/certificates/[action].js.
+//
+// Two gates (Ixians 10/10/2026 PT):
+//  1. signinGate: wallet sign-in + license check + TESTNET purchase preview. On wherever SPICE_SESSION_SECRET (>=32 chars)
+//     and the D1 binding exist (preview and, once the secret is set, production). Reads MAINNET DeskLicenses (spice-gate.js).
+//  2. gate (holder data: statements, view-only links, withdrawal requests, wallet, trade): TESTNET PREVIEW only
+//     (SUI_NETWORK=testnet AND SPICE_CERT_PREVIEW=1). Production answers 503 preview_only for these.
+// There is NO mainnet certificate purchase path: cert-buy-quote always builds against the testnet package.
+import { readJson, sameOrigin } from './http.js';
 import * as H from './spice-holder.js';
 import SAMPLE from './spice-sample/master.sample.json' with { type: 'json' };
 import { walletBalances } from './spice-wallet.js';
 import { tradeQuote, TRADE_LIMITS } from './spice-trade.js';
+import { licenseAccess, CERT_ELIGIBILITY, copy } from './spice-gate.js';
+import { certBuyQuote, TESTNET_CERT } from './spice-cert-buy.js';
 
 const GQL_TESTNET = 'https://graphql.testnet.sui.io/graphql';
+// Function responses get none of the _headers rules (Siona SC14), so set them here. One Referrer-Policy.
+export const json = (status, body) => new Response(JSON.stringify(body), { status, headers: {
+  'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff',
+  'referrer-policy': 'no-referrer', 'x-robots-tag': 'noindex, nofollow, noarchive' } });
 
+export function signinGate(env) {
+  if (!H.requireSecret(env)) return 'not_configured';
+  if (!env?.STORE_DB) return 'not_configured';
+  return null;
+}
 export function gate(env) {
   if (env?.SUI_NETWORK !== 'testnet' || env?.SPICE_CERT_PREVIEW !== '1') return 'preview_only';
   if (!H.requireSecret(env)) return 'not_configured';
@@ -24,34 +41,41 @@ export async function ownedSerials(env, address, fetchImpl = fetch) {
   return (d?.address?.objects?.nodes || []).map((n) => Number(n.contents?.json?.serial)).filter(Number.isFinite);
 }
 const bearer = (req) => (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+const HOLDER_ACTIONS = new Set(['token-view', 'me', 'withdraw', 'wallet', 'trade-quote']);
 
 export async function handle(action, context, deps = {}) {
   const { request, env } = context;
   const now = deps.now ?? Date.now();
-  const g = gate(env); if (g) return json(503, { ok: false, reason: g });
+  const sg = signinGate(env); if (sg) return json(503, { ok: false, reason: sg });
+  const holderOk = !gate(env);
+  if (HOLDER_ACTIONS.has(action) && !holderOk) return json(503, { ok: false, reason: 'preview_only' });
   if (request.method !== 'POST') return json(405, { ok: false, reason: 'method' });
   if (!sameOrigin(request)) return json(403, { ok: false, reason: 'bad_origin' });
-  const secret = H.requireSecret(env), host = new URL(request.url).host;
+  const secret = H.requireSecret(env), host = new URL(request.url).host, db = env.STORE_DB;
   const b = (await readJson(request)) || {};
+  const access = (addr) => (deps.licenseAccess ?? licenseAccess)(addr, { m: CERT_ELIGIBILITY });
   const block = masterBlock(env), holders = H.parsePrivate(env);
-  const bad = H.validateBlock(block); if (bad.length) return json(500, { ok: false, reason: 'ledger_block_invalid' });
+  if (holderOk) { const bad = H.validateBlock(block); if (bad.length) return json(500, { ok: false, reason: 'ledger_block_invalid' }); }
+  const holderView = async (addr) => (holderOk ? H.viewByAddress(block, holders, addr, await (deps.ownedSerials ?? ownedSerials)(env, addr)) : null);
 
   if (action === 'challenge') {
     const nonce = await H.makeNonce(secret, now);
     if (b.kind === 'withdraw') {
+      if (!holderOk) return json(503, { ok: false, reason: 'preview_only' });
       const s = await H.readSession(secret, bearer(request), now); if (!s) return json(401, { ok: false, reason: 'sign_in_again' });
       if (!H.ASSETS[b.asset] || !H.validPayoutAddress(b.asset, b.payoutAddress)) return json(400, { ok: false, reason: 'bad_payout' });
       return json(200, { ok: true, message: H.withdrawalMessage(host, nonce, { serial: Number(b.serial), asset: b.asset, payoutAddress: b.payoutAddress }) });
     }
-    return json(200, { ok: true, message: H.signInMessage(host, nonce), expires_in_s: H.NONCE_TTL_MS / 1000 });
+    if (!H.normAddr(b.address)) return json(400, { ok: false, reason: 'bad_address' });
+    return json(200, { ok: true, message: H.signInMessage(host, nonce, b.address), expires_in_s: H.NONCE_TTL_MS / 1000 });
   }
   if (action === 'signin') {
-    const v = await H.verifySigned(secret, host, b.message, b.signature, (n) => H.signInMessage(host, n), now);
+    const w = /^Wallet: (.+)$/m.exec(String(b.message || ''))?.[1];
+    const v = await H.verifySigned(secret, host, b.message, b.signature, (n) => H.signInMessage(host, n, w), now);
     if (!v.ok) return json(401, { ok: false, reason: v.reason });
-    const owned = await (deps.ownedSerials ?? ownedSerials)(env, v.address);
-    const view = H.viewByAddress(block, holders, v.address, owned);
-    if (!view.certificates.length) return json(403, { ok: false, reason: 'no_certificate_in_this_wallet' });
-    return json(200, { ok: true, session: await H.makeSession(secret, v.address, now), address: v.address, view });
+    const used = await H.consumeNonce(db, v.nonce, 'signin', now); if (used) return json(used === 'nonce_already_used' ? 409 : 503, { ok: false, reason: used });
+    return json(200, { ok: true, session: await H.makeSession(secret, v.address, now), address: v.address, expires_in_s: H.SESSION_TTL_MS / 1000,
+      access: await access(v.address), view: await holderView(v.address) });
   }
   if (action === 'token-view') {
     const view = await H.viewByToken(block, holders, b.serial, b.token);
@@ -59,8 +83,14 @@ export async function handle(action, context, deps = {}) {
   }
   const s = await H.readSession(secret, bearer(request), now);
   if (!s) return json(401, { ok: false, reason: 'sign_in_again' });
-  const owned = await (deps.ownedSerials ?? ownedSerials)(env, s.address);
-  const view = H.viewByAddress(block, holders, s.address, owned);
+  if (action === 'access') return json(200, { ok: true, address: s.address, access: await access(s.address) });
+  if (action === 'cert-buy-quote') {
+    const a = await access(s.address);
+    if (!a.eligible) return json(403, { ok: false, reason: 'not_eligible', access: a, explain: copy().notEligible });
+    try { return json(200, { ok: true, chain: TESTNET_CERT.chain, ...(await (deps.certBuyQuote ?? certBuyQuote)({ address: s.address })) }); }
+    catch (e) { return json(400, { ok: false, reason: String(e.message || e).slice(0, 200) }); }
+  }
+  const view = await holderView(s.address);
   if (action === 'me') return json(200, { ok: true, address: s.address, view });
   if (action === 'withdraw') {
     const serial = Number(b.serial);
@@ -71,13 +101,14 @@ export async function handle(action, context, deps = {}) {
     const v = await H.verifySigned(secret, host, b.message, b.signature, (n) => H.withdrawalMessage(host, n, { serial, asset: b.asset, payoutAddress: b.payoutAddress }), now);
     if (!v.ok) return json(401, { ok: false, reason: v.reason });
     if (v.address !== H.normAddr(s.address)) return json(403, { ok: false, reason: 'signer_is_not_the_signed_in_wallet' });
-    const kv0 = env.SPICE_WITHDRAW_QUEUE_TESTNET;
-    if (kv0) { if (await kv0.get(`n:${v.nonce}`)) return json(409, { ok: false, reason: 'request_already_used' }); await kv0.put(`n:${v.nonce}`, '1', { expirationTtl: 900 }); }
+    const used = await H.consumeNonce(db, v.nonce, 'withdraw', now);
+    if (used) return json(used === 'nonce_already_used' ? 409 : 503, { ok: false, reason: used === 'nonce_already_used' ? 'request_already_used' : used });
     const rec = H.withdrawalRecord({ serial, asset: b.asset, payoutAddress: b.payoutAddress, address: v.address, message: b.message, signature: b.signature, now });
+    const locked = await H.lockPending(db, serial, rec.request_id, now); if (locked) return json(409, { ok: false, reason: locked });
     const kv = env.SPICE_WITHDRAW_QUEUE_TESTNET;
     if (kv) await kv.put(`w:${rec.request_id}`, JSON.stringify(rec), { expirationTtl: 30 * 86400 });
     return json(200, { ok: true, queued: !!kv, request_id: rec.request_id, payout_deadline_pt: rec.payout_deadline_pt,
-      note: kv ? 'Queued on the TESTNET preview queue. Nothing is paid on preview.' : 'Preview: signature verified, but no queue is bound, so nothing was stored. Nothing is paid on preview.' });
+      note: kv ? 'Queued on the TESTNET preview queue. Nothing is paid on preview.' : 'Preview: signature verified and the request locked for this certificate, but no queue is bound, so nothing else was stored. Nothing is paid on preview.' });
   }
   if (action === 'wallet') return json(200, { ok: true, ...(await (deps.walletBalances ?? walletBalances)(s.address)) });
   if (action === 'trade-quote') {

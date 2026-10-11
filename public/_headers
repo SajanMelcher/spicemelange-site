@@ -25,11 +25,9 @@
   Content-Type: image/png
   Cache-Control: public, max-age=86400
   Access-Control-Allow-Origin: *
-/certificates/holder/*
+# Spice Certificates pages (sign-in, buying gate, holder page). Siona SC14: NO Referrer-Policy here, so these pages send
+# exactly ONE (the site-wide strict-origin-when-cross-origin). Holder tokens live in the URL fragment (never in a referrer).
+# /api/certificates/* is a Pages Function: _headers never applies there; store-core/spice-api.js json() sets its headers.
+/certificates/*
   X-Robots-Tag: noindex, nofollow, noarchive
-  Referrer-Policy: no-referrer
-  Cache-Control: no-store
-/api/certificates/*
-  X-Robots-Tag: noindex, nofollow, noarchive
-  Referrer-Policy: no-referrer
   Cache-Control: no-store

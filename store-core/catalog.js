@@ -56,8 +56,8 @@ export const CATALOG = [
   { sku: 'dune-saga-collection', name: 'The Secret Journals', role: 'Every template, now and in the future', glyph: 'sigil', bundle: true, kind: 'Grok Bot template collection', version: latestFor('dune-saga-collection')?.version ?? null,
     priceUsdc: '300', placeholder: false, // Sajan 10/9 ~10:00 PM PT (staged): replaces the $250 Full Desk; singles stay $50
     quote: 'Seven seats, one Golden Path, and every seat still to come.',
-    blurb: "The God Emperor's Secret Journals: all seven Golden Path Desk Grok Bot templates plus Leto's nine system journals, and every future template at no extra cost. Upgrades are free forever. All sales final.",
-    includes: ['All 7 Grok Bot desk templates', "Leto's nine system journals (doctrine, decisions, lessons, guardrails and more)", 'Every future template, at no extra cost', 'Upgrades free forever: re-download the latest any time', 'Collection overview and README'],
+    blurb: "The God Emperor's Secret Journals: all seven Golden Path Desk Grok Bot templates plus Leto's system templates, and every future template at no extra cost. Upgrades are free forever. All sales final.",
+    includes: ['All 7 Grok Bot desk templates', "Leto's system templates (doctrine, decisions, lessons, guardrails and more)", 'Every future template, at no extra cost', 'Upgrades free forever: re-download the latest any time', 'Collection overview and README'],
     highlights: ['$300 for every template, now and in the future', 'Upgrades free forever', 'Start with three seats, grow to seven and beyond'],
     format: 'Grok Bot templates (ZIP, Markdown + JSON)', file: 'file:dune-saga-collection' },
   { sku: 'plumbline-pro', name: 'The Spice Melange Trading Desk Pro', role: 'Coming soon', glyph: 'plumb', comingSoon: true,
@@ -77,4 +77,15 @@ export const bySku = (sku) => CATALOG.find((p) => p.sku === sku) ?? null;
 export const servedSku = (sku) => bySku(sku)?.upgradeTo ?? sku;
 export const addonsFor = (sku) => CATALOG.filter((p) => p.addon && p.addonFor?.includes(sku));
 export const ARCHETYPES = CATALOG.filter((p) => !p.bundle && !p.comingSoon && !p.hidden && !p.retired);
-export const LISTED = CATALOG.filter((p) => !p.hidden && !p.retired);
+// PREVIEW-ONLY single-product mode. Basis: Tleilaxu's PROPOSED store/CATALOG-WORDING-proposed-secret-journals.md (NOT approved
+// yet), Sajan 8:18 PM PT 10/10 as relayed ("Remove all individual tokens. And create one token with the template of all the
+// agents."), and LICENSE 2026.10.10.1 §1 ("We no longer sell single templates"). STORE_SINGLES_FOR_SALE=0 takes the seven $50
+// seat singles off sale: at BUILD time (store pages, gallery, catalog.json) via process.env, and at RUN time (createOrder) via
+// the Pages env. scripts/deploy.sh sets it to 0 for preview builds and wrangler.toml sets it in [env.preview.vars] only.
+// Production default stays '1' (singles on sale) until Sajan approves the catalog wording; then set it for production too.
+// Past single-template orders keep re-downloading and upgrading either way (checkLink/servedSku are unchanged).
+export const singlesForSale = (env) => String(env?.STORE_SINGLES_FOR_SALE ?? '1') !== '0';
+const BUILD_ENV = typeof process !== 'undefined' && process?.env ? process.env : {};
+export const SINGLES_FOR_SALE_AT_BUILD = singlesForSale(BUILD_ENV);
+export const isSingle = (p) => !!p && p.kind === KIND && !p.bundle && !p.retired; // the seven $50 seat templates
+export const LISTED = CATALOG.filter((p) => !p.hidden && !p.retired && (SINGLES_FOR_SALE_AT_BUILD || !isSingle(p)));

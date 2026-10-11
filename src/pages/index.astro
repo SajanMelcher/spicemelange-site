@@ -8,6 +8,10 @@ import SectionHead from '../components/SectionHead.astro';
 import Disclaimer from '../components/Disclaimer.astro';
 import LearnInvite from '../components/LearnInvite.astro';
 import { SITE, mailto } from '../data/site';
+import { copy } from '../../store-core/spice-gate.js';
+import { TESTNET_BANNER } from '../data/certificates';
+import CertFooterHook from '../components/CertFooterHook.astro';
+const cert = copy();
 
 const pillars = [
   { title: 'Patience', glyph: 'hourglass', text: 'The Golden Path is measured in decades, not candles. We buy on schedule, and we let time do the heavy lifting.' },
@@ -88,6 +92,16 @@ const ways = [
         <footer class="mt-3 text-sm text-sand-300/70">The desk’s rule of thumb</footer>
       </blockquote>
     </div>
+  </section>
+
+  <!-- SPICE CERTIFICATES (holders only; testnet preview) -->
+  <section class="container-x pt-4" aria-labelledby="certs">
+    <a href="https://thespicemelange.org/certificates/" class="card group block no-underline transition-colors hover:border-spice-400/40" data-cert-home>
+      <span class="eyebrow">Spice Certificates · {cert.short}</span>
+      <span id="certs" class="mt-2 block font-serif text-2xl text-sand-50 group-hover:text-spice-300">Spice Certificates, for {cert.who} <span aria-hidden="true">→</span></span>
+      <span class="mt-2 block text-sand-200/85">Spice Certificates are available only to {cert.who}. Sign in with your Sui wallet (a message, never a transaction or your seed phrase) to check. The 8% APR, credited in sats, is a target, not a promise, and you can lose money. Education only. {TESTNET_BANNER}</span>
+    </a>
+    <CertFooterHook />
   </section>
 
   <!-- CTAs -->

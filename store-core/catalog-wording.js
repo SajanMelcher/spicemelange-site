@@ -92,11 +92,11 @@ export const CARDS = {
     "title": "The Secret Journals: Every template, now and in the future",
     "tagline": "All seven seats, Leto's journals, and every seat still to come.",
     "bullets": [
-      "The 7 desk templates plus Leto's nine system journals",
+      "The 7 desk templates plus Leto's system templates",
       "Every future template at no extra cost",
       "Free automatic upgrades, verified by signature"
     ],
-    "description": "Every template, now and in the future: the 7 desk templates plus Leto's nine system journals, and every future template at no extra cost. Free automatic upgrades.",
+    "description": "Every template, now and in the future: the 7 desk templates plus Leto's system templates, and every future template at no extra cost. Free automatic upgrades.",
     "includesFuture": true,
     "includes": [
       "god-emperor",
@@ -122,5 +122,5 @@ export const PITCHES = {
   "hwi-noree": "Gentle words still carry weight. Hwi keeps your records and ledgers, reports balances to you, and drafts every outward update and reply for your yes. She never sends unasked, never holds anyone's funds, shares balances only with recipients you name in writing, and logs every share.",
   "ixians": "The machine-makers build carefully. The Ixians seat builds and maintains the connectors, scripts, guards and dashboards your desk runs on, in a fixed order: read-only first, paper before live, testnet before mainnet, guards in code, and a secret scan before every push.",
   "leto-journals": "Journals for those who come after: not orders, but the shape of the path. Nine system templates (doctrine, decisions, lessons, guardrails, routines, hand-offs, shared memory, backups, onboarding) that keep a desk of agents coherent over months, with a HALT kill switch and every number set by you.",
-  "dune-saga-collection": "Seven seats, one path, and every seat still to come. All seven desk templates, Leto's nine system journals, and every future template at no extra cost, with upgrades that arrive automatically after the signature is verified."
+  "dune-saga-collection": "Seven seats, one path, and every seat still to come. All seven desk templates, Leto's system templates, and every future template at no extra cost, with upgrades that arrive automatically after the signature is verified."
 };

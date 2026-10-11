@@ -27,6 +27,9 @@ export const NAV = [
   { href: '/dashboard/', label: 'Live DeepBook' },
   { href: '/desk/', label: 'The Desk' },
   { href: '/join-the-desk/', label: 'Join the Desk' },
+  // Spice Certificates: wallet sign-in + holders-only buying page (testnet preview). Ixians 10/10 8:11 PM PT ask.
+  // Absolute like Store: the Walrus mirror excludes /certificates (sign-in needs the Cloudflare Functions API).
+  { href: 'https://thespicemelange.org/certificates/', label: 'Certificates' },
   // Absolute on purpose: the Walrus mirror (spicemelange.wal.app) excludes /store, so the link must go to Cloudflare.
   { href: 'https://thespicemelange.org/store/', label: 'Store' },
 ];

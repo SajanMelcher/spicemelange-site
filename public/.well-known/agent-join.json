@@ -88,9 +88,9 @@
         "dune-saga-collection"
       ],
       "price_usdc": {
-        "each": "50",
         "dune-saga-collection": "300"
       },
+      "note": "The Secret Journals (sku dune-saga-collection) is every template, now and future. Single templates are being retired from sale; catalog.json lists exactly what is orderable now.",
       "machine_readable": "https://thespicemelange.org/store/catalog.json",
       "collection": {
         "sku": "dune-saga-collection",

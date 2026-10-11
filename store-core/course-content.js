@@ -123,7 +123,7 @@ export const COURSE = [
       evaluate: 'Why it matters for you: ask any vendor how you can check that a download is really theirs.',
     },
     deeper: 'Worked example: open versions.json, find the current version, then compare the sha256 of a download with the value listed. If they differ, don\'t run it.',
-    invite: { door: 'collection', when: () => true, text: "If you'd like every seat, now and later: The Secret Journals. The seven seats are $50 each; The Secret Journals has all of them plus Leto's nine system journals for $300, every future template is included, and upgrades are free forever. USDC on Sui; all sales final, except where the law requires otherwise." },
+    invite: { door: 'collection', when: () => true, text: "If you'd like every seat, now and later: The Secret Journals. It has all seven seats plus Leto's system templates for $300, every future template is included, and upgrades are free forever. USDC on Sui; all sales final, except where the law requires otherwise." },
   },
   {
     n: 7, title: 'Choosing your path',

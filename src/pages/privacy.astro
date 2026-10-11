@@ -42,6 +42,14 @@ const updated = 'October 10, 2026';
       <li><strong>Sui</strong> is a public blockchain. Our server reads it through the public Sui GraphQL service (graphql.mainnet.sui.io) to check payments; your browser doesn't contact it. If you use a Sui wallet to reset your token, that wallet is your own software and talks to the network itself. Payments on Sui are public and can't be deleted by anyone.</li>
     </ul>
 
+    <h2 id="certificates">Spice Certificates and wallet sign-in</h2>
+    <ul data-privacy-certificates>
+      <li><strong>Signing in with your wallet:</strong> we receive your public Sui wallet address, the short message you signed and its signature. We check them and keep only the one-time code from that message in our database, until about a minute after it expires (it lasts 2 minutes), so a signature can't be used twice. Your sign-in session lasts 15 minutes and lives only in that page's memory: no cookie and no storage. Signing is never a transaction and we never ask for your seed phrase.</li>
+      <li><strong>Checks our server makes with your wallet address:</strong> it asks the public Sui GraphQL service on mainnet (graphql.mainnet.sui.io) which store license your wallet holds, to decide whether you can open the Spice Certificates buying page. On the testnet preview it also asks Sui testnet GraphQL (graphql.testnet.sui.io) for your testnet certificates and balances, and the public Sui testnet full node (fullnode.testnet.sui.io) to build and dry-run the testnet purchase or trade you asked for; it reads DeepBook mainnet prices (graphql.mainnet.sui.io and deepbook-indexer.mainnet.mystenlabs.com) only as a price reference. These services, run by Mysten Labs and the Sui network, see our server's request with your public address, not your browser. We don't store the results.</li>
+      <li><strong>Certificate holders (testnet preview today):</strong> to show your statement and handle a withdrawal request we use your wallet address, your payout address, the withdrawal message you signed and its signature, the email you gave at purchase, and your display name, which is kept in a private holder file, never in our public ledger. A signed withdrawal request is kept in a private queue for 30 days, and a lock that stops two requests for the same certificate is kept for up to 7 days. Payouts are priced at the Coinbase market price at the time of withdrawal.</li>
+      <li>Your browser contacts none of these Sui services on the certificate pages. Your wallet is your own software and talks to the network itself.</li>
+    </ul>
+
     <h2>Unsubscribing and deletion</h2>
     <ul>
       <li>Every lesson or course email has a one-click unsubscribe. When you unsubscribe we delete your address, quiz answers, referral source and send history at once, and keep only a scrambled (hashed) copy of your address and the date, so we never email you again.</li>

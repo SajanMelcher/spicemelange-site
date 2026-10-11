@@ -1,11 +1,11 @@
 
 # License: The Spice Melange agent templates
-Version 2026.10.10 (approved by the seller 2026-10-10) · Seller: Sajan Melcher, doing business as The Spice Melange ("we") · Buyer: the person or entity that paid ("you")
+Version 2026.10.10.1 (approved by the seller 2026-10-10) · Seller: Sajan Melcher, doing business as The Spice Melange ("we") · Buyer: the person or entity that paid ("you")
 
 ## 1. What you get
 Each paid order grants you a **personal, non-exclusive, non-transferable license** to use the template(s) in that order. The license covers every template file, skill, routine and journal in the ZIP, and every upgrade we release for it.
-- **Single template license ($50 order).** Covers that one template, for example `moneo`.
-- **Collection license (The Dune Saga Collection, $300 order).** Covers every template in the collection today: the 7 desk packs and Leto's Secret Journals. It also covers **every template we add to the collection later**, at no extra cost. It does not cover separately sold add-ons or services unless we say so in writing.
+- **The Secret Journals ($300 order).** Covers every agent template we offer today: the 7 desk packs and Leto's system templates (sold on their own until 2026-10-10 as "Leto's Secret Journals"). It also covers **every template we add later**, at no extra cost. It does not cover separately sold add-ons or services unless we say so in writing.
+- **Earlier licenses stay valid.** We no longer sell single templates, but licenses bought earlier keep the rights they had, including free upgrades and downloads for what they cover. A single template license (a $50 order) covers its one template, for example `moneo`. A collection license bought under the earlier name The Dune Saga Collection covers everything The Secret Journals covers, including future templates.
 
 ## 2. One owner, one desk
 - The license is for **one owner**: you, or one entity if an entity bought it. You may run the templates on as many of your own bots as you like, but **only for your own desk**. A desk is one owner's own accounts, team folder and agents.

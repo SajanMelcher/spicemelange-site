@@ -10,7 +10,7 @@
  * order amount (BigInt), tx time inside [created - skew, expires + skew] and not in the future,
  * digest never used before, order not already paid, chain identifier matches the network.
  */
-import { bySku, addonsFor, servedSku } from './catalog.js';
+import { bySku, addonsFor, servedSku, isSingle, singlesForSale } from './catalog.js';
 import { verifyPersonalMessage } from './suisig.js';
 import { maybePurge } from './purge.js';
 import { TEMPLATES } from './versions.js';
@@ -72,6 +72,7 @@ export function loadConfig(env = {}) {
   if (!env.STORE_DB) return { enabled: false, reason: 'db_not_bound' };
   const int = (v, d, lo, hi) => { const n = v === undefined || v === '' ? d : Number(v); return Number.isInteger(n) && n >= lo && n <= hi ? n : d; };
   return {
+    singlesForSale: singlesForSale(env),
     enabled: true,
     net,
     payTo: normalizeAddress(payTo),
@@ -258,6 +259,7 @@ export async function createOrder(cfg, { sku, email, ipHash, connectorClient, se
   await maybePurge(cfg, nowMs); // S3 retention (unpaid orders > 30 days, old counters); gated, never throws
   const p = bySku(sku);
   if (!p || p.comingSoon || p.retired || p.addon) return { ok: false, status: 400, reason: 'unknown_product' }; // retired: download-only; addon: delivered with its parent
+  if (isSingle(p) && cfg.singlesForSale === false) return { ok: false, status: 400, reason: 'unknown_product' }; // PREVIEW-ONLY single-product mode (catalog.js)
   // Hidden SKUs behave exactly like unknown ones unless the secret flag matches.
   if (p.hidden && !(cfg.selftestKey && typeof selftestKey === 'string' && safeEqual(selftestKey, cfg.selftestKey))) {
     return { ok: false, status: 400, reason: 'unknown_product' };

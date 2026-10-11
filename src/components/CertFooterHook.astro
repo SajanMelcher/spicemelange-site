@@ -1,0 +1,5 @@
+---
+// Renders Tleilaxu's certificate footer line (borrowing as a last resort) once it is pasted into src/data/certificates.ts.
+import { TLEILAXU_CERT_FOOTER_LINE } from '../data/certificates';
+---
+{TLEILAXU_CERT_FOOTER_LINE && <p class="mt-3 text-xs text-sand-300/80" data-tleilaxu-footer>{TLEILAXU_CERT_FOOTER_LINE}</p>}

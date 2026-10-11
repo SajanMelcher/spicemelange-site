@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Admin: issue / rotate / revoke a holder's tailored VIEW-ONLY link /certificates/holder/<serial>/<token>.
+// Admin: issue / rotate / revoke a holder's tailored VIEW-ONLY link /certificates/holder/#s=<serial>&t=<token> (token in the fragment: never sent to a server; Siona SC15).
 // 256-bit random token (base64url, 43 chars). Only sha256(token) is stored: in the tokens registry (outside the repo,
 // for Hwi's daily master.json build) and, with --master, straight into that block's row.token_hash. The link is printed ONCE.
 //   node scripts/spice-holder-token.mjs issue|rotate --serial 3 --tokens <registry.json> [--master <master.json|block.json>] [--base https://...]
@@ -34,6 +34,6 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop()
   const master = mPath ? JSON.parse(readFileSync(mPath, 'utf8')) : null;
   const token = apply(cmd, serial, reg, master);
   write(tokPath, reg); if (master) write(mPath, master);
-  if (token) console.log(`${arg('--base', 'https://thespicemelange.org')}/certificates/holder/${serial}/${token}`);
+  if (token) console.log(`${arg('--base', 'https://thespicemelange.org')}/certificates/holder/#s=${serial}&t=${token}`);
   else console.log(`serial ${serial}: link revoked`);
 }

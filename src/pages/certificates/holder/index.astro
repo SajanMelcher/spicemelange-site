@@ -1,14 +1,16 @@
 ---
-// Spice Certificates holder page: TESTNET PREVIEW (branch spice-cert-preview). Not linked from the site; not for production
-// (gate 2). Sample data only. All holder data comes from /api/certificates/* behind a wallet signature or a view-only link.
+// Spice Certificates holder page: TESTNET PREVIEW. Linked from /certificates/. Holder data (statements, links, withdrawal,
+// wallet, trade) answers only on the testnet preview (SPICE_CERT_PREVIEW=1); production shows sign-in only (gate 2). Sample data only. All holder data comes from /api/certificates/* behind a wallet signature or a view-only link.
 import Base from '../../../layouts/Base.astro';
 import Disclaimer from '../../../components/Disclaimer.astro';
+import CertFooterHook from '../../../components/CertFooterHook.astro';
+import { PAYOUT_PRICING } from '../../../data/certificates';
 ---
 <Base title="Spice Certificate holders (TESTNET PREVIEW)" description="Testnet preview of the Spice Certificate holder page. Sample data only." noindex>
   <section class="container-x pt-12 pb-2">
     <p class="eyebrow mb-3" data-testnet-label>TESTNET PREVIEW · sample data · not a real certificate</p>
     <h1 class="text-4xl leading-tight text-sand-50 sm:text-5xl">Spice Certificate holders</h1>
-    <p class="mt-3 max-w-3xl text-sand-200/90">Only you see your own certificates: sign a short message with the Sui wallet that holds them (no gas, no transaction, never your seed phrase), or open the personal view-only link we sent you.</p>
+    <p class="mt-3 max-w-3xl text-sand-200/90">Only you see your own certificates: sign a short message with the Sui wallet that holds them (no gas, no transaction, never your seed phrase), or open the personal view-only link we sent you. Buying certificates: see <a class="text-ibad-300" href="/certificates/">Spice Certificates</a>.</p>
   </section>
 
   <section class="container-x py-3" aria-label="Read this first">
@@ -38,7 +40,7 @@ import Disclaimer from '../../../components/Disclaimer.astro';
     <article class="card mt-6" data-withdraw-card>
       <h2 class="font-serif text-2xl text-sand-50">How to withdraw</h2>
       <ol class="mt-2 list-decimal space-y-1 pl-5 text-sm text-sand-200">
-        <li>Whole certificates only. Choose <b>USDC on Sui</b> or <b>BTC</b>; both are sent by Sajan through Coinbase.</li>
+        <li>Whole certificates only. Choose <b>USDC on Sui</b> or <b>BTC</b>; both are sent by Sajan through Coinbase. <b data-payout-pricing>{PAYOUT_PRICING}</b></li>
         <li>Sign the request below with the wallet that holds the certificate, <b>or</b> email <a class="link" href="mailto:reserve@thespicemelange.org">reserve@thespicemelange.org</a> from the email you gave at purchase.</li>
         <li>We confirm by email and confirm your payout address twice. Sajan approves each payout by hand. Target: within 6 hours of a verified request (a target, not a promise).</li>
       </ol>
@@ -73,47 +75,40 @@ import Disclaimer from '../../../components/Disclaimer.astro';
     </article>
   </section>
 
-  <section class="container-x py-6"><Disclaimer extra="TESTNET PREVIEW with sample data. Not an offer of any security or deposit. The 8% is a target, not a promise. Draft terms pending securities counsel review." /></section>
+  <section class="container-x py-6"><CertFooterHook /><Disclaimer extra="TESTNET PREVIEW with sample data. Not an offer of any security or deposit. The 8% is a target, not a promise. Draft terms pending securities counsel review." /></section>
 
   <script>
     import { certTable, summary, walletTable, quoteBlock } from '../../../lib/holder-render.js';
+    import { state, api, signIn, signMessage as sign } from '../../../lib/wallet-signin.js';
     const $ = (s) => document.querySelector(s);
     const say = (t, sel = '[data-msg]') => { $(sel).textContent = t; };
-    let session = null, account = null, wallet = null, view = null, lastTx = null;
-    const api = (a, body = {}) => fetch('/api/certificates/' + a, { method: 'POST', headers: { 'content-type': 'application/json', ...(session ? { authorization: 'Bearer ' + session } : {}) }, body: JSON.stringify(body) }).then((r) => r.json()).catch(() => ({ ok: false, reason: 'network_error' }));
-    const wallets = [];
-    const reg = { register: (...ws) => { wallets.push(...ws); return () => {}; } };
-    window.addEventListener('wallet-standard:register-wallet', (e) => { try { e.detail(reg); } catch {} });
-    window.dispatchEvent(new CustomEvent('wallet-standard:app-ready', { detail: reg }));
-    const sign = async (message) => (await wallet.features['sui:signPersonalMessage'].signPersonalMessage({ message: new TextEncoder().encode(message), account })).signature;
-
+    let view = null, lastTx = null;
     function render(v) {
       view = v; $('[data-view]').classList.remove('hidden');
       $('[data-summary]').innerHTML = summary(v); $('[data-certs]').innerHTML = certTable(v);
       $('[data-wd-serial]').innerHTML = v.certificates.filter((c) => c.status === 'active' && c.withdrawal_status === 'none').map((c) => `<option value="${c.serial}">No. ${c.serial}</option>`).join('');
       $('[data-wd-btn]').disabled = !v.can_withdraw;
     }
-    // Personal view-only link: /certificates/holder/<serial>/<token>
-    const m = location.pathname.match(/^\/certificates\/holder\/(\d+)\/([A-Za-z0-9_-]{43,128})\/?$/);
+    // Personal view-only link: /certificates/holder/#s=<serial>&t=<token>. The fragment never reaches a server or a log (SC15).
+    const frag = new URLSearchParams(location.hash.slice(1));
+    const m = /^\d{1,12}$/.test(frag.get('s') || '') && /^[A-Za-z0-9_-]{43,128}$/.test(frag.get('t') || '') ? [null, frag.get('s'), frag.get('t')] : null;
+    if (location.hash === '#old-link') say('That link uses an old format we retired for your privacy. Ask reserve@thespicemelange.org for a new one.');
+    if (m) history.replaceState(null, '', location.pathname); // drop the token from the address bar and history entry
     if (m) { say('Opening your view-only link…'); api('token-view', { serial: m[1], token: m[2] }).then((r) => r.ok ? (render(r.view), say('View-only link. Sign in with your wallet to request a withdrawal or see your wallet.')) : say('This link is not valid or was replaced. Ask reserve@thespicemelange.org for a new one.')); }
 
     $('[data-signin]').addEventListener('click', async () => {
-      wallet = wallets.find((w) => w.features?.['sui:signPersonalMessage'] && w.features?.['standard:connect']);
-      if (!wallet) return say('No Sui wallet found in this browser. Install or unlock your wallet, then reload.');
       try {
-        const { accounts } = await wallet.features['standard:connect'].connect(); account = accounts[0];
-        const ch = await api('challenge'); if (!ch.ok) return say('Sign-in unavailable: ' + ch.reason);
-        say('Sign the message in ' + wallet.name + '. It is not a transaction.');
-        const r = await api('signin', { message: ch.message, signature: await sign(ch.message) });
-        if (!r.ok) return say(r.reason === 'no_certificate_in_this_wallet' ? 'This wallet holds no Spice Certificate.' : 'Sign-in refused: ' + r.reason);
-        session = r.session; render(r.view); say('Signed in. Session lasts 15 minutes.');
+        const r = await signIn(say); if (!r) return;
+        if (!r.view) return say('Signed in. Holder statements are a testnet preview and are not switched on here.');
+        if (!r.view.certificates.length) return say('Signed in. This wallet holds no Spice Certificate.');
+        render(r.view); say('Signed in. Session lasts 15 minutes.');
         const w = await api('wallet'); if (w.ok) { $('[data-wallet-card]').classList.remove('hidden'); $('[data-wallet]').innerHTML = walletTable(w); }
         $('[data-trade-card]').classList.remove('hidden');
       } catch (e) { say('Wallet error: ' + (e?.message ?? e)); }
     });
 
     $('[data-wd-form]').addEventListener('submit', async (e) => {
-      e.preventDefault(); if (!session) return say('Sign in with your wallet first.', '[data-wd-msg]');
+      e.preventDefault(); if (!state.session) return say('Sign in with your wallet first.', '[data-wd-msg]');
       const body = { kind: 'withdraw', serial: Number($('[data-wd-serial]').value), asset: $('[data-wd-asset]').value, payoutAddress: $('[data-wd-addr]').value.trim() };
       const ch = await api('challenge', body); if (!ch.ok) return say('Refused: ' + ch.reason, '[data-wd-msg]');
       try {
@@ -133,10 +128,10 @@ import Disclaimer from '../../../components/Disclaimer.astro';
       if (q.tx_json) { lastTx = q.tx_json; $('[data-tr-sign]').classList.remove('hidden'); }
     });
     $('[data-tr-sign]').addEventListener('click', async () => {
-      const f = wallet?.features?.['sui:signAndExecuteTransaction'];
+      const f = state.wallet?.features?.['sui:signAndExecuteTransaction'];
       if (!f || !lastTx) return;
       try {
-        const r = await f.signAndExecuteTransaction({ transaction: { toJSON: async () => lastTx }, account, chain: 'sui:testnet' });
+        const r = await f.signAndExecuteTransaction({ transaction: { toJSON: async () => lastTx }, account: state.account, chain: 'sui:testnet' });
         $('[data-tr-out]').insertAdjacentHTML('beforeend', `<p class="mt-2">Submitted by your wallet: <span class="font-mono">${String(r.digest).replace(/[^A-Za-z0-9]/g, '')}</span> (testnet).</p>`);
       } catch (e) { $('[data-tr-out]').insertAdjacentHTML('beforeend', '<p class="mt-2">Not signed.</p>'); }
       lastTx = null; $('[data-tr-sign]').classList.add('hidden');

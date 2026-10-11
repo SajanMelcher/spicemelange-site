@@ -580,3 +580,17 @@ test('S2: the mainnet store refuses to open if STORE_PAYTO differs from the sign
   assert.equal(ok.enabled, true); assert.equal(ok.payTo, '0x88e8516771e71da54a7449a0a46e6a0c4af71ef71ac4d379847319c7e18a780f');
   assert.equal(loadConfig({ ...env('0x' + 'ab'.repeat(32)), SUI_NETWORK: 'testnet' }).enabled, true, 'preview/testnet uses its own payee');
 });
+
+test('PREVIEW-ONLY single-product mode: STORE_SINGLES_FOR_SALE=0 refuses the seven $50 singles, keeps The Secret Journals and past downloads', async () => {
+  const { singlesForSale, isSingle, bySku } = await import('../store-core/catalog.js');
+  assert.equal(singlesForSale({}), true, 'production default unchanged until Sajan approves');
+  assert.equal(singlesForSale({ STORE_SINGLES_FOR_SALE: '0' }), false);
+  assert.ok(isSingle(bySku('moneo')) && !isSingle(bySku('dune-saga-collection')) && !isSingle(bySku('leto-journals')));
+  const off = loadConfig(env({ STORE_SINGLES_FOR_SALE: '0' }));
+  assert.equal((await createOrder(off, { sku: 'moneo', nowMs: T0 })).reason, 'unknown_product');
+  const col = await createOrder(off, { sku: 'dune-saga-collection', nowMs: T0 });
+  assert.ok(BigInt(col.order.amountAtomic) >= 300_000_000n && BigInt(col.order.amountAtomic) < 300_010_000n);
+  const w = readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf8');
+  assert.ok(w.indexOf('STORE_SINGLES_FOR_SALE') > w.indexOf('[env.preview.vars]'), 'flag only in preview vars');
+  assert.match(readFileSync(new URL('../scripts/deploy.sh', import.meta.url), 'utf8'), /export STORE_SINGLES_FOR_SALE=0/);
+});
