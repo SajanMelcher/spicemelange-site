@@ -2,14 +2,17 @@
 // /treasury: read-only Desk Treasury (Sajan approved making these two addresses public, 9:32 AM PT 10/15/2026).
 // PREVIEW branch only. Balances are read in the visitor's browser from public Sui GraphQL mainnet (address balances; public JSON-RPC
 // suix_getAllBalances was deprecated on public fullnodes and refuses the call as of 10/15/2026);
-// USD estimates use DeepBook indexer last prices (free, public). No keys, no signing, no writes, no private data.
+// Desk wallet also shows its DeepBook BalanceManager (balance bag dynamic fields, Sui GraphQL), open orders (DeepBook indexer,
+// best effort) and NAVI supply positions (same logic as fish-deepbook/navi-holdings.ts: NAVI open API for pool ids/indices/oracle
+// prices + storage user_state table read on chain via Sui GraphQL; NAVI normalizes to 9 dp; amount = scaled * supplyIndex / 1e27).
+// USD estimates use DeepBook indexer last prices (free, public), falling back to NAVI's public oracle price. No keys, no signing, no writes, no private data.
 import Base from '../../layouts/Base.astro';
 const WALLETS = [
-  { id: 'desk', label: 'Desk trading wallet', note: 'Separate from Sajan\'s personal Coinbase and SoFi accounts. No leverage, no loan money. The Sui wallet The Fish Speakers and The Honored Matres trade DeepBook from. Funds parked inside its DeepBook BalanceManager or open orders are not wallet balances and are not shown here.', address: '0x340480183e48ac0b45e883d2c8f6e3d37f57dd88d42c17a5c457293bf9fbd9d5' },
+  { id: 'desk', label: 'Desk trading wallet', note: 'Separate from Sajan\'s personal Coinbase and SoFi accounts. No leverage, no loan money. The Sui wallet The Fish Speakers and The Honored Matres trade DeepBook from. Its DeepBook BalanceManager and NAVI supply positions are shown below and included in the combined total.', balanceManager: '0xb7084d0abf33836f215841f58219934bf34ada8d3d9c384d2ee6192887f85471', navi: true, address: '0x340480183e48ac0b45e883d2c8f6e3d37f57dd88d42c17a5c457293bf9fbd9d5' },
   { id: 'store', label: 'Store payment address', note: 'Coinbase-hosted deposit address; funds are swept to Coinbase custody, so the on-chain balance here is usually near zero. Where The Secret Journals payments (USDC on Sui) are received.', address: '0x88e8516771e71da54a7449a0a46e6a0c4af71ef71ac4d379847319c7e18a780f' },
 ];
 ---
-<Base title="Desk Treasury (read-only)" description="Live, verifiable balances of the Spice Melange Trading Desk's two public Sui wallets.">
+<Base title="Desk Treasury (read-only)" description="Live, verifiable balances of the Spice Melange Trading Desk's trading wallet and store payment address.">
   <section class="mx-auto max-w-5xl px-5 py-12">
     <h1 class="font-display text-3xl text-sand-50">Desk Treasury <span class="text-base text-sand-300">read-only · live from Sui</span></h1>
     <p class="mt-3 max-w-3xl text-sand-200/90">The spice must flow, and anyone may count it. These are the live balances of the desk trading wallet and the store payment address, read in your browser straight from the public Sui GraphQL service. Every number links to a Sui explorer so you can check it yourself.</p>
@@ -41,37 +44,103 @@ const WALLETS = [
       const d = await gql('query($a:SuiAddress!){ address(address:$a){ balances(first:50){ nodes{ coinType{repr} totalBalance } } } }', { a });
       return (d.address?.balances?.nodes || []).map((b) => ({ coinType: b.coinType.repr, totalBalance: String(b.totalBalance) }));
     }
+    const NAVI = 'https://open-api.naviprotocol.io/api';
+    const POOLS = ['SUI_USDC', 'DEEP_USDC', 'WAL_USDC', 'NS_USDC', 'XBTC_USDC', 'IKA_USDC'];
+    const b64 = (bytes) => btoa(String.fromCharCode(...bytes));
+    const hexBytes = (h) => h.replace(/^0x/, '').match(/../g).map((x) => parseInt(x, 16));
+    async function dynField(parent, type, bcs) {
+      const d = await gql('query($p:SuiAddress!,$t:String!,$b:Base64!){ address(address:$p){ dynamicField(name:{type:$t,bcs:$b}){ value{ ... on MoveValue{ json } } } } }', { p: parent, t: type, b: bcs });
+      return d.address?.dynamicField?.value?.json ?? null;
+    }
+    async function bmBalances(bm) {
+      const d = await gql('query($a:SuiAddress!){ object(address:$a){ asMoveObject{ contents{ json } } } }', { a: bm });
+      const bag = d.object?.asMoveObject?.contents?.json?.balances?.id; if (!bag) throw new Error('BalanceManager not found');
+      const f = await gql('query($a:SuiAddress!){ address(address:$a){ dynamicFields(first:50){ nodes{ name{ type{repr} } value{ ... on MoveValue{ json } } } } } }', { a: bag });
+      return (f.address?.dynamicFields?.nodes || []).map((n) => {
+        const t = n.name.type.repr; const i = t.indexOf('<');
+        return { coinType: i >= 0 ? t.slice(i + 1, -1) : t, totalBalance: String(n.value?.json ?? '0') };
+      });
+    }
+    async function openOrders(bm) {
+      const out = []; let slow = 0;
+      await Promise.all(POOLS.map(async (pool) => {
+        try { for (const o of (await (await tf(`${IDX}/orders/${pool}/${bm}?limit=50`, {}, 30_000)).json()) || [])
+          if (!['canceled', 'filled', 'expired'].includes(String(o.current_status).toLowerCase())) out.push({ pool, ...o }); } catch { slow++; }
+      }));
+      out.slow = slow; return out.sort((a, b) => a.pool.localeCompare(b.pool) || b.price - a.price);
+    }
+    async function naviSupply(addr, px) {
+      const [pools, cfg] = await Promise.all([tf(NAVI + '/navi/pools?env=prod&market=main').then((r) => r.json()), tf(NAVI + '/navi/config?env=prod&market=main').then((r) => r.json())]);
+      const rp = cfg.data?.reserveParentId; if (!rp) throw new Error('NAVI config unavailable');
+      const ab = b64(hexBytes(addr)), out = [];
+      for (const p of pools.data || []) {
+        const sym = p.token?.symbol; if (!['WAL', 'DEEP', 'SUI', 'USDC'].includes(sym)) continue;
+        const res = await dynField(rp, 'u8', b64([p.id])); const ut = res?.supply_balance?.user_state?.id; if (!ut) continue;
+        const scaled = await dynField(ut, 'address', ab); if (!scaled || scaled === '0') continue;
+        const qty = Number(BigInt(scaled) * BigInt(p.currentSupplyIndex) / 10n ** 27n) / 1e9;
+        if (px[sym] == null && Number(p.oracle?.price) > 0) px[sym] = Number(p.oracle.price);
+        out.push({ s: sym, qty, usd: px[sym] != null ? qty * px[sym] : null });
+      }
+      return out;
+    }
     async function prices() {
       const p = { USDC: 1, USDT: 1 };
       try { for (const s of await (await tf(IDX + '/summary')).json()) if (s.quote_currency === 'USDC' && s.last_price > 0 && p[s.base_currency] == null) p[s.base_currency] = s.last_price; } catch {}
       return p;
     }
-    async function card(w, px) {
-      const ex = `https://suivision.xyz/account/${w.address}`, ex2 = `https://suiscan.xyz/mainnet/account/${w.address}`;
-      const a = (txt) => `<a class="text-ibad-300 hover:underline" href="${ex}" rel="noopener noreferrer" target="_blank">${txt}</a>`;
-      const raw = (await balances(w.address)).filter((b) => b.totalBalance !== '0');
-      const rows = await Promise.all(raw.map(async (b) => {
+    const lk = (href, txt) => `<a class="text-ibad-300 hover:underline" href="${href}" rel="noopener noreferrer" target="_blank">${txt}</a>`;
+    async function rowsOf(raw, px) {
+      const rows = await Promise.all(raw.filter((b) => b.totalBalance !== '0').map(async (b) => {
         const m = await coinMeta(b.coinType);
         const s = m?.symbol || b.coinType.split('::').pop();
         const qty = m ? Number(b.totalBalance) / 10 ** m.decimals : null;
         return { s, qty, raw: b.totalBalance, usd: qty != null && px[s] != null ? qty * px[s] : null };
       }));
-      rows.sort((x, y) => (y.usd || 0) - (x.usd || 0));
-      const total = rows.reduce((t, r) => t + (r.usd || 0), 0);
-      return `<article class="rounded-lg border border-sand-700/40 bg-night-900/60 p-5">
-        <h2 class="font-display text-xl text-sand-50">${esc(w.label)} <span class="text-sm text-sand-300">${a(usd(total) + ' est.')}</span></h2>
+      return rows.sort((x, y) => (y.usd || 0) - (x.usd || 0));
+    }
+    const sum = (rows) => rows.reduce((t, r) => t + (r.usd || 0), 0);
+    function table(rows, href, empty = 'No balances') {
+      return `<table class="mt-2 w-full text-sm"><thead><tr class="text-left text-sand-300"><th>Coin</th><th class="text-right">Balance</th><th class="text-right">USD (est.)</th></tr></thead><tbody>
+        ${rows.map((r) => `<tr><td>${esc(r.s)}</td><td class="text-right">${lk(href, r.qty == null ? esc(r.raw) + ' (raw)' : fmt(r.qty))}</td><td class="text-right">${lk(href, usd(r.usd))}</td></tr>`).join('') || `<tr><td colspan="3" class="text-sand-300">${empty}</td></tr>`}
+        </tbody></table>`;
+    }
+    async function card(w, px) {
+      const ex = `https://suivision.xyz/account/${w.address}`, ex2 = `https://suiscan.xyz/mainnet/account/${w.address}`;
+      const navi = w.navi ? await naviSupply(w.address, px).then((r) => ({ r })).catch((e) => ({ err: e.message })) : null;
+      const wallet = await rowsOf(await balances(w.address), px);
+      let total = sum(wallet), extra = '';
+      if (w.balanceManager) {
+        const exBm = `https://suivision.xyz/object/${w.balanceManager}`;
+        try {
+          const bm = await rowsOf(await bmBalances(w.balanceManager), px); total += sum(bm);
+          extra += `<h3 class="mt-5 text-sand-100">DeepBook BalanceManager <span class="text-xs text-sand-300">${lk(exBm, esc(w.balanceManager.slice(0, 6) + '…' + w.balanceManager.slice(-4)))} · ${lk(exBm, usd(sum(bm)) + ' est.')}</span></h3>${table(bm, exBm)}`;
+        } catch (e) { extra += `<p class="mt-4 text-sm text-red-300">BalanceManager read failed: ${esc(e.message)}. ${lk(exBm, 'View on SuiVision')}</p>`; }
+        const orders = await openOrders(w.balanceManager);
+        extra += `<h3 class="mt-4 text-sand-100">Open DeepBook orders <span class="text-xs text-sand-300">public DeepBook indexer${orders.slow ? ` · ${orders.slow} pool(s) timed out, retrying next refresh` : ''} · funds locked in open orders are held by the DeepBook pool and are not counted in the totals</span></h3>
+          <table class="mt-1 w-full text-sm"><thead><tr class="text-left text-sand-300"><th>Pool</th><th>Side</th><th class="text-right">Price</th><th class="text-right">Remaining</th></tr></thead><tbody>
+          ${orders.map((o) => `<tr><td>${esc(o.pool)}</td><td>${esc(o.type)}</td><td class="text-right">${fmt(o.price, 6)}</td><td class="text-right">${lk(exBm, fmt(o.remaining_quantity, 6))}</td></tr>`).join('') || '<tr><td colspan="4" class="text-sand-300">No open orders</td></tr>'}
+          </tbody></table>`;
+      }
+      if (navi) {
+        const exN = `https://app.naviprotocol.io/portfolio?address=${w.address}`;
+        if (navi.err) extra += `<p class="mt-4 text-sm text-red-300">NAVI read failed: ${esc(navi.err)}. ${lk(ex, 'View on SuiVision')}</p>`;
+        else { total += sum(navi.r); extra += `<h3 class="mt-5 text-sand-100">Supplied on NAVI (lending, no borrowing) <span class="text-xs text-sand-300">${lk(ex, usd(sum(navi.r)) + ' est.')} · ${lk(exN, 'NAVI portfolio')} · read on chain from NAVI storage</span></h3>${table(navi.r, ex, 'No NAVI supply')}`; }
+      }
+      const combined = w.balanceManager || w.navi;
+      return { total, html: `<article class="rounded-lg border border-sand-700/40 bg-night-900/60 p-5">
+        <h2 class="font-display text-xl text-sand-50">${esc(w.label)} <span class="text-sm text-sand-300">${lk(ex, usd(total) + (combined ? ' combined est.' : ' est.'))}</span></h2>
         <p class="mt-1 text-sm text-sand-200/90">${esc(w.note)}</p>
-        <p class="mt-1 break-all font-mono text-xs">${a(esc(w.address))} · <a class="text-ibad-300" href="${ex2}" rel="noopener noreferrer" target="_blank">Suiscan</a></p>
-        <table class="mt-3 w-full text-sm"><thead><tr class="text-left text-sand-300"><th>Coin</th><th class="text-right">Balance</th><th class="text-right">USD (est.)</th></tr></thead><tbody>
-        ${rows.map((r) => `<tr><td>${esc(r.s)}</td><td class="text-right">${a(r.qty == null ? esc(r.raw) + ' (raw)' : fmt(r.qty))}</td><td class="text-right">${a(usd(r.usd))}</td></tr>`).join('') || '<tr><td colspan="3" class="text-sand-300">No balances</td></tr>'}
-        </tbody></table></article>`;
+        <p class="mt-1 break-all font-mono text-xs">${lk(ex, esc(w.address))} · ${lk(ex2, 'Suiscan')}</p>
+        <h3 class="mt-3 text-sand-100">Wallet <span class="text-xs text-sand-300">${lk(ex, usd(sum(wallet)) + ' est.')}</span></h3>${table(wallet, ex)}
+        ${extra}
+        ${combined ? `<p class="mt-4 text-sm text-sand-100"><b>Combined (wallet + BalanceManager + NAVI supply):</b> ${lk(ex, usd(total) + ' est.')}</p>` : ''}</article>` };
     }
     async function load() {
       const st = document.getElementById('tr-status');
       const px = await prices();
-      const html = await Promise.all(WALLETS.map((w) => card(w, px).catch((e) => `<article class="rounded-lg border border-red-700/40 p-5"><h2 class="text-sand-50">${esc(w.label)}</h2><p class="text-sm text-red-300">Could not read from Sui: ${esc(e.message)}. <a class="text-ibad-300" href="https://suivision.xyz/account/${w.address}" target="_blank" rel="noopener noreferrer">View on SuiVision</a></p></article>`)));
+      const html = await Promise.all(WALLETS.map((w) => card(w, px).then((c) => c.html).catch((e) => `<article class="rounded-lg border border-red-700/40 p-5"><h2 class="text-sand-50">${esc(w.label)}</h2><p class="text-sm text-red-300">Could not read from Sui: ${esc(e.message)}. <a class="text-ibad-300" href="https://suivision.xyz/account/${w.address}" target="_blank" rel="noopener noreferrer">View on SuiVision</a></p></article>`)));
       document.getElementById('tr-list').innerHTML = html.join('');
-      st.textContent = 'Updated ' + new Date().toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles' }) + ' PT · refreshes every 60 s · source: Sui GraphQL mainnet (public)';
+      st.textContent = 'Updated ' + new Date().toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles' }) + ' PT · refreshes every 60 s · source: Sui GraphQL mainnet, DeepBook indexer, NAVI open API (all public)';
     }
     load(); setInterval(load, 60_000);
   </script>

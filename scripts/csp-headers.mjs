@@ -77,9 +77,9 @@ export function walletBlock(h) {
   }).join('\n') + '\n';
 }
 // /treasury/ (read-only Desk Treasury, preview): own CSP so ONLY this route may call public Sui GraphQL mainnet
-// (address balances + coin metadata) plus the DeepBook indexer for prices. The rest of the site stays unchanged.
+// (address balances + coin metadata) plus the DeepBook indexer (prices, open orders) and NAVI's public open API (pool indices, oracle prices). The rest of the site stays unchanged.
 export const TREASURY_PATH = '/treasury/';
-export const TREASURY_CONNECT = ["'self'", ...CONNECT, 'https://graphql.mainnet.sui.io'];
+export const TREASURY_CONNECT = ["'self'", ...CONNECT, 'https://graphql.mainnet.sui.io', 'https://open-api.naviprotocol.io'];
 export function treasuryBlock(h) {
   if (TREASURY_CONNECT.some((c) => /^(https?:|wss?:)$|\*/.test(c))) throw new Error('wildcard in treasury connect-src');
   return [TREASURY_PATH + '*', '  ! Content-Security-Policy', `  Content-Security-Policy: ${csp(h, TREASURY_CONNECT)}`, '  Cache-Control: no-cache', ''].join('\n');
