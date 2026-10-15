@@ -331,7 +331,7 @@ export async function createOrder(cfg, { sku, email, ipHash, connectorClient, se
 async function loadOrder(cfg, id) {
   return rowToOrder(await cfg.db.prepare('SELECT * FROM orders WHERE id = ?1').bind(id).first());
 }
-async function authOrder(cfg, orderId, token) {
+export async function authOrder(cfg, orderId, token) {
   if (!ORDER_RE.test(orderId ?? '') || !TOKEN_RE.test(token ?? '')) return { err: 'bad_order_or_token' };
   const o = await loadOrder(cfg, orderId);
   if (!o || o.net !== cfg.net) return { err: 'unknown_order' };

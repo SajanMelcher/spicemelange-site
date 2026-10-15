@@ -21,7 +21,11 @@
       <div id="co-step2" hidden>
         <p>Order <code id="co-id" class="text-spice-300"></code> on <span id="co-net"></span>. Send <strong>exactly</strong>:</p>
         <p class="flex items-center gap-2"><code id="co-amount" class="font-serif text-3xl text-spice-300"></code> <span>USDC</span> <button type="button" class="btn-ghost !min-h-8 !px-3 !py-1 co-copy" data-target="co-amount">Copy</button></p>
-        <p class="text-xs text-sand-300/80">To this Sui address:</p>
+        <div class="rounded-xl border border-spice-500/30 bg-night-950/60 p-3">
+          <button id="co-wallet" type="button" class="btn-primary">Pay with Sui wallet</button>
+          <p class="mt-2 text-xs text-sand-300/80">One click: your wallet (Slush or any Sui wallet) shows the exact transfer below; you approve it there, and we check the payment automatically. We never see your keys. To build the transfer, our server reads your wallet address's USDC balance on the public Sui network.</p>
+        </div>
+        <p class="text-xs text-sand-300/80">Or send it yourself, to this Sui address:</p>
         <p class="flex items-start gap-2"><code id="co-payto" class="break-all text-xs text-ibad-300"></code> <button type="button" class="btn-ghost !min-h-8 shrink-0 !px-3 !py-1 co-copy" data-target="co-payto">Copy</button></p>
         <p class="text-xs text-sand-300/80">Pay before <span id="co-exp"></span>. Send from a Sui wallet in a single transfer; exchange withdrawals may batch or round, so use an exact-amount wallet transfer. Any other amount will not match. Keep this tab open, or note your order ID and token below.</p>
         <details class="text-xs text-sand-300/70"><summary class="cursor-pointer">Order token (private)</summary><code id="co-token" class="break-all"></code></details>
@@ -124,6 +128,42 @@
       await new Promise((r) => setTimeout(r, 15000));
     }
     polling = 0;
+  });
+  // One-click pay (Wallet Standard): connect, ask our server for the exact-amount USDC transfer (built + dry-run there),
+  // let the wallet sign and execute it, then submit the digest to the unchanged verifier. The manual flow stays as fallback.
+  const wallets: any[] = [];
+  const wreg = { register: (...ws: any[]) => { wallets.push(...ws); return () => {}; } };
+  window.addEventListener('wallet-standard:register-wallet', (e: any) => { try { e.detail(wreg); } catch {} });
+  window.dispatchEvent(new CustomEvent('wallet-standard:app-ready', { detail: wreg }));
+  const PAY_REASONS: Record<string, string> = {
+    not_enough_usdc: 'This wallet does not hold enough USDC on Sui for this order.',
+    dry_run_failed: 'The transfer would fail (often: not enough SUI for gas). Top up a little SUI, or send manually below.',
+    already_paid: 'This order is already paid.', order_window_closed: 'This order expired. Start a new one.',
+  };
+  $('co-wallet').addEventListener('click', async () => {
+    if (!order) return;
+    const w = wallets.find((x) => x.features?.['standard:connect'] && x.features?.['sui:signAndExecuteTransaction']);
+    if (!w) return msg('No Sui wallet found in this browser. Install or unlock Slush (or another Sui wallet), or open this page in your wallet app. You can also send manually below.');
+    try {
+      msg(`Connecting ${w.name}…`);
+      const { accounts } = await w.features['standard:connect'].connect();
+      const chain = order.network;
+      const account = accounts.find((a: any) => a.chains?.includes(chain)) ?? accounts[0];
+      if (!account) return msg('The wallet shared no account.');
+      msg('Building your exact transfer…');
+      const res = await fetch('/api/store/pay-tx', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${order.token}` }, body: JSON.stringify({ orderId: order.orderId, sender: account.address }) });
+      const q = await res.json().catch(() => ({ ok: false, reason: 'network_error' }));
+      if (!q.ok) return msg(PAY_REASONS[q.reason] ?? `Wallet payment unavailable (${q.reason}). You can send manually below.`);
+      if (q.chain !== chain || String(q.payTo).toLowerCase() !== String(order.payTo).toLowerCase()) return msg('Payment details did not match the order. Please send manually below.');
+      msg(`Approve the transfer of ${order.amount} USDC in ${w.name}…`);
+      const tx = q.tx_json;
+      const r = await w.features['sui:signAndExecuteTransaction'].signAndExecuteTransaction({ transaction: { toJSON: async () => tx }, account, chain });
+      const digest = String(r?.digest ?? '').replace(/[^A-Za-z0-9]/g, '');
+      if (!digest) return msg('The wallet did not return a transaction digest. Use "Find my payment" below.');
+      ($('co-digest') as HTMLInputElement).value = digest;
+      msg('Payment sent. Confirming…');
+      for (let i = 0; i < 12; i++) { if (await verify(digest)) return; await new Promise((ok) => setTimeout(ok, 5000)); }
+    } catch (e: any) { msg('Not paid: ' + String(e?.message ?? e).slice(0, 120) + '. You can try again or send manually below.'); }
   });
   document.querySelectorAll<HTMLButtonElement>('.co-copy').forEach((b) => b.addEventListener('click', async () => {
     try { await navigator.clipboard.writeText($(b.dataset.target!).textContent ?? ''); b.textContent = 'Copied'; } catch { b.textContent = 'Select'; }
