@@ -84,6 +84,14 @@ export function treasuryBlock(h) {
   if (TREASURY_CONNECT.some((c) => /^(https?:|wss?:)$|\*/.test(c))) throw new Error('wildcard in treasury connect-src');
   return [TREASURY_PATH + '*', '  ! Content-Security-Policy', `  Content-Security-Policy: ${csp(h, TREASURY_CONNECT)}`, '  Cache-Control: no-cache', ''].join('\n');
 }
+// /trade/ (self-custody swaps): the browser quotes DeepBook (Sui fullnode gRPC-web) and the Cetus aggregator API (+ Pyth Hermes,
+// used by some Cetus routes), checks the holder badge on Sui GraphQL, and the visitor's own wallet signs. Exact hosts, no wildcard.
+export const TRADE_PATH = '/trade/';
+export const TRADE_CONNECT = ["'self'", ...SUI_MAINNET, 'https://api-sui.cetus.zone', 'https://hermes.pyth.network', ...WALLET_HOSTS];
+export function tradeBlock(h) {
+  if (TRADE_CONNECT.some((c) => /^(https?:|wss?:)$|\*/.test(c))) throw new Error('wildcard in trade connect-src');
+  return [TRADE_PATH + '*', '  ! Content-Security-Policy', `  Content-Security-Policy: ${csp(h, TRADE_CONNECT)}`, '  Cache-Control: no-cache', ''].join('\n');
+}
 export function routeHashes(dist = DIST) {
   const out = {};
   for (const p of WALLET_PATHS) { try { statSync(join(dist, p)); out[p] = inlineHashes(join(dist, p)); } catch {} }
@@ -98,6 +106,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const cur = readFileSync(path, 'utf8');
   if (cur.includes('Strict-Transport-Security')) { console.error('dist/_headers already has a site-wide block'); process.exit(1); }
   writeFileSync(path, block + cur + (cur.endsWith('\n') ? '' : '\n') + (Object.keys(routeHashes()).length ? walletBlock(routeHashes()) : '')
-    + (statSync(join(DIST, TREASURY_PATH), { throwIfNoEntry: false }) ? treasuryBlock(inlineHashes(join(DIST, TREASURY_PATH))) : ''));
+    + (statSync(join(DIST, TREASURY_PATH), { throwIfNoEntry: false }) ? treasuryBlock(inlineHashes(join(DIST, TREASURY_PATH))) : '')
+    + (statSync(join(DIST, TRADE_PATH), { throwIfNoEntry: false }) ? tradeBlock(inlineHashes(join(DIST, TRADE_PATH))) : ''));
   console.log(`_headers: site-wide block added (${h.scripts.length} inline script hashes, ${h.styles.length} style hashes, CSP ${v.length} chars)`);
 }

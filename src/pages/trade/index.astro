@@ -1,0 +1,86 @@
+---
+// /trade: self-custody swaps (SUI, USDC, WAL, DEEP, CETUS). The visitor connects their OWN Sui wallet (Slush or any Wallet
+// Standard wallet) and signs in that wallet. The desk never sees keys and never moves funds. Quotes compare DeepBook v3 pools
+// with the Cetus aggregator using the same logic as the connector (src/lib/trade/trading.ts). Spot only, no leverage.
+import Base from '../../layouts/Base.astro';
+---
+<Base title="Trade spice (self-custody swaps)" description="Swap SUI, USDC, WAL, DEEP and CETUS from your own Sui wallet. Best route across DeepBook v3 and the Cetus aggregator. You sign; the desk never holds your keys.">
+  <section class="mx-auto max-w-3xl px-5 py-12">
+    <h1 class="font-display text-3xl text-sand-50">Trade spice <span class="text-base text-sand-300">self-custody · Sui mainnet</span></h1>
+    <p class="mt-3 text-sand-200/90">Connect your own Sui wallet (Slush or any Sui wallet), get a quote comparing DeepBook v3 pools with the Cetus aggregator, and sign the swap in your wallet. The desk never sees your keys and never touches your funds.</p>
+    <div class="mt-4 rounded-lg border border-sand-700/40 bg-night-900/60 p-4 text-sm text-sand-200">
+      <p><b>Disclosed desk fee:</b> <span id="t-fee">…</span></p>
+      <p class="mt-1">Spot swaps only, no leverage. Education only, not financial advice; no returns are promised. Prices move: every swap carries an on-chain minimum and reverts below it.</p>
+    </div>
+    <div class="mt-6 flex flex-wrap items-center gap-3">
+      <button id="t-connect" class="rounded bg-spice-500 px-4 py-2 font-semibold text-night-950">Connect wallet</button>
+      <span id="t-addr" class="text-sm text-sand-300"></span>
+      <span id="t-badge" class="hidden rounded-full border border-spice-400 px-3 py-1 text-xs text-spice-300">★ The Secret Journals holder</span>
+    </div>
+    <form id="t-form" class="mt-6 grid gap-3 sm:grid-cols-4">
+      <label class="text-sm text-sand-300">From<select id="t-from" class="mt-1 w-full rounded bg-night-800 p-2 text-sand-50"></select></label>
+      <label class="text-sm text-sand-300">To<select id="t-to" class="mt-1 w-full rounded bg-night-800 p-2 text-sand-50"></select></label>
+      <label class="text-sm text-sand-300">Amount<input id="t-amt" type="number" min="0" step="any" value="1" class="mt-1 w-full rounded bg-night-800 p-2 text-sand-50" /></label>
+      <label class="text-sm text-sand-300">Max slippage %<input id="t-slip" type="number" min="0.01" max="5" step="0.01" value="0.5" class="mt-1 w-full rounded bg-night-800 p-2 text-sand-50" /></label>
+      <button id="t-quote" type="submit" class="rounded border border-sand-500 px-4 py-2 text-sand-50 sm:col-span-4">Get quote</button>
+    </form>
+    <p id="t-status" class="mt-4 text-sm text-sand-300" aria-live="polite"></p>
+    <div id="t-routes" class="mt-4 space-y-2"></div>
+    <button id="t-swap" class="mt-4 hidden rounded bg-spice-500 px-4 py-2 font-semibold text-night-950">Swap in my wallet</button>
+    <p class="mt-8 text-sm text-sand-300">AI agents: use the connector tools <code>wallet_setup_guide</code>, <code>get_swap_quote</code> and <code>build_swap_tx</code> (unsigned transactions you sign yourself). See <a class="underline" href="/llms.txt">/llms.txt</a>.</p>
+  </section>
+  <script>
+    import { SYMBOLS, getSwapQuote, buildSwapTransaction, feeDisclosure } from '../../lib/trade/trading.ts';
+    import { isHolder } from '../../lib/trade/holder.ts';
+    const $ = (id: string) => document.getElementById(id)!;
+    const esc = (s: unknown) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+    const wallets: any[] = [];
+    const reg = { register: (...ws: any[]) => { wallets.push(...ws); return () => {}; } };
+    window.addEventListener('wallet-standard:register-wallet', (e: any) => { try { e.detail(reg); } catch {} });
+    window.dispatchEvent(new CustomEvent('wallet-standard:app-ready', { detail: reg }));
+    let wallet: any = null, account: any = null, choice: any = null;
+    $('t-fee').textContent = feeDisclosure().text;
+    for (const id of ['t-from', 't-to']) (($(id) as HTMLSelectElement).innerHTML = SYMBOLS.map((s) => `<option>${s}</option>`).join(''));
+    ($('t-to') as HTMLSelectElement).value = 'USDC'; ($('t-from') as HTMLSelectElement).value = 'SUI';
+    const say = (s: string) => ($('t-status').textContent = s);
+    $('t-connect').addEventListener('click', async () => {
+      wallet = wallets.find((w) => w.features?.['standard:connect'] && (w.features?.['sui:signAndExecuteTransaction'] || w.features?.['sui:signTransaction']));
+      if (!wallet) return say('No Sui wallet found. Install or unlock Slush (or another Sui wallet), then reload.');
+      const { accounts } = await wallet.features['standard:connect'].connect();
+      account = accounts.find((a: any) => a.chains?.includes('sui:mainnet')) ?? accounts[0];
+      if (!account) return say('The wallet shared no account.');
+      $('t-addr').textContent = `${wallet.name}: ${account.address.slice(0, 6)}…${account.address.slice(-4)}`;
+      isHolder(account.address).then((h) => $('t-badge').classList.toggle('hidden', !h)).catch(() => {});
+    });
+    $('t-form').addEventListener('submit', async (e) => {
+      e.preventDefault(); $('t-swap').classList.add('hidden'); $('t-routes').innerHTML = '';
+      const from = ($('t-from') as HTMLSelectElement).value, to = ($('t-to') as HTMLSelectElement).value, amount = Number(($('t-amt') as HTMLInputElement).value);
+      if (from === to) return say('Pick two different coins.');
+      say('Quoting DeepBook and Cetus…');
+      try {
+        const sender = account?.address ?? '0x' + '0'.repeat(63) + '1';
+        const q = await getSwapQuote({ from, to, amount, sender });
+        const ok = q.routes.filter((r) => !r.error && r.expected_out > 0).sort((a, b) => b.expected_out - a.expected_out);
+        $('t-routes').innerHTML = q.routes.map((r) => `<div class="rounded border border-sand-700/40 p-3 text-sm ${r === ok[0] ? 'border-spice-400' : ''}">
+          <b>${esc(r.venue === 'deepbook' ? 'DeepBook v3' : 'Cetus aggregator')}</b> · ${esc(r.route)}<br>
+          ${r.error ? `<span class="text-sand-400">unavailable: ${esc(r.error)}</span>` : `expected ≈ <b>${r.expected_out.toFixed(6)} ${esc(to)}</b> · price impact ${r.price_impact_pct ?? '–'}%${r === ok[0] ? ' · <b>best</b>' : ''}`}</div>`).join('');
+        choice = ok[0] ? { from, to, amount, venue: ok[0].venue, route: ok[0].venue === 'deepbook' ? ok[0].route : undefined } : null;
+        say(choice ? (account ? 'Review, then swap. Your wallet will show the full transaction before you sign.' : 'Connect your wallet to swap.') : 'No route for this amount.');
+        if (choice && account) $('t-swap').classList.remove('hidden');
+      } catch (err: any) { say('Quote failed: ' + (err?.message ?? err)); }
+    });
+    $('t-swap').addEventListener('click', async () => {
+      if (!choice || !account) return;
+      const slippage_bps = Math.round(Number(($('t-slip') as HTMLInputElement).value) * 100);
+      try {
+        say('Building the transaction…');
+        const { tx, meta } = await buildSwapTransaction({ ...choice, sender: account.address, slippage_bps });
+        say(`Sign in ${wallet.name}: min ${meta.min_out.toFixed(6)} ${meta.to} (reverts below that).`);
+        const f = wallet.features['sui:signAndExecuteTransaction'];
+        if (!f) return say('This wallet cannot sign and submit transactions here.');
+        const r = await f.signAndExecuteTransaction({ transaction: tx, account, chain: 'sui:mainnet' });
+        $('t-status').innerHTML = `Submitted: <a class="underline" href="https://suiscan.xyz/mainnet/tx/${esc(r.digest)}" rel="noopener" target="_blank">${esc(r.digest)}</a>`;
+      } catch (err: any) { say('Not sent: ' + (err?.message ?? err)); }
+    });
+  </script>
+</Base>

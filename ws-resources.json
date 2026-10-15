@@ -27,6 +27,10 @@
     "/plumbline/index.html": {
       "Cache-Control": "public, max-age=300",
       "Content-Type": "text/html; charset=utf-8"
+    },
+    "/trade/index.html": {
+      "Cache-Control": "public, max-age=300",
+      "Content-Type": "text/html; charset=utf-8"
     }
   },
   "routes": {

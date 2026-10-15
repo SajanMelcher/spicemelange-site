@@ -17,7 +17,8 @@
     "mcpPointer": "https://thespicemelange.org/.well-known/mcp.json",
     "storeCatalog": "https://thespicemelange.org/store/catalog.json",
     "treasury": "https://thespicemelange.org/treasury/",
-    "learn": "https://thespicemelange.org/learn/"
+    "learn": "https://thespicemelange.org/learn/",
+    "trade": "https://thespicemelange.org/trade/"
   },
   "mcp": {
     "name": "plumbline",
@@ -75,5 +76,64 @@
     "trading, custody or signing API",
     "access to desk records or keys",
     "investment advice"
-  ]
+  ],
+  "selfCustodyTrading": {
+    "status": "preview: connector v0.4.0 tools are built and tested but NOT yet deployed to https://plumbline-mcp.fly.dev/mcp",
+    "custody": "non-custodial: the desk never creates, holds or sees agent keys and never moves agent funds. Agents generate their own Sui Ed25519 keypair locally, sign locally and submit to a Sui fullnode themselves. No submit tool by design.",
+    "leverage": false,
+    "coins": [
+      "SUI",
+      "USDC",
+      "WAL",
+      "DEEP",
+      "CETUS"
+    ],
+    "venues": [
+      "DeepBook v3",
+      "Cetus aggregator",
+      "Walrus (public receipts)"
+    ],
+    "tools": {
+      "wallet_setup_guide": "steps + @mysten/sui code to create and fund your own wallet; never share the key",
+      "get_swap_quote": "from, to, amount, sender -> best route DeepBook v3 vs Cetus aggregator (all DEXes), expected out, price impact, fees, desk fee",
+      "build_swap_tx": "-> base64 UNSIGNED swap tx (sender = you, on-chain min_out) + mainnet simulation",
+      "build_create_balance_manager_tx": "create your own DeepBook BalanceManager",
+      "build_bm_deposit_tx": "deposit into your BalanceManager",
+      "build_bm_withdraw_tx": "withdraw back to your own address",
+      "build_limit_order_tx": "spot limit order (post-only option, expiry, optional deposit in the same tx); fees in the input coin",
+      "build_cancel_order_tx": "cancel one or all orders in a pool + withdraw settled",
+      "get_book_depth": "on-chain level-2 depth around mid",
+      "get_cetus_pool": "read-only Cetus CLMM pool state",
+      "walrus_store_guide": "store a PUBLIC receipt/note on Walrus with your own key",
+      "build_walrus_register_tx": "unsigned Walrus register-blob tx + blob_id",
+      "read_walrus_blob": "read a public Walrus blob",
+      "check_holder": "does this address hold The Secret Journals token (on chain)?",
+      "golden_path_market_read": "holders only: market read + pre-trade checklist (education only)"
+    },
+    "flow": [
+      "wallet_setup_guide",
+      "fund your address with SUI (gas) + the coin to sell",
+      "get_swap_quote",
+      "build_swap_tx",
+      "verify/simulate, sign locally with your own key",
+      "submit to a public Sui fullnode yourself",
+      "optional: store a public receipt on Walrus"
+    ],
+    "deskFee": {
+      "disclosed": true,
+      "receiver": "0x340480183e48ac0b45e883d2c8f6e3d37f57dd88d42c17a5c457293bf9fbd9d5",
+      "previewBps": 10,
+      "productionBps": "TBD",
+      "appliesTo": "swaps only",
+      "mechanism": "Cetus routes: aggregator overlay fee; DeepBook routes: fee split from the output in the same transaction. Shown on every quote and visible in the unsigned tx."
+    },
+    "holderPerks": {
+      "token": "The Secret Journals DeskLicense (non-transferable)",
+      "unlocks": [
+        "golden_path_market_read"
+      ],
+      "nonHolders": "keep every basic tool"
+    },
+    "disclaimer": "Education only, not financial advice. No returns promised."
+  }
 }
