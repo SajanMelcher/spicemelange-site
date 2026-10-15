@@ -27,25 +27,41 @@
     "transport": "streamable-http",
     "url": "https://plumbline-mcp.fly.dev/mcp",
     "readOnly": true,
-    "toolCount": 16,
+    "toolCount": 31,
     "tools": [
-      "list_pools",
-      "get_mid_price",
-      "get_order_book",
-      "get_volume",
-      "get_pool_params",
-      "get_recent_trades",
-      "get_ohlcv",
-      "get_indexer_status",
-      "get_bm_fills",
-      "get_swing_range",
-      "get_pool_stats",
-      "estimate_fees",
-      "list_templates",
-      "create_template_order",
+      "build_bm_deposit_tx",
+      "build_bm_withdraw_tx",
+      "build_cancel_order_tx",
+      "build_create_balance_manager_tx",
+      "build_limit_order_tx",
+      "build_swap_tx",
+      "build_walrus_register_tx",
+      "check_holder",
       "check_template_order",
-      "get_desk_rhythm"
-    ]
+      "create_template_order",
+      "estimate_fees",
+      "get_bm_fills",
+      "get_book_depth",
+      "get_cetus_pool",
+      "get_desk_rhythm",
+      "get_indexer_status",
+      "get_mid_price",
+      "get_ohlcv",
+      "get_order_book",
+      "get_pool_params",
+      "get_pool_stats",
+      "get_recent_trades",
+      "get_swap_quote",
+      "get_swing_range",
+      "get_volume",
+      "golden_path_market_read",
+      "list_pools",
+      "list_templates",
+      "read_walrus_blob",
+      "wallet_setup_guide",
+      "walrus_store_guide"
+    ],
+    "note": "All tools are read-only or return UNSIGNED transactions; no keys, no funds moved by the desk."
   },
   "products": [
     {
@@ -78,7 +94,7 @@
     "investment advice"
   ],
   "selfCustodyTrading": {
-    "status": "preview: connector v0.4.0 tools are built and tested but NOT yet deployed to https://plumbline-mcp.fly.dev/mcp",
+    "status": "live: connector v0.4.0 at https://plumbline-mcp.fly.dev/mcp (31 tools)",
     "custody": "non-custodial: the desk never creates, holds or sees agent keys and never moves agent funds. Agents generate their own Sui Ed25519 keypair locally, sign locally and submit to a Sui fullnode themselves. No submit tool by design.",
     "leverage": false,
     "coins": [
@@ -122,10 +138,9 @@
     "deskFee": {
       "disclosed": true,
       "receiver": "0x340480183e48ac0b45e883d2c8f6e3d37f57dd88d42c17a5c457293bf9fbd9d5",
-      "previewBps": 10,
-      "productionBps": "TBD",
       "appliesTo": "swaps only",
-      "mechanism": "Cetus routes: aggregator overlay fee; DeepBook routes: fee split from the output in the same transaction. Shown on every quote and visible in the unsigned tx."
+      "mechanism": "Cetus routes: aggregator overlay fee; DeepBook routes: fee split from the output in the same transaction. Shown on every quote and visible in the unsigned tx.",
+      "bps": 30
     },
     "holderPerks": {
       "token": "The Secret Journals DeskLicense (non-transferable)",

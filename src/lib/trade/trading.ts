@@ -12,8 +12,8 @@ import { AggregatorClient, Env } from "@cetusprotocol/aggregator-sdk";
 import BN from "bn.js";
 
 // Site copy of deepbook-mcp/src/trading.ts (same quote/build logic). Fee rate comes from the build env PUBLIC_DESK_FEE_BPS
-// (unset = 10 bps preview placeholder; production rate TBD by Sajan).
-const ENV: Record<string, string | undefined> = { DESK_FEE_BPS: (import.meta as any).env?.PUBLIC_DESK_FEE_BPS };
+// (unset = 30 bps, the production rate Sajan approved 1:01 PM PT 10/15; same as the connector's fly.toml).
+const ENV: Record<string, string | undefined> = { DESK_FEE_BPS: (import.meta as any).env?.PUBLIC_DESK_FEE_BPS ?? "30" };
 export const FULLNODE = ENV.PLUMBLINE_FULLNODE_URL || "https://fullnode.mainnet.sui.io:443";
 
 export const COINS = {
