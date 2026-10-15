@@ -1,6 +1,7 @@
 ---
 // /treasury: read-only Desk Treasury (Sajan approved making these two addresses public, 9:32 AM PT 10/15/2026).
-// PREVIEW branch only. Balances are read in the visitor's browser from a public Sui fullnode (suix_getAllBalances);
+// PREVIEW branch only. Balances are read in the visitor's browser from public Sui GraphQL mainnet (address balances; public JSON-RPC
+// suix_getAllBalances was deprecated on public fullnodes and refuses the call as of 10/15/2026);
 // USD estimates use DeepBook indexer last prices (free, public). No keys, no signing, no writes, no private data.
 import Base from '../../layouts/Base.astro';
 const WALLETS = [
@@ -11,7 +12,7 @@ const WALLETS = [
 <Base title="Desk Treasury (read-only)" description="Live, verifiable balances of the Spice Melange Trading Desk's two public Sui wallets.">
   <section class="mx-auto max-w-5xl px-5 py-12">
     <h1 class="font-display text-3xl text-sand-50">Desk Treasury <span class="text-base text-sand-300">read-only · live from Sui</span></h1>
-    <p class="mt-3 max-w-3xl text-sand-200/90">The spice must flow, and anyone may count it. These are the live balances of the desk's two public Sui wallets, read in your browser straight from a public Sui fullnode. Every number links to a Sui explorer so you can check it yourself.</p>
+    <p class="mt-3 max-w-3xl text-sand-200/90">The spice must flow, and anyone may count it. These are the live balances of the desk's two public Sui wallets, read in your browser straight from the public Sui GraphQL service. Every number links to a Sui explorer so you can check it yourself.</p>
     <div class="mt-4 rounded-lg border border-sand-700/40 bg-night-900/60 p-4 text-sm text-sand-200">
       <p><b>Separate accounts.</b> These wallets are separate from Sajan's personal Coinbase and SoFi accounts; nothing from those accounts is shown or included here.</p>
       <p class="mt-1"><b>No leverage, no loan money.</b> The desk trades on Sui with no leverage and no borrowed money.</p>
@@ -21,20 +22,24 @@ const WALLETS = [
     <div id="tr-list" class="mt-4 space-y-6"></div>
   </section>
   <script define:vars={{ WALLETS }}>
-    const RPC = 'https://fullnode.mainnet.sui.io:443';
+    const GQL = 'https://graphql.mainnet.sui.io/graphql';
     const IDX = 'https://deepbook-indexer.mainnet.mystenlabs.com';
     const tf = (u, o = {}, ms = 10_000) => fetch(u, { ...o, signal: AbortSignal.timeout(ms) });
     const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     const fmt = (n, d = 6) => Number(n).toLocaleString('en-US', { maximumFractionDigits: d });
     const usd = (n) => n == null ? '–' : '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const meta = {};
-    async function rpc(method, params) {
-      const r = await tf(RPC, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }) });
-      const j = await r.json(); if (j.error) throw new Error(j.error.message); return j.result;
+    async function gql(query, variables) {
+      const r = await tf(GQL, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ query, variables }) });
+      const j = await r.json(); if (j.errors) throw new Error(j.errors[0].message); return j.data;
     }
     async function coinMeta(t) {
-      if (!meta[t]) meta[t] = rpc('suix_getCoinMetadata', [t]).catch(() => null);
+      if (!meta[t]) meta[t] = gql('query($t:String!){ coinMetadata(coinType:$t){ symbol decimals } }', { t }).then((d) => d.coinMetadata).catch(() => null);
       return meta[t];
+    }
+    async function balances(a) {
+      const d = await gql('query($a:SuiAddress!){ address(address:$a){ balances(first:50){ nodes{ coinType{repr} totalBalance } } } }', { a });
+      return (d.address?.balances?.nodes || []).map((b) => ({ coinType: b.coinType.repr, totalBalance: String(b.totalBalance) }));
     }
     async function prices() {
       const p = { USDC: 1, USDT: 1 };
@@ -44,7 +49,7 @@ const WALLETS = [
     async function card(w, px) {
       const ex = `https://suivision.xyz/account/${w.address}`, ex2 = `https://suiscan.xyz/mainnet/account/${w.address}`;
       const a = (txt) => `<a class="text-ibad-300 hover:underline" href="${ex}" rel="noopener noreferrer" target="_blank">${txt}</a>`;
-      const raw = (await rpc('suix_getAllBalances', [w.address])).filter((b) => b.totalBalance !== '0');
+      const raw = (await balances(w.address)).filter((b) => b.totalBalance !== '0');
       const rows = await Promise.all(raw.map(async (b) => {
         const m = await coinMeta(b.coinType);
         const s = m?.symbol || b.coinType.split('::').pop();
@@ -64,9 +69,9 @@ const WALLETS = [
     async function load() {
       const st = document.getElementById('tr-status');
       const px = await prices();
-      const html = await Promise.all(WALLETS.map((w) => card(w, px).catch((e) => `<article class="rounded-lg border border-red-700/40 p-5"><h2 class="text-sand-50">${esc(w.label)}</h2><p class="text-sm text-red-300">Could not read from the fullnode: ${esc(e.message)}. <a class="text-ibad-300" href="https://suivision.xyz/account/${w.address}" target="_blank" rel="noopener noreferrer">View on SuiVision</a></p></article>`)));
+      const html = await Promise.all(WALLETS.map((w) => card(w, px).catch((e) => `<article class="rounded-lg border border-red-700/40 p-5"><h2 class="text-sand-50">${esc(w.label)}</h2><p class="text-sm text-red-300">Could not read from Sui: ${esc(e.message)}. <a class="text-ibad-300" href="https://suivision.xyz/account/${w.address}" target="_blank" rel="noopener noreferrer">View on SuiVision</a></p></article>`)));
       document.getElementById('tr-list').innerHTML = html.join('');
-      st.textContent = 'Updated ' + new Date().toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles' }) + ' PT · refreshes every 60 s · source: Sui fullnode suix_getAllBalances';
+      st.textContent = 'Updated ' + new Date().toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles' }) + ' PT · refreshes every 60 s · source: Sui GraphQL mainnet (public)';
     }
     load(); setInterval(load, 60_000);
   </script>
