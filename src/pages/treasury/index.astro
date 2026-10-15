@@ -1,0 +1,73 @@
+---
+// /treasury: read-only Desk Treasury (Sajan approved making these two addresses public, 9:32 AM PT 10/15/2026).
+// PREVIEW branch only. Balances are read in the visitor's browser from a public Sui fullnode (suix_getAllBalances);
+// USD estimates use DeepBook indexer last prices (free, public). No keys, no signing, no writes, no private data.
+import Base from '../../layouts/Base.astro';
+const WALLETS = [
+  { id: 'desk', label: 'Desk trading wallet', note: 'The Sui wallet The Fish Speakers and The Honored Matres trade DeepBook from. Funds parked inside its DeepBook BalanceManager or open orders are not wallet balances and are not shown here.', address: '0x340480183e48ac0b45e883d2c8f6e3d37f57dd88d42c17a5c457293bf9fbd9d5' },
+  { id: 'store', label: 'Store payment wallet', note: 'Where The Secret Journals payments (USDC on Sui) are received.', address: '0x88e8516771e71da54a7449a0a46e6a0c4af71ef71ac4d379847319c7e18a780f' },
+];
+---
+<Base title="Desk Treasury (read-only)" description="Live, verifiable balances of the Spice Melange Trading Desk's two public Sui wallets.">
+  <section class="mx-auto max-w-5xl px-5 py-12">
+    <h1 class="font-display text-3xl text-sand-50">Desk Treasury <span class="text-base text-sand-300">read-only · live from Sui</span></h1>
+    <p class="mt-3 max-w-3xl text-sand-200/90">The spice must flow, and anyone may count it. These are the live balances of the desk's two public Sui wallets, read in your browser straight from a public Sui fullnode. Every number links to a Sui explorer so you can check it yourself.</p>
+    <div class="mt-4 rounded-lg border border-sand-700/40 bg-night-900/60 p-4 text-sm text-sand-200">
+      <p><b>Separate accounts.</b> These wallets are separate from Sajan's personal Coinbase and SoFi accounts; nothing from those accounts is shown or included here.</p>
+      <p class="mt-1"><b>No leverage, no loan money.</b> The desk trades on Sui with no leverage and no borrowed money.</p>
+      <p class="mt-1">Education only, not financial advice. Balances are not performance and promise no returns. USD values are estimates from DeepBook last prices (USDC = $1); coins without a free price show "–".</p>
+    </div>
+    <p class="mt-4 text-sm text-sand-300" id="tr-status">Loading…</p>
+    <div id="tr-list" class="mt-4 space-y-6"></div>
+  </section>
+  <script define:vars={{ WALLETS }}>
+    const RPC = 'https://fullnode.mainnet.sui.io:443';
+    const IDX = 'https://deepbook-indexer.mainnet.mystenlabs.com';
+    const tf = (u, o = {}, ms = 10_000) => fetch(u, { ...o, signal: AbortSignal.timeout(ms) });
+    const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const fmt = (n, d = 6) => Number(n).toLocaleString('en-US', { maximumFractionDigits: d });
+    const usd = (n) => n == null ? '–' : '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const meta = {};
+    async function rpc(method, params) {
+      const r = await tf(RPC, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }) });
+      const j = await r.json(); if (j.error) throw new Error(j.error.message); return j.result;
+    }
+    async function coinMeta(t) {
+      if (!meta[t]) meta[t] = rpc('suix_getCoinMetadata', [t]).catch(() => null);
+      return meta[t];
+    }
+    async function prices() {
+      const p = { USDC: 1, USDT: 1 };
+      try { for (const s of await (await tf(IDX + '/summary')).json()) if (s.quote_currency === 'USDC' && s.last_price > 0 && p[s.base_currency] == null) p[s.base_currency] = s.last_price; } catch {}
+      return p;
+    }
+    async function card(w, px) {
+      const ex = `https://suivision.xyz/account/${w.address}`, ex2 = `https://suiscan.xyz/mainnet/account/${w.address}`;
+      const a = (txt) => `<a class="text-ibad-300 hover:underline" href="${ex}" rel="noopener noreferrer" target="_blank">${txt}</a>`;
+      const raw = (await rpc('suix_getAllBalances', [w.address])).filter((b) => b.totalBalance !== '0');
+      const rows = await Promise.all(raw.map(async (b) => {
+        const m = await coinMeta(b.coinType);
+        const s = m?.symbol || b.coinType.split('::').pop();
+        const qty = m ? Number(b.totalBalance) / 10 ** m.decimals : null;
+        return { s, qty, raw: b.totalBalance, usd: qty != null && px[s] != null ? qty * px[s] : null };
+      }));
+      rows.sort((x, y) => (y.usd || 0) - (x.usd || 0));
+      const total = rows.reduce((t, r) => t + (r.usd || 0), 0);
+      return `<article class="rounded-lg border border-sand-700/40 bg-night-900/60 p-5">
+        <h2 class="font-display text-xl text-sand-50">${esc(w.label)} <span class="text-sm text-sand-300">${a(usd(total) + ' est.')}</span></h2>
+        <p class="mt-1 text-sm text-sand-200/90">${esc(w.note)}</p>
+        <p class="mt-1 break-all font-mono text-xs">${a(esc(w.address))} · <a class="text-ibad-300" href="${ex2}" rel="noopener noreferrer" target="_blank">Suiscan</a></p>
+        <table class="mt-3 w-full text-sm"><thead><tr class="text-left text-sand-300"><th>Coin</th><th class="text-right">Balance</th><th class="text-right">USD (est.)</th></tr></thead><tbody>
+        ${rows.map((r) => `<tr><td>${esc(r.s)}</td><td class="text-right">${a(r.qty == null ? esc(r.raw) + ' (raw)' : fmt(r.qty))}</td><td class="text-right">${a(usd(r.usd))}</td></tr>`).join('') || '<tr><td colspan="3" class="text-sand-300">No balances</td></tr>'}
+        </tbody></table></article>`;
+    }
+    async function load() {
+      const st = document.getElementById('tr-status');
+      const px = await prices();
+      const html = await Promise.all(WALLETS.map((w) => card(w, px).catch((e) => `<article class="rounded-lg border border-red-700/40 p-5"><h2 class="text-sand-50">${esc(w.label)}</h2><p class="text-sm text-red-300">Could not read from the fullnode: ${esc(e.message)}. <a class="text-ibad-300" href="https://suivision.xyz/account/${w.address}" target="_blank" rel="noopener noreferrer">View on SuiVision</a></p></article>`)));
+      document.getElementById('tr-list').innerHTML = html.join('');
+      st.textContent = 'Updated ' + new Date().toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles' }) + ' PT · refreshes every 60 s · source: Sui fullnode suix_getAllBalances';
+    }
+    load(); setInterval(load, 60_000);
+  </script>
+</Base>

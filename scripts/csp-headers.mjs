@@ -76,6 +76,14 @@ export function walletBlock(h) {
     return [p + '*', '  ! Content-Security-Policy', `  Content-Security-Policy: ${csp(r, WALLET_CONNECT)}`, '  X-Robots-Tag: noindex, nofollow', '  Cache-Control: no-store'];
   }).join('\n') + '\n';
 }
+// /treasury/ (read-only Desk Treasury, preview): own CSP so ONLY this route may call the public Sui mainnet fullnode
+// (suix_getAllBalances / suix_getCoinMetadata) plus the DeepBook indexer for prices. The rest of the site stays unchanged.
+export const TREASURY_PATH = '/treasury/';
+export const TREASURY_CONNECT = ["'self'", ...CONNECT, 'https://fullnode.mainnet.sui.io'];
+export function treasuryBlock(h) {
+  if (TREASURY_CONNECT.some((c) => /^(https?:|wss?:)$|\*/.test(c))) throw new Error('wildcard in treasury connect-src');
+  return [TREASURY_PATH + '*', '  ! Content-Security-Policy', `  Content-Security-Policy: ${csp(h, TREASURY_CONNECT)}`, '  Cache-Control: no-cache', ''].join('\n');
+}
 export function routeHashes(dist = DIST) {
   const out = {};
   for (const p of WALLET_PATHS) { try { statSync(join(dist, p)); out[p] = inlineHashes(join(dist, p)); } catch {} }
@@ -89,6 +97,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const path = join(DIST, '_headers');
   const cur = readFileSync(path, 'utf8');
   if (cur.includes('Strict-Transport-Security')) { console.error('dist/_headers already has a site-wide block'); process.exit(1); }
-  writeFileSync(path, block + cur + (cur.endsWith('\n') ? '' : '\n') + (Object.keys(routeHashes()).length ? walletBlock(routeHashes()) : ''));
+  writeFileSync(path, block + cur + (cur.endsWith('\n') ? '' : '\n') + (Object.keys(routeHashes()).length ? walletBlock(routeHashes()) : '')
+    + (statSync(join(DIST, TREASURY_PATH), { throwIfNoEntry: false }) ? treasuryBlock(inlineHashes(join(DIST, TREASURY_PATH))) : ''));
   console.log(`_headers: site-wide block added (${h.scripts.length} inline script hashes, ${h.styles.length} style hashes, CSP ${v.length} chars)`);
 }

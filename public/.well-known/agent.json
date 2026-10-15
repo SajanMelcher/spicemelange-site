@@ -1,0 +1,79 @@
+{
+  "schema": "spicemelange.agent-catalog/v1",
+  "name": "The Spice Melange Trading Desk",
+  "url": "https://thespicemelange.org/",
+  "description": "Education-only, Dune-themed Sui trading desk (Bitcoin = spice). Read-only DeepBook market data connector plus one product, The Secret Journals. No return claims, not financial advice, no private desk data.",
+  "policies": {
+    "educationOnly": true,
+    "returnClaims": false,
+    "leverage": false,
+    "borrowedMoney": false,
+    "outsideAgentWriteAccess": false,
+    "requiresOwnerApprovalBeforePayment": true
+  },
+  "docs": {
+    "llms": "https://thespicemelange.org/llms.txt",
+    "agentJoin": "https://thespicemelange.org/.well-known/agent-join.json",
+    "mcpPointer": "https://thespicemelange.org/.well-known/mcp.json",
+    "storeCatalog": "https://thespicemelange.org/store/catalog.json",
+    "treasury": "https://thespicemelange.org/treasury/",
+    "learn": "https://thespicemelange.org/learn/"
+  },
+  "mcp": {
+    "name": "plumbline",
+    "title": "The Spice Melange Trading Desk",
+    "verifiedBy": "Glama",
+    "transport": "streamable-http",
+    "url": "https://plumbline-mcp.fly.dev/mcp",
+    "readOnly": true,
+    "toolCount": 16,
+    "tools": [
+      "list_pools",
+      "get_mid_price",
+      "get_order_book",
+      "get_volume",
+      "get_pool_params",
+      "get_recent_trades",
+      "get_ohlcv",
+      "get_indexer_status",
+      "get_bm_fills",
+      "get_swing_range",
+      "get_pool_stats",
+      "estimate_fees",
+      "list_templates",
+      "create_template_order",
+      "check_template_order",
+      "get_desk_rhythm"
+    ]
+  },
+  "products": [
+    {
+      "sku": "dune-saga-collection",
+      "name": "The Secret Journals",
+      "price": {
+        "amount": "300",
+        "asset": "USDC",
+        "network": "sui:mainnet"
+      },
+      "covers": "All templates, now and future",
+      "onlyProduct": true,
+      "salesFinal": "All sales final, except where the law requires otherwise",
+      "howToBuy": [
+        "Get the owner's explicit yes on the exact payment (asset, amount, from, to).",
+        "POST https://thespicemelange.org/api/store/order {\"sku\":\"dune-saga-collection\"} -> orderId, token, payTo, coinType, exact amount.",
+        "Send exactly that amount in one USDC transfer from the buyer's own wallet to payTo.",
+        "POST https://thespicemelange.org/api/store/verify {orderId, token, digest} -> signed download link.",
+        "Status: POST /api/store/status {orderId} with Authorization: Bearer <token>."
+      ]
+    }
+  ],
+  "spiceCertificates": {
+    "url": "https://thespicemelange.org/certificates/",
+    "requires": "Holding The Secret Journals token in the buyer's wallet"
+  },
+  "notOffered": [
+    "trading, custody or signing API",
+    "access to desk records or keys",
+    "investment advice"
+  ]
+}
