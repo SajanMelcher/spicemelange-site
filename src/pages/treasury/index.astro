@@ -5,17 +5,17 @@
 // USD estimates use DeepBook indexer last prices (free, public). No keys, no signing, no writes, no private data.
 import Base from '../../layouts/Base.astro';
 const WALLETS = [
-  { id: 'desk', label: 'Desk trading wallet', note: 'The Sui wallet The Fish Speakers and The Honored Matres trade DeepBook from. Funds parked inside its DeepBook BalanceManager or open orders are not wallet balances and are not shown here.', address: '0x340480183e48ac0b45e883d2c8f6e3d37f57dd88d42c17a5c457293bf9fbd9d5' },
-  { id: 'store', label: 'Store payment wallet', note: 'Where The Secret Journals payments (USDC on Sui) are received.', address: '0x88e8516771e71da54a7449a0a46e6a0c4af71ef71ac4d379847319c7e18a780f' },
+  { id: 'desk', label: 'Desk trading wallet', note: 'Separate from Sajan\'s personal Coinbase and SoFi accounts. No leverage, no loan money. The Sui wallet The Fish Speakers and The Honored Matres trade DeepBook from. Funds parked inside its DeepBook BalanceManager or open orders are not wallet balances and are not shown here.', address: '0x340480183e48ac0b45e883d2c8f6e3d37f57dd88d42c17a5c457293bf9fbd9d5' },
+  { id: 'store', label: 'Store payment address', note: 'Coinbase-hosted deposit address; funds are swept to Coinbase custody, so the on-chain balance here is usually near zero. Where The Secret Journals payments (USDC on Sui) are received.', address: '0x88e8516771e71da54a7449a0a46e6a0c4af71ef71ac4d379847319c7e18a780f' },
 ];
 ---
 <Base title="Desk Treasury (read-only)" description="Live, verifiable balances of the Spice Melange Trading Desk's two public Sui wallets.">
   <section class="mx-auto max-w-5xl px-5 py-12">
     <h1 class="font-display text-3xl text-sand-50">Desk Treasury <span class="text-base text-sand-300">read-only · live from Sui</span></h1>
-    <p class="mt-3 max-w-3xl text-sand-200/90">The spice must flow, and anyone may count it. These are the live balances of the desk's two public Sui wallets, read in your browser straight from the public Sui GraphQL service. Every number links to a Sui explorer so you can check it yourself.</p>
+    <p class="mt-3 max-w-3xl text-sand-200/90">The spice must flow, and anyone may count it. These are the live balances of the desk trading wallet and the store payment address, read in your browser straight from the public Sui GraphQL service. Every number links to a Sui explorer so you can check it yourself.</p>
     <div class="mt-4 rounded-lg border border-sand-700/40 bg-night-900/60 p-4 text-sm text-sand-200">
-      <p><b>Separate accounts.</b> These wallets are separate from Sajan's personal Coinbase and SoFi accounts; nothing from those accounts is shown or included here.</p>
-      <p class="mt-1"><b>No leverage, no loan money.</b> The desk trades on Sui with no leverage and no borrowed money.</p>
+      <p><b>Desk trading wallet (…d9d5): separate accounts, no leverage, no loan money.</b> It is separate from Sajan's personal Coinbase and SoFi accounts and trades on Sui with no leverage and no borrowed money.</p>
+      <p class="mt-1"><b>Store payment address:</b> a Coinbase-hosted deposit address; payments are swept to Coinbase custody, so its on-chain balance is usually near zero. No Coinbase account data is shown here.</p>
       <p class="mt-1">Education only, not financial advice. Balances are not performance and promise no returns. USD values are estimates from DeepBook last prices (USDC = $1); coins without a free price show "–".</p>
     </div>
     <p class="mt-4 text-sm text-sand-300" id="tr-status">Loading…</p>
